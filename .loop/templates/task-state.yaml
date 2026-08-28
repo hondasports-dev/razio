@@ -1,0 +1,21 @@
+task:
+  id: null
+  goal: null
+  in_scope: []
+  out_of_scope: []
+  spec_confidence: null
+  risk: null
+  acceptance_criteria: []
+  material_assumptions: []
+  verification_plan: []
+  findings: []
+  evidence:
+    static: []
+    unit: []
+    build: []
+    device: []
+    logs: []
+  revision:
+    branch: null
+    commit_sha: null
+  status: prepare
