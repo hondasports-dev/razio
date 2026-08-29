@@ -5,7 +5,10 @@
     <string name="status_label">状態: %1$s</string>
     <string name="equalizer_label">Equalizer: %1$s</string>
     <string name="dynamics_label">DynamicsProcessing: %1$s</string>
-    <string name="poc_keep_alive_hint">ON は次回起動時に復元します。他アプリで試すときは RAZIO を終了せず、バックグラウンドに残してください。プロセスが死ぬと effect は消えますが、起動し直すと ON なら付け直します。</string>
+    <string name="poc_keep_alive_hint">ON のあいだ通知が出ます。これでバックグラウンドでも effect を維持します。ON は次回起動時にも復元します。</string>
+    <string name="notification_channel_name">RAZIO</string>
+    <string name="notification_title">RAZIO</string>
+    <string name="notification_text">AM エフェクトが他アプリの音声に掛かっています</string>
     <string name="status_idle">Idle</string>
     <string name="status_initializing">Initializing</string>
     <string name="status_active">Active</string>

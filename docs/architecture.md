@@ -35,6 +35,7 @@ app/
 │  └─ component/
 ├─ audio/
 │  ├─ GlobalAudioEffectController
+│  ├─ RazioAudioService
 │  ├─ AudioEffectUiState
 │  ├─ preset/
 │  └─ AudioEffectLog
@@ -44,7 +45,9 @@ app/
 └─ MainActivity
 ```
 
-PoC では `GlobalAudioEffectController` を `Application` に保持する。Foreground Service はまだ入れない。プロセスが死ぬと session 0 の effect も消えるが、ON なら次回起動時に付け直す。出力先の増減では preset を付け直し、effect が死んでいれば作り直す。
+`GlobalAudioEffectController` は `Application` に保持する。ON のあいだ `RazioAudioService`（foregroundServiceType=`specialUse`）を起動し、プロセスが殺されにくくする。FGS は自前メディア再生ではないので `mediaPlayback` は使わない。プロセスが死んだ場合は ON なら次回起動時に effect と FGS を付け直す。出力先の増減では preset を付け直し、effect が死んでいれば作り直す。
+
+FGS の `startForeground` 失敗は logcat に出して隠さない。通知許可がなくても effect の enable は進める。
 
 ## AudioEffectController
 
@@ -168,7 +171,7 @@ MVP では複雑な DB は不要です。
 
 選択中プリセットは現状 Normal AM 固定。Room は必要性が出るまで導入しません。
 
-起動時に保存済み ON なら `initialize` のあと `setEnabled(true)` する。UI のスイッチは `RazioApp.setPowerOn` 経由で effect と prefs を同時に更新する。
+起動時に保存済み ON なら `initialize` のあと effect を enable し、FGS も起動する。UI のスイッチは `RazioApp.setPowerOn` 経由で effect・FGS・prefs を同時に更新する。API 33 以上では ON 時に `POST_NOTIFICATIONS` を要求する。
 
 ## 依存関係方針
 

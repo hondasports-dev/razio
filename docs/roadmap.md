@@ -93,13 +93,11 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Normal AM preset
 - [x] effect availability 表示
 - [x] 設定保存（ON/OFF を DataStore に保存し、起動時に復元）
-- [x] lifecycle 対応（Application 生存。プロセス死は起動時に付け直し。FGS は未実装）
+- [x] lifecycle 対応（Application 生存。ON 中は specialUse FGS。プロセス死は起動時に付け直し）
 - [x] route change 対応（AudioDeviceCallback で preset 付け直し / 再生成）
 - [x] エラーハンドリング（Unsupported / Error を画面表示）
 - [x] 最小 Compose UI
 - [x] 実機 regression 手順（起動時 ON 復元は Pixel 10 Pro で確認。BT 抜き差しは docs/testing.md）
-
-FGS はプロセスを殺されないための次の安定化。今のスライスには入れない。
 
 ## Phase 3: Sound design
 

@@ -1,5 +1,11 @@
 package dev.hondasports.razio.ui.screen
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +25,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import dev.hondasports.razio.R
 import dev.hondasports.razio.audio.AudioEngineReport
 import dev.hondasports.razio.audio.AudioEffectUiState
@@ -36,11 +44,31 @@ fun RazioHomeRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        onPowerChange(true)
+    }
     RazioHomeScreen(
         state = state,
-        onPowerChange = onPowerChange,
+        onPowerChange = { enabled ->
+            if (enabled && needsNotificationPermission(context)) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                onPowerChange(enabled)
+            }
+        },
         modifier = modifier,
     )
+}
+
+private fun needsNotificationPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < 33) return false
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.POST_NOTIFICATIONS,
+    ) != PackageManager.PERMISSION_GRANTED
 }
 
 @Composable

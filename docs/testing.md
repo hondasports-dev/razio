@@ -114,9 +114,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 Phase 2 の実機 regression（変更したとき）:
 
 1. RAZIO を ON にして YouTube で効果を確認
-2. `adb shell am force-stop dev.hondasports.razio` のあと起動し、ON が復元されて effect が付く
-3. OFF にして force-stop → 起動し、OFF のまま
-4. ON のまま Bluetooth 接続 / 切断し、効果が残るか（logcat `route change`）
+2. ON 中に通知が出ること、`dumpsys activity services` で `RazioAudioService` が foreground であること
+3. `adb shell am force-stop dev.hondasports.razio` のあと起動し、ON が復元されて effect と FGS が付く
+4. OFF にして通知が消え、force-stop → 起動し、OFF のまま
+5. ON のまま Bluetooth 接続 / 切断し、効果が残るか（logcat `route change`）
 
 ## テスト不能時
 

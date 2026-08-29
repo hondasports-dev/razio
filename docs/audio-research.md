@@ -17,7 +17,7 @@ PoC 実装:
 - `Equalizer(priority, 0)` と `DynamicsProcessing(priority, 0, config)` を独立に試す
 - `MODIFY_AUDIO_SETTINGS` を manifest に入れる
 - 生成・enable・release の成否を `RAZIO/AudioEffect` タグで出す
-- 効果オブジェクトは `Application` 生存期間。FGS は未実装
+- 効果オブジェクトは `Application` 生存期間。ON 中は `RazioAudioService`（specialUse FGS）でプロセスを維持する
 
 そのため、RAZIO では「API が存在する = 必ず全アプリに効く」と判断しません。
 
