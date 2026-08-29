@@ -141,7 +141,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Android: 17 (API 37)
 - Build: `CP2A.260805.005`
 - Output: **Bluetooth イヤホン**（ユーザー報告。本体スピーカーは未試聴）
-- Target app: ユーザーが他アプリ再生で確認。アプリ名は未記録
+- Target app: **YouTube**（後続エントリで確認）。最初の他アプリ試聴時はアプリ名未記録
 - Effect: EqualizerBundle + DynamicsProcessing on session `0`
 - session 0 initialization: **success**
 - Enable / disable: **success**（UI `Active` / `Disabled`、`enabled` actual が追従）
@@ -185,13 +185,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 
 - Device: Pixel 10 Pro (`blazer`)
 - Android: 17
-- Output: Bluetooth 再聴待ち
+- Output: **Bluetooth イヤホン**
+- Target app: **YouTube**
 - Effect: ピークを 1.0–1.1 kHz に狭め、1.8 kHz 以上を -15 dB。5 band EQ の表示はほぼ同じ（910 Hz は +3.5 dB のまま）。こもりの本体は DynamicsProcessing preEQ
 - session 0 initialization: **success**
 - Enable: **success**
-- Audible effect: 再聴待ち
+- Audible effect: **yes**（ユーザー。YouTube + Bluetooth）
 - logcat: `equalizer create ok session=0 bands=5 60Hz:-1500mB 230Hz:-1500mB 910Hz:347mB 3600Hz:-1500mB 14000Hz:-1500mB` / `setEnabled actual=true`
-- Conclusion: 暗くしたカーブを実機に載せた。聴感はユーザー確認待ち。
+- Conclusion: YouTube の他アプリ再生に session 0 が乗ることを確認。PoC の「主要メディアアプリ 1 つ以上」は満たした。スピーカー / 音楽アプリ / Chrome は未切り分け。Global AudioEffect を MVP 候補として継続。
 
 ## 判断基準
 

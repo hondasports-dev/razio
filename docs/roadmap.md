@@ -36,13 +36,13 @@
 
 実機確認:
 
-- [ ] YouTube
+- [x] YouTube（Pixel 10 Pro、Bluetooth。効果あり）
 - [ ] 音楽アプリ
 - [ ] Chrome
 - [ ] 本体スピーカー
-- [x] Bluetooth（Pixel 10 Pro、効果あり・弱い。イヤホン機種未記録）
+- [x] Bluetooth（Pixel 10 Pro。イヤホン機種未記録）
 
-2026-08-29: Bluetooth で他アプリへ効果あり（弱い）。スピーカーは未試聴。記録は `docs/audio-research.md`。
+2026-08-29: YouTube + Bluetooth で他アプリへ効果あり。スピーカーは未試聴。記録は `docs/audio-research.md`。
 
 判断:
 
