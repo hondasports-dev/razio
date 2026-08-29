@@ -226,6 +226,29 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
   3. Home へ送って他アプリを再生し、effect が残るか聴く
 - Conclusion: この端末では FGS によるバックグラウンド維持が成立。プロセス強制終了までは保証しない。
 
+### 2026-08-29 / Pixel 10 Pro / screen off soak
+
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
+- Android: 17
+- Build: `CP2A.260805.005`
+- Output: 既存経路。今回は画面 OFF の寿命確認
+- Target app: soak 中はメディア再生なし（`dumpsys audio` に `state:started` なし）
+- Effect: session 0 Equalizer + DynamicsProcessing + `RazioAudioService`
+- Screen: `KEYCODE_SLEEP` のあと約 90 秒。`dumpsys power` `mWakefulness=Dozing`
+- FGS: **success**（同一 `ServiceRecord`、`isForeground=true`、pid `27462` のまま）
+- session 0 after soak: **success**
+  - `2 effects for session 0`
+  - EqualizerBundle Enabled `y` Suspended `n`
+  - DynamicsProcessing Enabled `y` Suspended `n`
+  - client pid `27462`
+- Audible effect: **not observed in this soak**（再生トラックが無かった）。聴感はユーザー確認待ち
+- Reproduction steps:
+  1. RAZIO を ON
+  2. `adb shell input keyevent KEYCODE_SLEEP`
+  3. 約 90 秒待つ
+  4. `dumpsys activity services` / `dumpsys media.audio_flinger`
+- Conclusion: 画面 OFF でも effect オブジェクトと FGS は残る。聴感の最終判定は画面 OFF のまま他アプリ再生が必要。
+
 ## 判断基準
 
 ### Green
