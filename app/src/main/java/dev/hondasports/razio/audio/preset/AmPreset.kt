@@ -6,9 +6,9 @@ object AmPreset {
     const val MID_LOW_HZ = 1000f
     const val MID_HIGH_HZ = 2000f
     const val HIGH_CUT_HZ = 3500f
-    const val LOW_GAIN_DB = -12f
-    const val MID_GAIN_DB = 3f
-    const val HIGH_GAIN_DB = -12f
+    const val LOW_GAIN_DB = -15f
+    const val MID_GAIN_DB = 6f
+    const val HIGH_GAIN_DB = -15f
 
     fun gainDbForCenterHz(centerHz: Float): Float {
         val hz = centerHz.coerceAtLeast(1f)

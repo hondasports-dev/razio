@@ -165,6 +165,22 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
   5. RAZIO を終了せずバックグラウンドに残し、Bluetooth イヤホンで他アプリの ON/OFF を聴く → 効果あり、弱い
 - Conclusion: Pixel 10 Pro の **Bluetooth 出力**で session `0` が他アプリ音声に乗る。仮 AM カーブでは弱い。BT とスピーカーは effect chain が違うことがあるので、スピーカーは別試聴。経路は採用候補。現プリセットを UI 待ちにせず先に強くする。
 
+### 2026-08-29 / Pixel 10 Pro / stronger AM preset
+
+- Device: Pixel 10 Pro (`blazer`)
+- Android: 17
+- Output: ユーザー再聴待ち（前回は Bluetooth）
+- Effect: 同じ session 0。EQ ±15 dB 上限、中域 +6 dB、MBC 10:1 / -24 dB / post +4 dB
+- session 0 initialization: **success**
+- Enable / disable: **success** (`Active`)
+- Audible effect: 再聴待ち
+- logcat:
+  - `equalizer create ok session=0 bands=5 60Hz:-1500mB 230Hz:-1500mB 910Hz:347mB 3600Hz:-1500mB 14000Hz:-1500mB`
+  - `dynamics create ok session=0 channels=2 am-config`
+  - `setEnabled requested=true actual=true` (equalizer / dynamics)
+- Reproduction steps: 再インストール後、RAZIO をバックグラウンドに残して Bluetooth で ON/OFF
+- Conclusion: 端末は新カーブを適用済み。5 band EQ の物理上限までカット。聴感はユーザー確認待ち。
+
 ## 判断基準
 
 ### Green

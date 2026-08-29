@@ -110,8 +110,8 @@ RAZIOは、Android端末で再生される音声を昔のAMラジオのような
 
 - 250 Hz以下: 強く減衰
 - 3.5 kHz以上: 強く減衰
-- 1〜2 kHz: 軽く強調
-- Compression: 強め
+- 1〜2 kHz: 強調（初期 +6 dB）
+- Compression: 強め（初期 ratio 10、threshold -24 dB）
 - Limiter: 有効
 
 ノイズ、crackle、fading等はglobal AudioEffectの成立性確認後です。
