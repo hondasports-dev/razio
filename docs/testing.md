@@ -15,13 +15,13 @@ RAZIO では、通常の Android アプリとしての品質に加えて「実�
 
 対象:
 
-- preset の値変換
-- AudioEffect state transition
+- preset の値変換（`AmPresetTest`）
+- AudioEffect state transition（`RazioStatusTest`）
 - error mapping
 - support 判定ロジック
 - 設定保存 / 復元
 
-Android framework の AudioEffect を unit test で無理に再現せず、controller の境界を interface 化してテスト可能にします。
+Android framework の AudioEffect を unit test で無理に再現せず、controller の境界を画面状態と preset 計算に分ける。
 
 ## 2. Android / UI test
 

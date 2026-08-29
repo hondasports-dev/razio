@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "skills": {
+    "android-cli": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "devtools/android-cli/SKILL.md",
+      "computedHash": "c8f73e2baa39d99de8a6b42cfe94a4a3aeae6756b0c4b6e5fe0d5e36d56fe4c8"
+    },
+    "android-profiler": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "profilers/android-profiler/SKILL.md",
+      "computedHash": "965d7c65ddf4f3972421edacf02dce91f85e4d272ee0a464ed793091d92de9b2"
+    },
+    "compose-component-design": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/compose-component-design/SKILL.md",
+      "computedHash": "aad7693b5fe33690a162469b693634292e6a41a08efc83fdb2b60525dd677b5c"
+    },
+    "compose-state-and-effects": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/compose-state-and-effects/SKILL.md",
+      "computedHash": "f9946e99fba9b450b1ca1919e85fcdc3bdb7e8017726b96cc060449cb9d0e027"
+    },
+    "compose-ui-testing-patterns": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/compose-ui-testing-patterns/SKILL.md",
+      "computedHash": "b52ba67d32e3425e1b2c69cdb4eb52e5d1f4b4eb78dbf9d0a94d8197225546b8"
+    },
+    "edge-to-edge": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "system/edge-to-edge/SKILL.md",
+      "computedHash": "a12a0edcb1cdee4c1e8b68b1b406f7fdf4535b726352aa358817ba400b9e02a0"
+    },
+    "gradle-run": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/gradle-run/SKILL.md",
+      "computedHash": "f2858d10aa0415c98d0b03d1038e7fb806bcd0eb4dff498ead0c831584b07dd5"
+    },
+    "kotlin-api-design": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/kotlin-api-design/SKILL.md",
+      "computedHash": "1bc1990a6bacbf2f745692543990be6276b58448b4790b6bd5c3ebc13c4c697c"
+    },
+    "kotlin-concurrency-and-flow": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/kotlin-concurrency-and-flow/SKILL.md",
+      "computedHash": "b89dfbd8314b845b3546a266d9d00435ed74796d7770192ab496eff49ed61fc0"
+    },
+    "kotlin-control-flow": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/kotlin-control-flow/SKILL.md",
+      "computedHash": "ab2b553a3f17880c63b1251f90b9f6a033409cbb8effd250a78badc90f4cb853"
+    },
+    "testing-setup": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "testing/testing-setup/SKILL.md",
+      "computedHash": "679aec15cb9f257ae7aa96bb324e459f2a94274c5459e1661f4dedde902fc186"
+    },
+    "using-chrisbanes-skills": {
+      "source": "chrisbanes/skills",
+      "sourceType": "github",
+      "skillPath": "skills/using-chrisbanes-skills/SKILL.md",
+      "computedHash": "967c2f6979e1ca6b1da1dda16be326bb6f282eef786e99a0b9d05e04c5addd8e"
+    }
+  }
+}

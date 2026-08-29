@@ -34,14 +34,17 @@ app/
 │  ├─ screen/
 │  └─ component/
 ├─ audio/
-│  ├─ AudioEffectController
-│  ├─ AudioEffectState
+│  ├─ GlobalAudioEffectController
+│  ├─ AudioEffectUiState
 │  ├─ preset/
-│  └─ diagnostics/
+│  └─ AudioEffectLog
 ├─ domain/
 │  └─ model/
+├─ RazioApp
 └─ MainActivity
 ```
+
+PoC では `GlobalAudioEffectController` を `Application` に保持する。Foreground Service はまだ入れない。プロセスが死ぬと session 0 の effect も消える。
 
 ## AudioEffectController
 
@@ -53,6 +56,10 @@ app/
 - プリセット適用
 - 例外を状態へ変換
 - release
+
+Equalizer と DynamicsProcessing は独立に生成し、片方の失敗でももう片方を使えるようにする。session `0` への insert effect は deprecated なので、失敗を隠さない。
+
+`MODIFY_AUDIO_SETTINGS` は manifest で宣言する。runtime permission ではない。
 
 UI から Android API を直接呼ばないようにします。
 
