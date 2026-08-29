@@ -348,6 +348,11 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - force-stop → 起動後も Narrow AM / `Active` / 同じ effect detail を復元
 - Audible effect: **ユーザー確認済み（「ええ感じ」）。Narrow/Vintageの差、Weak signalの音量、高域量を受入**
 
+### 2026-08-29 / Distant radio candidate dropped
+
+- User feedback: Narrow AM と Distant radio の差が聴き分けにくく、Distant radio は不要
+- Decision: Distant radio はプリセット候補・UIから外し、次の音作りは Saturation へ進む
+
 ## 判断基準
 
 ### Green

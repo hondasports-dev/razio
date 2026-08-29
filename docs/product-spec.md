@@ -57,7 +57,6 @@ UI は昔のポケットラジオを想起させる方向を候補とします�
 
 - Normal AM
 - Weak Signal
-- Distant Radio
 - Vintage Speaker
 - Shortwave-like
 
