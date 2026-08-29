@@ -7,28 +7,27 @@ import org.junit.Test
 class AmPresetTest {
     @Test
     fun lowShelf_isStrongCut() {
-        assertEquals(-15f, AmPreset.gainDbForCenterHz(60f), 0.01f)
-        assertEquals(-15f, AmPreset.gainDbForCenterHz(300f), 0.01f)
+        assertEquals(-18f, AmPreset.gainDbForCenterHz(60f), 0.01f)
+        assertEquals(-18f, AmPreset.gainDbForCenterHz(250f), 0.01f)
     }
 
     @Test
     fun midrange_isBoosted() {
-        assertEquals(6f, AmPreset.gainDbForCenterHz(950f), 0.01f)
-        assertEquals(6f, AmPreset.gainDbForCenterHz(1050f), 0.01f)
+        assertEquals(6f, AmPreset.gainDbForCenterHz(500f), 0.01f)
+        assertEquals(6f, AmPreset.gainDbForCenterHz(2400f), 0.01f)
     }
 
     @Test
     fun upperMids_startRollingOff() {
-        val at1500 = AmPreset.gainDbForCenterHz(1500f)
-        assertTrue(at1500 < AmPreset.MID_GAIN_DB)
-        assertTrue(at1500 > AmPreset.HIGH_GAIN_DB)
+        val at3000 = AmPreset.gainDbForCenterHz(3000f)
+        assertTrue(at3000 < AmPreset.MID_GAIN_DB)
+        assertTrue(at3000 > AmPreset.HIGH_GAIN_DB)
     }
 
     @Test
     fun highShelf_isStrongCut() {
-        assertEquals(-15f, AmPreset.gainDbForCenterHz(1600f), 0.01f)
-        assertEquals(-15f, AmPreset.gainDbForCenterHz(2500f), 0.01f)
-        assertEquals(-15f, AmPreset.gainDbForCenterHz(8000f), 0.01f)
+        assertEquals(-24f, AmPreset.gainDbForCenterHz(3400f), 0.01f)
+        assertEquals(-24f, AmPreset.gainDbForCenterHz(8000f), 0.01f)
     }
 
     @Test
@@ -39,7 +38,7 @@ class AmPresetTest {
 
     @Test
     fun transition_movesTowardMidBoost() {
-        val betweenLowAndMid = AmPreset.gainDbForCenterHz(625f)
+        val betweenLowAndMid = AmPreset.gainDbForCenterHz(375f)
         assertTrue(betweenLowAndMid > AmPreset.LOW_GAIN_DB)
         assertTrue(betweenLowAndMid < AmPreset.MID_GAIN_DB)
     }

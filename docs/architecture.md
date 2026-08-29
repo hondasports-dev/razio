@@ -106,15 +106,21 @@ Limiter
 Output
 ```
 
-プリセットごとのカーブは次の通りです。どちらも端末 EQ の min / max で clamp します。
+プリセットごとのカーブは次の通りです。すべて端末 EQ の min / max で clamp します。
 
 | プリセット | 低域 | 中域 | 高域 | 狙い |
 | --- | --- | --- | --- | --- |
-| Narrow AM | 300 Hz 以下を -15 dB | 950〜1,050 Hz を +6 dB | 1.6 kHz 以上を -15 dB | 狭帯域の AM |
-| Vintage speaker | 220 Hz 以下を -12 dB | 700〜1,350 Hz を +4 dB | 2.8 kHz 以上を -12 dB | 小型の古いスピーカー |
+| Narrow AM | 250 Hz 以下を -18 dB | 500〜2,400 Hz を +6 dB | 3.4 kHz 以上を -24 dB（2.4 kHzからロールオフ） | 狭いAMラジオ。MBC 10:1 / post +6 dB / makeup +8 dB |
+| Vintage speaker | 120 Hz 以下を -18 dB | 350〜3,000 Hz を +4 dB | 4.8 kHz 以上を -20 dB（3 kHzからロールオフ） | 70〜80年代ラジカセの紙コーン／箱鳴り風。MBC 10:1 / post +6 dB / makeup +8 dB |
+| Weak signal | 320 Hz 以下を -18 dB | 850〜1,150 Hz を +4 dB | 1.45 kHz 以上を -24 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
 
-選択したカーブは Equalizer と DynamicsProcessing の pre-EQ に同じ値を使います。
-- ダイナミックレンジを狭くする（MBC ratio 10:1、threshold -24 dB）
+音質カーブは原則 Equalizer に一度だけ適用します。Equalizer が生成できない端末では、DynamicsProcessing の pre-EQ をフォールバックとして使い、同じカーブを二重適用しません。
+- ダイナミックレンジを狭くする（Narrow / Vintage は MBC ratio 10:1、threshold -24 dB。Weak signal は 16:1、threshold -30 dB）
+- MBC 後段にプリセットごとの post / makeup gain を加え、EQ と圧縮による過度な音量低下を抑えます。最終ピークは limiter（-1 dB）で制限します。
+
+プリセット変更は既存の Equalizer / DynamicsProcessing を release せず、約 80 ms の補間でパラメータを更新します。切替中の再タップは、その時点の補間値を次の遷移の開始値にします。effect が壊れて更新できない場合だけ、従来通り再生成へ戻します。
+
+DynamicsProcessing は null config の既定値をプリセット適用済みとして扱いません。まず端末の実チャンネル数を probe して RAZIO の Config を作成し、対応する Config を作れない場合は `Failed` / `Unsupported` として表示します。これにより、既定値の未設定 band が残ったまま成功扱いになることを防ぎます。
 
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
 
@@ -173,9 +179,9 @@ MVP では複雑な DB は不要です。
 - RAZIO の ON/OFF（DataStore Preferences）
 - 選択中プリセット（DataStore Preferences。未保存時は Narrow AM）
 
-プリセット変更時は既存の session 0 effect を release して、選択したカーブで Equalizer / DynamicsProcessing を再生成します。Room は必要性が出るまで導入しません。
+プリセット変更時は既存の session 0 effect を release せず、Equalizer / DynamicsProcessing のパラメータを約 80 ms かけて段階更新します。段数や effect が壊れている場合だけ再生成へフォールバックします。Room は必要性が出るまで導入しません。
 
-起動時に保存済みプリセットを復元してから effect を初期化し、保存済み ON なら effect を enable し、FGS も起動する。UI のスイッチは `RazioApp.setPowerOn` 経由、プリセット選択は `RazioApp.setPreset` 経由で effect と prefs を更新する。API 33 以上では ON 時に `POST_NOTIFICATIONS` を要求する。
+起動時に保存済みプリセットを復元してから effect を初期化し、保存済み ON なら effect を enable し、FGS も起動する。UI のスイッチは `RazioApp.setPowerOn` 経由、プリセット選択は `RazioApp.setPreset` 経由で effect と prefs を更新する。短時間の連続操作では古い DataStore 書き込みをキャンセルし、最後の選択が後から上書きされないようにする。API 33 以上では ON 時に `POST_NOTIFICATIONS` を要求する。
 
 ## 依存関係方針
 

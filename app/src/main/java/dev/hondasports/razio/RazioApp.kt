@@ -8,6 +8,7 @@ import dev.hondasports.razio.audio.RazioPreferences
 import dev.hondasports.razio.audio.preset.AudioPreset
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
@@ -18,6 +19,8 @@ class RazioApp : Application() {
         private set
 
     private lateinit var preferences: RazioPreferences
+    private var powerPersistenceJob: Job? = null
+    private var presetPersistenceJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -39,7 +42,8 @@ class RazioApp : Application() {
 
     fun setPreset(preset: AudioPreset) {
         audioEffects.setPreset(preset)
-        applicationScope.launch {
+        presetPersistenceJob?.cancel()
+        presetPersistenceJob = applicationScope.launch {
             preferences.setPreset(preset)
         }
     }
@@ -55,7 +59,8 @@ class RazioApp : Application() {
             RazioAudioService.stop(this)
         }
         if (persist) {
-            applicationScope.launch {
+            powerPersistenceJob?.cancel()
+            powerPersistenceJob = applicationScope.launch {
                 preferences.setPowerOn(enabled)
             }
         }

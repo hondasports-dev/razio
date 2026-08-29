@@ -185,6 +185,7 @@ private fun presetLabel(preset: AudioPreset): String {
     val resId = when (preset) {
         AudioPreset.NARROW_AM -> R.string.preset_narrow_am
         AudioPreset.VINTAGE_SPEAKER -> R.string.preset_vintage_speaker
+        AudioPreset.WEAK_SIGNAL -> R.string.preset_weak_signal
     }
     return stringResource(resId)
 }
@@ -194,6 +195,7 @@ private fun presetDescription(preset: AudioPreset): String {
     val resId = when (preset) {
         AudioPreset.NARROW_AM -> R.string.preset_narrow_am_description
         AudioPreset.VINTAGE_SPEAKER -> R.string.preset_vintage_speaker_description
+        AudioPreset.WEAK_SIGNAL -> R.string.preset_weak_signal_description
     }
     return stringResource(resId)
 }

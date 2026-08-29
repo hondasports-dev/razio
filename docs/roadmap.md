@@ -105,9 +105,9 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 
 候補:
 
-- [x] Narrow AM（Pixel 10 Pro + Pixel Buds Pro 2 で試聴確認）
-- [x] Vintage speaker（Pixel 10 Pro + Pixel Buds Pro 2 で試聴確認）
-- [ ] Weak signal
+- [ ] Narrow AM（AM実用帯域・声域重視へ再調整。実機聴感確認待ち）
+- [ ] Vintage speaker（70〜80年代ラジカセのかまぼこ型へ再調整。実機聴感確認待ち）
+- [ ] Weak signal（実装済み。実機聴感確認待ち）
 - [ ] Distant radio
 - [ ] Saturation
 - [ ] Hiss
@@ -122,7 +122,7 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 - [ ] レトロラジオ風デザイン
 - [ ] tuning dial の表現
 - [ ] signal meter
-- [x] preset UI（Narrow AM / Vintage speaker）
+- [x] preset UI（Narrow AM / Vintage speaker / Weak signal）
 - [ ] dark / light 方針
 - [ ] icon / branding
 

@@ -255,7 +255,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
 - Android: 17
 - Build: `CP2A.260805.005`
-- Output: **Pixel Buds Pro 2**（Bluetooth A2DP）
+- Output: **Pixel Buds Pro 2**（初回確認）/ **SoundCore 2**（端ケース修正後の再確認、Bluetooth A2DP）
 - Target app: **Spotify**（route 切断前に再生。切断時は OS が一時停止）
 - RAZIO: ON。UI `Active`、FGS は同じ pid `27462`
 - Disconnect: `cmd bluetooth_manager disable` 後 `bluetooth_on=0`、`BLE_ON`、接続台数 0
@@ -303,6 +303,50 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Selection persistence: force-stop → 起動後も Vintage speaker / `Active` を復元
 - Audible effect: **yes**（実機試聴後、ユーザーがコミットを指示）
 - Conclusion: Narrow AMを既定として残したまま、Vintage speakerを切り替えて比較できる状態を受け入れ。ノイズ / crackle / fading は未実装のまま次の候補へ。
+
+### 2026-08-29 / Pixel 10 Pro / smooth preset transition and gain compensation
+
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
+- Android: 17 / build `CP2A.260805.005`
+- Output: **Pixel Buds Pro 2**（初回確認）/ **SoundCore 2**（端ケース修正後の再確認、Bluetooth A2DP）
+- Target app: **Spotify**（`PlaybackState=PLAYING`）
+- Effect: session `0` の Equalizer + DynamicsProcessing を release せず、約 80 ms の補間で Narrow AM / Vintage speaker / Weak signal を更新。Equalizer がある場合は DynamicsProcessing の pre-EQ を flat にして EQ の二重適用を避ける
+- Gain: Weak signal の UI detail は `preEq=flat mbcPost=8.0dB`。MBC 後段の makeup gain で EQ / 圧縮による過度な音量低下を補正し、limiter は -1 dB
+- session 0: rapid tap 直後と遷移完了後に `2 effects for session 0`（EqualizerBundle + DynamicsProcessing）、UI は `Active` を維持
+- Selection persistence: force-stop → 起動後も Weak signal / `Active` / `RazioAudioService` foreground を復元
+- Audible effect: **新しい補間 / makeup gain の聴感はユーザー確認待ち**
+- Conclusion: 技術的には effect chain を保持したまま切り替えられることを確認。音量差・クリップ・ポンピングは Pixel Buds でユーザー試聴後に受け入れ判定する。
+
+### 2026-08-29 / retro radio and boombox characteristic retune
+
+- Narrow AM: AM 放送の実用帯域を目安に 100 Hz 以下を -12 dB、300 Hz〜3 kHz を +6 dB、5 kHz 以上を -12 dB（3 kHz からロールオフ）
+- Vintage speaker: 100 Hz 以下を -12 dB、300 Hz〜3 kHz を +4 dB、10 kHz 以上を -10 dB（3 kHz からロールオフ）
+- Weak signal: 狭帯域・強圧縮の既存カーブを維持
+- Noise / crackle / physical speaker distortion は、global AudioEffect だけで他アプリ音声へ安全に混ぜる方式が未成立のため今回の変更対象外。MBC / limiter と中域カーブで再現できる範囲に限定
+- Recheck: Pixel 10 Pro / Android 17 / **SoundCore 2**（Bluetooth A2DP）で Spotify `PlaybackState=PLAYING` 中に Narrow AM の UI detail が `60Hz:-1200mB 230Hz:-30mB 910Hz:600mB 3600Hz:60mB 14000Hz:-1200mB`、Vintage speaker が `60Hz:-1200mB 230Hz:-160mB 910Hz:400mB 3600Hz:280mB 14000Hz:-1000mB` となり、UI は `Active`
+- 連続切替直後も session `0` の `EqualizerBundle` + `DynamicsProcessing` の 2 effects を維持。該当端末でクラッシュ該当ログなし
+- Audible effect: **上記再調整後はユーザー確認待ち**
+
+### 2026-08-29 / darker extremes and gain compensation
+
+- User feedback: first wider pass still sounded too bright / bass-heavy and quiet overall
+- Narrow AM: 150 Hz 以下 / 4.5 kHz 以上を -18 dB、350 Hz〜2.8 kHz を +6 dB。MBC post +6 dB + makeup +8 dB（effective +14 dB）
+- Vintage speaker: 120 Hz 以下 / 8 kHz 以上を -18 dB、350 Hz〜3 kHz を +4 dB。MBC post +6 dB + makeup +8 dB（effective +14 dB）
+- Weak signal: 両端を -18 dB、MBC post +4 dB + makeup +8 dB（effective +12 dB）へ変更
+- Recheck: Pixel 10 Pro / Android 17 / SoundCore 2 Bluetooth A2DP / Spotify `PLAYING` で、Narrow AM は実装上 `60Hz:-1500mB 230Hz:-839mB 910Hz:600mB 3600Hz:-529mB 14000Hz:-1500mB`、DynamicsProcessing は `preEq=flat mbcPost=14.0dB`。UI は `Active`、session `0` の2 effectsを維持し、force-stop後も Narrow AM / `Active` を復元
+- Audible effect: **再調整後の音量・低高域バランスはユーザー確認待ち**
+
+### 2026-08-29 / preset separation and Weak signal gain
+
+- User feedback: Narrow AM と Vintage speaker の差が分かりにくく、Weak signal が小さく、高域をさらに抑えたい
+- Narrow AM: 250 Hz 以下を -18 dB、500〜2.4 kHz を +6 dB、3.4 kHz 以上を -24 dB。狭い声域寄りのラジオ特性
+- Vintage speaker: 120 Hz 以下を -18 dB、350〜3 kHz を +4 dB、4.8 kHz 以上を -20 dB。Narrow より広いが高域は丸める特性
+- Weak signal: 中域を +4 dB、MBC post +8 dB + makeup +10 dB（effective +18 dB）、高域目標 -24 dB
+- 実機: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、SoundCore 2（Bluetooth A2DP）、Spotify `PlaybackState=PLAYING`
+- UI detail: Narrow AM は `60Hz:-1500mB 230Hz:-1500mB 910Hz:600mB 3600Hz:-1500mB 14000Hz:-1500mB` / `mbcPost=14.0dB`、Vintage speaker は `60Hz:-1500mB 230Hz:-747mB 910Hz:400mB 3600Hz:-400mB 14000Hz:-1500mB` / `mbcPost=14.0dB`、Weak signal は `60Hz:-1500mB 230Hz:-1500mB 910Hz:400mB 3600Hz:-1500mB 14000Hz:-1500mB` / `mbcPost=18.0dB`
+- 連続切替（約20 ms間隔）後も `状態: Active` と session `0` の `EqualizerBundle` + `DynamicsProcessing` の2 effectsを維持。`RazioAudioService` は `isForeground=true`。`dumpsys media_session` は Spotify `PLAYING`、`dumpsys audio` は SoundCore 2 `bt_a2dp`。直近400行の logcat に RAZIO のクラッシュ／AudioEffect例外なし
+- force-stop → 起動後も Narrow AM / `Active` / 同じ effect detail を復元
+- Audible effect: **今回の最終カーブの聴感（Narrow/Vintageの差、Weak signalの音量、高域量）はユーザー確認待ち**
 
 ## 判断基準
 
