@@ -40,9 +40,9 @@
 - [ ] 音楽アプリ
 - [ ] Chrome
 - [ ] 本体スピーカー
-- [ ] Bluetooth
+- [x] Bluetooth（Pixel 10 Pro、効果あり・弱い。イヤホン機種未記録）
 
-2026-08-29 Pixel 10 Pro / Android 17: session `0` の Equalizer / DynamicsProcessing は生成・enable まで成功。可聴効果は未確認のため上は未チェック。記録は `docs/audio-research.md`。
+2026-08-29: Bluetooth で他アプリへ効果あり（弱い）。スピーカーは未試聴。記録は `docs/audio-research.md`。
 
 判断:
 

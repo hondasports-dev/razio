@@ -140,12 +140,12 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
 - Android: 17 (API 37)
 - Build: `CP2A.260805.005`
-- Output: メディア再生なし。出力先の聴感比較は未実施
-- Target app: 未実施（YouTube / 音楽 / Chrome は人間の聴感待ち）
+- Output: **Bluetooth イヤホン**（ユーザー報告。本体スピーカーは未試聴）
+- Target app: ユーザーが他アプリ再生で確認。アプリ名は未記録
 - Effect: EqualizerBundle + DynamicsProcessing on session `0`
 - session 0 initialization: **success**
 - Enable / disable: **success**（UI `Active` / `Disabled`、`enabled` actual が追従）
-- Audible effect: **not observed**（生成と enable の成功は他アプリへの可聴効果の証明にしない）
+- Audible effect: **yes / weak** on Bluetooth（他アプリへ効果はあるが AM らしさは不足）
 - logcat (`RAZIO/AudioEffect`):
   - `equalizer create ok session=0 bands=5 60Hz:-1200mB 230Hz:-1200mB 910Hz:119mB 3600Hz:-1200mB 14000Hz:-1200mB`
   - `dynamics create ok session=0 channels=2 am-config`
@@ -162,8 +162,8 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
   2. `adb -s 56101FDCH006CX install -r app/build/outputs/apk/debug/app-debug.apk`
   3. `adb shell am start -n dev.hondasports.razio/.MainActivity`
   4. 起動直後は Disabled。スイッチ ON で Active
-  5. RAZIO を終了せずバックグラウンドに残し、他アプリで ON/OFF を聴く（未実施）
-- Conclusion: Pixel 10 Pro / Android 17 では session `0` の effect 生成と enable は成立した。system-wide の可聴効果は未確認のため **Green にしない**。Phase 1 の実機チェックボックスは空けたまま。
+  5. RAZIO を終了せずバックグラウンドに残し、Bluetooth イヤホンで他アプリの ON/OFF を聴く → 効果あり、弱い
+- Conclusion: Pixel 10 Pro の **Bluetooth 出力**で session `0` が他アプリ音声に乗る。仮 AM カーブでは弱い。BT とスピーカーは effect chain が違うことがあるので、スピーカーは別試聴。経路は採用候補。現プリセットを UI 待ちにせず先に強くする。
 
 ## 判断基準
 
