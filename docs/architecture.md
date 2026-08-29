@@ -108,9 +108,9 @@ Output
 
 目安:
 
-- 250 Hz 以下を強く落とす（初期値 -15 dB。端末 EQ の min で clamp）
-- 1.8 kHz 以上を強く落とす（初期値 -15 dB。こもった AM 寄り）
-- 1 kHz 付近を持ち上げる（初期値 +6 dB）
+- 300 Hz 以下を強く落とす（初期値 -15 dB。端末 EQ の min で clamp）
+- 1.6 kHz 以上を強く落とす（初期値 -15 dB。狭帯域の AM 寄り）
+- 950〜1,050 Hz を持ち上げる（初期値 +6 dB）
 - ダイナミックレンジを狭くする（MBC ratio 10:1、threshold -24 dB）
 
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
@@ -169,7 +169,7 @@ MVP では複雑な DB は不要です。
 
 - RAZIO の ON/OFF（DataStore Preferences）
 
-選択中プリセットは現状 Normal AM 固定。Room は必要性が出るまで導入しません。
+選択中プリセットは現状 Narrow AM 固定。Room は必要性が出るまで導入しません。
 
 起動時に保存済み ON なら `initialize` のあと effect を enable し、FGS も起動する。UI のスイッチは `RazioApp.setPowerOn` 経由で effect・FGS・prefs を同時に更新する。API 33 以上では ON 時に `POST_NOTIFICATIONS` を要求する。
 

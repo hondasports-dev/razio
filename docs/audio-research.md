@@ -277,6 +277,19 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
   5. `audio devices added` と `route change`、`actual=true`、session 0 の 2 effects を確認
 - Conclusion: この端末では Bluetooth route の切断・再接続で callback が発火し、session 0 effect が ON のまま再適用される。イヤホン再接続後も FGS と effect chain は維持された。
 
+### 2026-08-29 / Pixel 10 Pro / Narrow AM listen
+
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
+- Android: 17
+- Build: `CP2A.260805.005`
+- Output: **Pixel Buds Pro 2**（Bluetooth A2DP）
+- Target app: **Spotify**
+- Preset: Narrow AM（300 Hz 以下 / 1.6 kHz 以上を -15 dB、950〜1,050 Hz を +6 dB）
+- session 0: Equalizer + DynamicsProcessing、UI `Active`
+- UI detail: 5-band EQ の 910 Hz は `470mB`。既存の暗い AM カーブより狭いピークを適用
+- Audible effect: **yes**（ユーザー確認: 「前よりこもってるからOK」）
+- Conclusion: Pixel 10 Pro + Bluetooth では Narrow AM の狭帯域化を受け入れ。ノイズ / crackle / fading は未実装のまま次の候補へ。
+
 ## 判断基準
 
 ### Green

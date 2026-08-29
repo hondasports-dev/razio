@@ -8,13 +8,13 @@ class AmPresetTest {
     @Test
     fun lowShelf_isStrongCut() {
         assertEquals(-15f, AmPreset.gainDbForCenterHz(60f), 0.01f)
-        assertEquals(-15f, AmPreset.gainDbForCenterHz(250f), 0.01f)
+        assertEquals(-15f, AmPreset.gainDbForCenterHz(300f), 0.01f)
     }
 
     @Test
     fun midrange_isBoosted() {
-        assertEquals(6f, AmPreset.gainDbForCenterHz(1000f), 0.01f)
-        assertEquals(6f, AmPreset.gainDbForCenterHz(1100f), 0.01f)
+        assertEquals(6f, AmPreset.gainDbForCenterHz(950f), 0.01f)
+        assertEquals(6f, AmPreset.gainDbForCenterHz(1050f), 0.01f)
     }
 
     @Test
@@ -26,7 +26,7 @@ class AmPresetTest {
 
     @Test
     fun highShelf_isStrongCut() {
-        assertEquals(-15f, AmPreset.gainDbForCenterHz(1800f), 0.01f)
+        assertEquals(-15f, AmPreset.gainDbForCenterHz(1600f), 0.01f)
         assertEquals(-15f, AmPreset.gainDbForCenterHz(2500f), 0.01f)
         assertEquals(-15f, AmPreset.gainDbForCenterHz(8000f), 0.01f)
     }

@@ -74,7 +74,7 @@ RAZIO で最も重要なテストです。
 | Android | 対象 OS version |
 | Target app | YouTube / music / Chrome |
 | Output | Speaker / Bluetooth / USB |
-| Preset | Normal AM |
+| Preset | Narrow AM |
 | RAZIO | ON / OFF |
 
 ### 必須確認

@@ -105,7 +105,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 
 候補:
 
-- [ ] Narrow AM
+- [x] Narrow AM（Pixel 10 Pro + Pixel Buds Pro 2 で試聴確認）
 - [ ] Vintage speaker
 - [ ] Weak signal
 - [ ] Distant radio
