@@ -385,10 +385,46 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 ### 2026-08-29 / Fading first pass
 
 - Scope: Hiss / Crackle のような独立ノイズを追加せず、global AudioEffect の DynamicsProcessing input gain だけを周期変動させる
-- Fading: Narrow AM と同じ EQ / MBC（input gain 0 dB）を維持し、input gain を ±3 dB、3.2 秒周期、100 ms tick で更新する
+- Fading: Narrow AM と同じ狭帯域 EQ / MBC（input gain 0 dB）を維持し、input gain を ±3 dB、3.2 秒周期、100 ms tick で更新する
 - Lifecycle: プリセット遷移完了後に変調を開始し、別プリセットへの切替・OFF・route change・release で Runnable をキャンセルする。更新失敗時も変調を停止し、既存の effect failure path に任せる
 - Unit: `AudioPreset.FADING` の帯域、変調深度、周期を確認済み
-- 実機: **ビルド・インストール後の Pixel 10 Pro / SoundCore 2 / Spotify 聴感確認待ち**
+- 実機 (2026-08-29): Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING`
+- 実機UI: `状態: Active`、`preset=fading`、EQ `60Hz:-1500mB 230Hz:-1500mB 910Hz:600mB 3600Hz:-1500mB 14000Hz:-1500mB`、Dynamics `channels=2 preEq=flat inputGain=0.0dB mbcPost=14.0dB fade=3.0dB/3200ms`
+- 連続切替: Narrow AM → Vintage speaker → Weak signal → Saturation → Fading を約20 ms間隔で選択後、遷移完了時も session `0` の `EqualizerBundle` + `DynamicsProcessing` の2 effectsと `Active` を維持
+- OFF/ON: UI `状態: Disabled`、EQ/Dynamics `actual=false`を確認後、再ONで `状態: Active`、EQ/Dynamics `actual=true`、FGS `isForeground=true` に復帰
+- 画面OFF: `mWakefulness=Dozing` の約5秒後も FGS `types=0x40000000` と session `0` の2 effectsを維持
+- Logcat: Fading実機試行範囲で `fading input gain update failed`、`AudioHardening`、アプリのcrash/ANRなし（周辺システムログは除外）
+- 最新APK: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `62b766a9232d66385c5f52638c981382`）、SHA-256 `DF6D00F3B01D9CCD7C2BC3B69A2A1A9A035265159FC73D18C0B5BA9C1E18255C`
+- 変調ログ: `fading modulation started depth=3.0dB period=3200ms tick=100ms` → OFF時 `fading modulation stopped` → 再ON時に同じstartログ。EQ/Dynamicsの `actual=false` / `actual=true` も確認
+- Audible effect: **ユーザー確認済み（「OK」）**（数秒周期の揺れ、クリック、急な音切れ、音量差を受入）
+
+### 2026-08-29 / all preset edge-cut retune
+
+- User feedback: **全プリセットで低域と高域をさらにカットしたい**
+- Rationale: 端末 Equalizer の最小値に達する帯域ではゲイン値だけ下げても音は変わらないため、低域から中域へ入る境界を上げ、高域のロールオフ開始を下げる。DynamicsProcessing fallback 向けには目標ゲインも深くする
+- Narrow AM / Fading: 300 Hz 以下 -24 dB、550〜2.2 kHz +6 dB、3.0 kHz 以上 -30 dB（2.2 kHzからロールオフ）
+- Vintage speaker: 180 Hz 以下 -24 dB、450〜2.6 kHz +4 dB、4.0 kHz 以上 -26 dB（2.6 kHzからロールオフ）
+- Weak signal: 380 Hz 以下 -24 dB、900〜1.1 kHz +4 dB、1.35 kHz 以上 -30 dB
+- Saturation: 180 Hz 以下 -18 dB、450〜2.4 kHz +2 dB、5.0 kHz 以上 -18 dB（2.4 kHzからロールオフ）
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `3192c91500e06f473428e3f5566596d0`）。APK SHA-256 `289F471B2227897D4C54ACF111BFC9DDDE0D0C5BCC9A11174FF7C03FB0E5F54C`
+- 実機 (2026-08-29): Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、SoundCore 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING`
+- 実機UI: 全プリセットで `状態: Active`、session `0` の Equalizer + DynamicsProcessing を維持。Narrow AM は `60Hz:-1500mB 230Hz:-1500mB 910Hz:600mB 3600Hz:-1500mB 14000Hz:-1500mB`、Vintage speaker は `60Hz:-1500mB 230Hz:-1500mB 910Hz:400mB 3600Hz:-1500mB 14000Hz:-1500mB`、Weak signal は `60Hz:-1500mB 230Hz:-1500mB 910Hz:400mB 3600Hz:-1500mB 14000Hz:-1500mB`、Saturation は `60Hz:-1500mB 230Hz:-1429mB 910Hz:200mB 3600Hz:-723mB 14000Hz:-1500mB`、Fading は Narrow AM と同じ端部値に `fade=3.0dB/3200ms`
+- 連続切替: 5プリセットを順番に選択後も `Active` と2 effectsを維持。OFFで EQ/Dynamics `actual=false`、再ONで `actual=true` と Fading modulation start/stop ログを確認
+- 画面OFF: `mWakefulness=Dozing` の約3秒後も FGS `isForeground=true types=0x40000000` と session `0` の2 effectsを維持
+- Audible effect: **ユーザー確認済み（「OK」）**（低域の量、高域の残り方、声の明瞭度、音量差、クリックの有無を受入）
+
+### 2026-08-29 / DynamicsProcessing-only EQ A/B PoC plan
+
+- Timing: 今回の全プリセット両端カット再調整をユーザー聴感で受入れた直後、Hiss / Crackle の AudioTrack オーバーレイ実装へ着手する前に実施する。既定経路の置換ではなく、検証用のA/B切替として1回の実機サイクルに限定する
+- Goal: EQも含めてDynamicsProcessing単体（Pre-EQ + MBC + Limiter、必要時のみPost-EQ）へまとめた場合に、現行のEqualizer + DynamicsProcessingより音質・安定性が改善するかを確認する
+- A（現行）: Equalizerが音域カーブ、DynamicsProcessingはPre-EQ flat + MBC + Limiter
+- B（候補）: Equalizerを生成せず、DynamicsProcessingのPre-EQ（必要ならPost-EQ）+ MBC + Limiterで全プリセットを処理
+- Device / output: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、本体スピーカー / SoundCore 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING`
+- Cases: Narrow AM / Vintage speaker / Weak signal / Saturation / Fading、ON/OFF、約80 msのプリセット遷移、route change、Home、画面OFF、force-stop後の復元
+- Acceptance: BがAより低域・高域のカットと声域の明瞭度で明確に有利、音量差が許容範囲、クリック・過度な歪み・無音化がなく、両出力先とライフサイクルで安定すること。差が小さいか端末依存の失敗がある場合はAを維持
+- Evidence: `dumpsys media.audio_flinger`（effect数と構成）、`dumpsys activity services dev.hondasports.razio`（FGS）、`dumpsys audio`（route）、filtered `logcat`（effect生成/enable、`AudioHardening`、crash/ANR）、A/B各プリセットのUI detailと聴感メモ
+- Out of scope: Hiss / Crackle生成、AudioPlaybackCapture、元音声のミュート/差し替え、二段EQの同時適用、既定経路の変更
+- Status: **PoC実装・実機測定待ち**。現行のEqualizer + DynamicsProcessingを既定経路として保持する
 
 ## 判断基準
 

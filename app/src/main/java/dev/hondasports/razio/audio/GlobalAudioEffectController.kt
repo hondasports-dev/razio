@@ -32,8 +32,10 @@ class GlobalAudioEffectController(
     private var selectedPreset: AudioPreset = AudioPreset.NARROW_AM
     private val transitionHandler = Handler(Looper.getMainLooper())
     private var transitionState: PresetTransition? = null
+    private var fadingRunnable: Runnable? = null
 
     fun initialize() {
+        stopFading()
         cancelPresetTransition(applyFinalPreset = false)
         _state.update { it.copy(initializing = true, status = RazioStatus.Initializing) }
         logAvailableEffects()
@@ -51,6 +53,7 @@ class GlobalAudioEffectController(
 
     fun setEnabled(enabled: Boolean) {
         if (!enabled) {
+            stopFading()
             cancelPresetTransition(applyFinalPreset = true)
         }
         if (enabled && equalizer == null && dynamics == null) {
@@ -69,10 +72,12 @@ class GlobalAudioEffectController(
             equalizer = equalizerReport,
             dynamics = dynamicsReport,
         )
+        updateFadingSchedule()
     }
 
     fun setPreset(preset: AudioPreset) {
         if (selectedPreset == preset) return
+        stopFading()
         val previousPreset = selectedPreset
         val wasOn = _state.value.powerOn
         val currentParameters = cancelPresetTransition(applyFinalPreset = false)
@@ -92,6 +97,7 @@ class GlobalAudioEffectController(
     }
 
     fun handleRouteChange() {
+        stopFading()
         cancelPresetTransition(applyFinalPreset = true)
         val wantOn = _state.value.powerOn
         AudioEffectLog.i("route change wantOn=$wantOn")
@@ -119,6 +125,7 @@ class GlobalAudioEffectController(
     }
 
     fun release() {
+        stopFading()
         cancelPresetTransition(applyFinalPreset = false)
         releaseEngines()
         attempted = false
@@ -246,6 +253,7 @@ class GlobalAudioEffectController(
                     if (step == TRANSITION_STEPS || progress >= 1f) {
                         transitionState = null
                         publishExisting(_state.value.powerOn)
+                        updateFadingSchedule()
                     }
                 } catch (throwable: Throwable) {
                     transitionState = null
@@ -359,6 +367,66 @@ class GlobalAudioEffectController(
         return currentParameters
     }
 
+    /**
+     * Starts the Fading modulation only after a preset transition has settled.
+     * The Handler and its Runnable are owned by this controller and are stopped
+     * on every lifecycle/effect transition path so a released effect is never
+     * touched by a stale callback.
+     */
+    private fun updateFadingSchedule() {
+        stopFading()
+        val preset = selectedPreset
+        val effect = dynamics ?: return
+        if (!_state.value.powerOn || transitionState != null) return
+        val report = _state.value.dynamics
+        if (report !is AudioEngineReport.Ready || !report.enabled) return
+        if (preset.fadeDepthDb <= 0f || preset.fadePeriodMs <= 0L) return
+
+        val startedAtMs = SystemClock.uptimeMillis()
+        val runnable = object : Runnable {
+            override fun run() {
+                if (fadingRunnable !== this) return
+                val currentDynamics = dynamics
+                if (
+                    currentDynamics == null ||
+                    !_state.value.powerOn ||
+                    selectedPreset != preset ||
+                    transitionState != null
+                ) {
+                    stopFading()
+                    return
+                }
+                val elapsedMs = SystemClock.uptimeMillis() - startedAtMs
+                val phase = (elapsedMs.toDouble() / preset.fadePeriodMs.toDouble()) *
+                    (2.0 * kotlin.math.PI)
+                val gainDb = preset.inputGainDb +
+                    kotlin.math.sin(phase).toFloat() * preset.fadeDepthDb
+                try {
+                    currentDynamics.setInputGainAllChannelsTo(gainDb)
+                } catch (throwable: Throwable) {
+                    AudioEffectLog.e("fading input gain update failed", throwable)
+                    stopFading()
+                    return
+                }
+                transitionHandler.postDelayed(this, FADING_TICK_MS)
+            }
+        }
+        fadingRunnable = runnable
+        AudioEffectLog.i(
+            "fading modulation started depth=${preset.fadeDepthDb}dB " +
+                "period=${preset.fadePeriodMs}ms tick=${FADING_TICK_MS}ms",
+        )
+        transitionHandler.post(runnable)
+    }
+
+    private fun stopFading() {
+        fadingRunnable?.let {
+            transitionHandler.removeCallbacks(it)
+            AudioEffectLog.i("fading modulation stopped")
+        }
+        fadingRunnable = null
+    }
+
     private fun transitionProgress(transition: PresetTransition): Float {
         val elapsedMs = SystemClock.uptimeMillis() - transition.startedAtMs
         return (elapsedMs.toFloat() / TRANSITION_DURATION_MS).coerceIn(0f, 1f)
@@ -457,7 +525,8 @@ class GlobalAudioEffectController(
         return "session=$sessionId channels=${dynamics.channelCount} " +
             "preset=${selectedPreset.id} preEq=${if (usePreEqCurve) "curve" else "flat"} " +
             "inputGain=${selectedPreset.inputGainDb}dB " +
-            "mbcPost=${selectedPreset.effectiveMbcPostGainDb}dB"
+            "mbcPost=${selectedPreset.effectiveMbcPostGainDb}dB " +
+            "fade=${selectedPreset.fadeDepthDb}dB/${selectedPreset.fadePeriodMs}ms"
     }
 
     private fun lerp(
@@ -573,6 +642,7 @@ class GlobalAudioEffectController(
         const val TRANSITION_STEPS = 8
         const val TRANSITION_STEP_MS = 10L
         const val TRANSITION_DURATION_MS = TRANSITION_STEPS * TRANSITION_STEP_MS
+        const val FADING_TICK_MS = 100L
         val CHANNEL_COUNTS = intArrayOf(2, 1)
     }
 }

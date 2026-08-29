@@ -20,18 +20,22 @@ enum class AudioPreset(
     val mbcPostGainDb: Float,
     val makeupGainDb: Float,
     val inputGainDb: Float = 0f,
+    val fadeDepthDb: Float = 0f,
+    val fadePeriodMs: Long = 0L,
 ) {
     NARROW_AM(
         id = "narrow_am",
         // Keep the voice band present while trimming the extremes that made
-        // the first wider pass sound too hi-fi on modern speakers.
-        lowCutHz = 250f,
-        midLowHz = 500f,
-        midHighHz = 2_400f,
-        highCutHz = 3_400f,
-        lowGainDb = -18f,
+        // the first wider pass sound too hi-fi on modern speakers. The deeper
+        // targets also help DynamicsProcessing fallback devices; Equalizer
+        // implementations still clamp them to their native minimum.
+        lowCutHz = 300f,
+        midLowHz = 550f,
+        midHighHz = 2_200f,
+        highCutHz = 3_000f,
+        lowGainDb = -24f,
         midGainDb = 6f,
-        highGainDb = -24f,
+        highGainDb = -30f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,
@@ -40,14 +44,14 @@ enum class AudioPreset(
     VINTAGE_SPEAKER(
         id = "vintage_speaker",
         // A small paper-cone enclosure keeps the vocal band (roughly
-        // 350 Hz–3 kHz) forward while rolling off the extremes.
-        lowCutHz = 120f,
-        midLowHz = 350f,
-        midHighHz = 3_000f,
-        highCutHz = 4_800f,
-        lowGainDb = -18f,
+        // 450 Hz–2.6 kHz) forward while rolling off the extremes.
+        lowCutHz = 180f,
+        midLowHz = 450f,
+        midHighHz = 2_600f,
+        highCutHz = 4_000f,
+        lowGainDb = -24f,
         midGainDb = 4f,
-        highGainDb = -20f,
+        highGainDb = -26f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,
@@ -55,13 +59,13 @@ enum class AudioPreset(
     ),
     WEAK_SIGNAL(
         id = "weak_signal",
-        lowCutHz = 320f,
-        midLowHz = 850f,
-        midHighHz = 1_150f,
-        highCutHz = 1_450f,
-        lowGainDb = -18f,
+        lowCutHz = 380f,
+        midLowHz = 900f,
+        midHighHz = 1_100f,
+        highCutHz = 1_350f,
+        lowGainDb = -24f,
         midGainDb = 4f,
-        highGainDb = -24f,
+        highGainDb = -30f,
         mbcRatio = 16f,
         mbcThresholdDb = -30f,
         mbcPostGainDb = 8f,
@@ -71,18 +75,36 @@ enum class AudioPreset(
         id = "saturation",
         // DynamicsProcessing has no wave-shaper. A moderate input push into
         // a strong MBC/limiter gives a safe, audible saturation approximation.
-        lowCutHz = 100f,
-        midLowHz = 300f,
-        midHighHz = 3_000f,
-        highCutHz = 7_000f,
-        lowGainDb = -8f,
+        lowCutHz = 180f,
+        midLowHz = 450f,
+        midHighHz = 2_400f,
+        highCutHz = 5_000f,
+        lowGainDb = -18f,
         midGainDb = 2f,
-        highGainDb = -8f,
+        highGainDb = -18f,
         mbcRatio = 20f,
         mbcThresholdDb = -18f,
         mbcPostGainDb = 4f,
         makeupGainDb = 4f,
         inputGainDb = 10f,
+    ),
+    FADING(
+        id = "fading",
+        // Keep the Narrow AM spectrum; the audible distinction is the
+        // slow input-gain movement that approximates reception fading.
+        lowCutHz = 300f,
+        midLowHz = 550f,
+        midHighHz = 2_200f,
+        highCutHz = 3_000f,
+        lowGainDb = -24f,
+        midGainDb = 6f,
+        highGainDb = -30f,
+        mbcRatio = 10f,
+        mbcThresholdDb = -24f,
+        mbcPostGainDb = 6f,
+        makeupGainDb = 8f,
+        fadeDepthDb = 3f,
+        fadePeriodMs = 3_200L,
     ),
     ;
 

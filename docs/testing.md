@@ -99,7 +99,8 @@ RAZIO で最も重要なテストです。
 - 高域が十分に落ちているか
 - 低域が十分に落ちているか
 - 声が前に出るか
-- Narrow AM が250 Hz以下／3.4 kHz以上を抑えた狭いAM放送風、Vintage speaker が350 Hz〜3 kHzのかまぼこ型として聞こえるか
+- Narrow AM が300 Hz以下／3.0 kHz以上を抑えた狭いAM放送風、Vintage speaker が450 Hz〜2.6 kHzのかまぼこ型として聞こえるか
+- 全プリセットで低域・高域のカットが十分に深く、Saturationでも端の音が残りすぎないか
 - OFF と比べて音量が過度に小さくならず、かつ不自然に大きくならないか
 - 長時間聞いて不快な歪みになっていないか
 - Saturation が他プリセットより明確に押し出され、過度なクリップや耳障りな歪みになっていないか
@@ -129,7 +130,7 @@ Phase 2 の実機 regression（変更したとき）:
 8. ON のままプリセットを切り替え、UI の選択状態・session 0 の EQ detail・聴感が切り替わること。切替中に `2 effects for session 0` が維持され、音量差が許容範囲であること
 9. Narrow AM → Vintage speaker → Weak signal → Saturation → Fading を短時間に連続選択し、旧プリセットへ瞬間的に戻る音色ジャンプや素通り区間がないこと
 
-2026-08-29 の最終プリセット調整では、Pixel 10 Pro（Android 17）/ SoundCore 2 / Spotify で上記 8・9 を実施し、ユーザー聴感も受入済み。Saturationの入力ゲイン・強い圧縮の聴感もユーザー確認済み。詳細な EQ 値・`dumpsys`・logcat は `docs/audio-research.md` に記録しています。
+2026-08-29 の初回プリセット調整では、Pixel 10 Pro（Android 17）/ SoundCore 2 / Spotify で上記 8・9 を実施し、ユーザー聴感も受入済み。Saturationの入力ゲイン・強い圧縮の聴感もユーザー確認済み。続く全プリセット両端カット再調整（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）も同じ実機でユーザー受入済み。詳細な EQ 値・`dumpsys`・logcat は `docs/audio-research.md` に記録しています。
 
 ### Hiss / Crackle AudioTrack overlay PoC（未実装）
 
@@ -142,6 +143,18 @@ Phase 2 の実機 regression（変更したとき）:
 3. RAZIO OFF、route切替、Home、画面OFF、対象アプリpauseでノイズが止まり、残留Runnable / AudioTrackがないこと
 4. `dumpsys media_session` / `dumpsys audio` / `dumpsys activity services dev.hondasports.razio` / `dumpsys media.audio_flinger` と `AudioHardening`・crash・ANRのfiltered logcatを保存
 5. 元音声を捕捉して再再生しないため、sourceの二重再生や捕捉許可によるアプリ差をPoCの合否から分離して記録
+
+### DynamicsProcessing 単体 A/B PoC（未実装）
+
+実施時期は、現行の全プリセット調整を実機聴感で受入れた直後、Hiss / Crackle の AudioTrack オーバーレイ実装へ進む前とする。既定経路を切り替えず、同じAPK内でA/Bを切り替えられる検証用設定として実施する。
+
+1. A（現行）の Equalizer + DynamicsProcessing（Pre-EQ flat）で、Spotifyを再生し本体スピーカー / SoundCore 2を確認
+2. B（候補）の DynamicsProcessing単体（Pre-EQ + MBC + Limiter、必要時のみPost-EQ）で同じ素材・同じ音量を確認
+3. Narrow AM / Vintage speaker / Weak signal / Saturation / Fadingを順に比較し、低域・高域のカット、声域の明瞭度、音量差、Compression / Limiterの副作用を記録
+4. ON / OFF、プリセット切替、route change、Home、画面OFF、force-stop後の復元を確認
+5. `dumpsys media.audio_flinger`、`dumpsys activity services dev.hondasports.razio`、`dumpsys audio`、filtered `logcat`でeffect数・FGS・route・crash/ANRを保存
+
+合否は、BがAより明確に有利で、Pixelの両出力先・Spotifyで安定し、音量低下・クリック・過度な歪みがないこと。差が小さい、または端末依存の失敗がある場合はAを既定として維持する。
 
 ## テスト不能時
 

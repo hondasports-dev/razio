@@ -187,6 +187,7 @@ private fun presetLabel(preset: AudioPreset): String {
         AudioPreset.VINTAGE_SPEAKER -> R.string.preset_vintage_speaker
         AudioPreset.WEAK_SIGNAL -> R.string.preset_weak_signal
         AudioPreset.SATURATION -> R.string.preset_saturation
+        AudioPreset.FADING -> R.string.preset_fading
     }
     return stringResource(resId)
 }
@@ -198,6 +199,7 @@ private fun presetDescription(preset: AudioPreset): String {
         AudioPreset.VINTAGE_SPEAKER -> R.string.preset_vintage_speaker_description
         AudioPreset.WEAK_SIGNAL -> R.string.preset_weak_signal_description
         AudioPreset.SATURATION -> R.string.preset_saturation_description
+        AudioPreset.FADING -> R.string.preset_fading_description
     }
     return stringResource(resId)
 }

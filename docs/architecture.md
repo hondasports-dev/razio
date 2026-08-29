@@ -122,10 +122,10 @@ Output
 
 | プリセット | 低域 | 中域 | 高域 | 狙い |
 | --- | --- | --- | --- | --- |
-| Narrow AM | 250 Hz 以下を -18 dB | 500〜2,400 Hz を +6 dB | 3.4 kHz 以上を -24 dB（2.4 kHzからロールオフ） | 狭いAMラジオ。MBC 10:1 / post +6 dB / makeup +8 dB |
-| Vintage speaker | 120 Hz 以下を -18 dB | 350〜3,000 Hz を +4 dB | 4.8 kHz 以上を -20 dB（3 kHzからロールオフ） | 70〜80年代ラジカセの紙コーン／箱鳴り風。MBC 10:1 / post +6 dB / makeup +8 dB |
-| Weak signal | 320 Hz 以下を -18 dB | 850〜1,150 Hz を +4 dB | 1.45 kHz 以上を -24 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
-| Saturation | 100 Hz 以下を -8 dB | 300〜3,000 Hz を +2 dB | 7 kHz 以上を -8 dB | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
+| Narrow AM | 300 Hz 以下を -24 dB | 550〜2,200 Hz を +6 dB | 3.0 kHz 以上を -30 dB（2.2 kHzからロールオフ） | 狭いAMラジオ。MBC 10:1 / post +6 dB / makeup +8 dB |
+| Vintage speaker | 180 Hz 以下を -24 dB | 450〜2,600 Hz を +4 dB | 4.0 kHz 以上を -26 dB（2.6 kHzからロールオフ） | 70〜80年代ラジカセの紙コーン／箱鳴り風。MBC 10:1 / post +6 dB / makeup +8 dB |
+| Weak signal | 380 Hz 以下を -24 dB | 900〜1,100 Hz を +4 dB | 1.35 kHz 以上を -30 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
+| Saturation | 180 Hz 以下を -18 dB | 450〜2,400 Hz を +2 dB | 5.0 kHz 以上を -18 dB（2.4 kHzからロールオフ） | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
 | Fading | Narrow AM と同じ | Narrow AM と同じ | Narrow AM と同じ | input gain を約±3 dB、3.2 秒周期でゆっくり変動させる受信揺らぎ |
 
 音質カーブは原則 Equalizer に一度だけ適用します。Equalizer が生成できない端末では、DynamicsProcessing の pre-EQ をフォールバックとして使い、同じカーブを二重適用しません。
@@ -141,6 +141,19 @@ DynamicsProcessing は null config の既定値をプリセット適用済みと
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
 
 Hiss / Crackle のような独立ノイズは、現在の global AudioEffect（Equalizer / DynamicsProcessing）だけでは生成・混合できません。AudioPlaybackCapture を使う代替案は MediaProjection の許可、capture policy、元音声との二重再生が発生し得るため、別途成立性を確認するまで保留します。
+
+### DynamicsProcessing 単体化の A/B PoC
+
+現行MVPは、実機で成立を確認できた `Equalizer + DynamicsProcessing` を既定経路として維持します。DynamicsProcessing には Pre-EQ / MBC / Post-EQ / Limiter があるため、EQも含めて1つの effect に収められる可能性があります。ただし、DynamicsProcessing の端末実装差と、現在の Equalizer 経路で得られた実機受入を同時に失わないよう、いきなり既定経路を置き換えません。
+
+PoCは、今回の全プリセット両端カット再調整をユーザー聴感で受入れた後、Hiss / Crackle の AudioTrack オーバーレイ実装へ着手する前に、1回の実機A/B検証として実施します。
+
+比較する経路:
+
+- A（現行）: Equalizer が音域カーブ、DynamicsProcessing は Pre-EQ flat + MBC + Limiter
+- B（候補）: Equalizerを生成せず、DynamicsProcessing の Pre-EQ（必要なら Post-EQ）+ MBC + Limiter で全カーブを処理
+
+Bが端末・出力先で安定し、Aより低域/高域のカット量と声域の明瞭度が良く、音量差・クリック・歪みが許容範囲なら、対応端末だけBを優先する候補にします。Bが失敗または聴感で劣る場合はAを維持し、Equalizerが使えない端末だけ既存のDynamicsProcessing Pre-EQフォールバックを使います。詳細な実施条件は `docs/audio-research.md`、チェック手順は `docs/testing.md` に記録します。
 
 2026-08-29: Pixel 10 Pro / Android 17 で YouTube・音楽アプリ・Chrome がスピーカーと Bluetooth に乗った。この端末では Global AudioEffect（session 0）を MVP とする。詳細は `docs/audio-research.md`。
 
