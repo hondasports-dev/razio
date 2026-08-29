@@ -48,6 +48,19 @@ class AudioPresetTest {
     }
 
     @Test
+    fun saturation_pushesInputIntoStrongCompression() {
+        val preset = AudioPreset.SATURATION
+
+        assertEquals(-8f, preset.gainDbForCenterHz(100f), 0.01f)
+        assertEquals(2f, preset.gainDbForCenterHz(300f), 0.01f)
+        assertEquals(-8f, preset.gainDbForCenterHz(7_000f), 0.01f)
+        assertEquals(10f, preset.inputGainDb, 0.01f)
+        assertEquals(20f, preset.mbcRatio, 0.01f)
+        assertEquals(-18f, preset.mbcThresholdDb, 0.01f)
+        assertEquals(8f, preset.effectiveMbcPostGainDb, 0.01f)
+    }
+
+    @Test
     fun millibels_clampsEachPresetToTheDeviceRange() {
         val value = AudioPreset.VINTAGE_SPEAKER.millibels(100f, -600, 600)
 

@@ -113,10 +113,12 @@ Output
 | Narrow AM | 250 Hz 以下を -18 dB | 500〜2,400 Hz を +6 dB | 3.4 kHz 以上を -24 dB（2.4 kHzからロールオフ） | 狭いAMラジオ。MBC 10:1 / post +6 dB / makeup +8 dB |
 | Vintage speaker | 120 Hz 以下を -18 dB | 350〜3,000 Hz を +4 dB | 4.8 kHz 以上を -20 dB（3 kHzからロールオフ） | 70〜80年代ラジカセの紙コーン／箱鳴り風。MBC 10:1 / post +6 dB / makeup +8 dB |
 | Weak signal | 320 Hz 以下を -18 dB | 850〜1,150 Hz を +4 dB | 1.45 kHz 以上を -24 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
+| Saturation | 100 Hz 以下を -8 dB | 300〜3,000 Hz を +2 dB | 7 kHz 以上を -8 dB | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
 
 音質カーブは原則 Equalizer に一度だけ適用します。Equalizer が生成できない端末では、DynamicsProcessing の pre-EQ をフォールバックとして使い、同じカーブを二重適用しません。
 - ダイナミックレンジを狭くする（Narrow / Vintage は MBC ratio 10:1、threshold -24 dB。Weak signal は 16:1、threshold -30 dB）
 - MBC 後段にプリセットごとの post / makeup gain を加え、EQ と圧縮による過度な音量低下を抑えます。最終ピークは limiter（-1 dB）で制限します。
+- Saturation だけは DynamicsProcessing の input gain を +10 dB にし、強い MBC（20:1）へ入力を押し込みます。Android AudioEffect に汎用 wave-shaper はないため、倍音を含む物理的な飽和とは区別して扱います。
 
 プリセット変更は既存の Equalizer / DynamicsProcessing を release せず、約 80 ms の補間でパラメータを更新します。切替中の再タップは、その時点の補間値を次の遷移の開始値にします。effect が壊れて更新できない場合だけ、従来通り再生成へ戻します。
 

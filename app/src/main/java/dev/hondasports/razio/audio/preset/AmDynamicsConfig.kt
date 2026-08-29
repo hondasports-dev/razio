@@ -30,6 +30,7 @@ internal object AmDynamicsConfig {
             0,
             true,
         )
+            .setInputGainAllChannelsTo(parameters.inputGainDb)
             .setPreEqAllChannelsTo(preEq)
             .setMbcAllChannelsTo(mbc)
             .setLimiterAllChannelsTo(limiter)
@@ -66,6 +67,9 @@ internal object AmDynamicsConfig {
         usePreEqCurve: Boolean,
     ) {
         val t = progress.coerceIn(0f, 1f)
+        dynamics.setInputGainAllChannelsTo(
+            lerp(from.inputGainDb, to.inputGainDb, t),
+        )
         val config = dynamics.config
         val preEqBandCount = config.preEqBandCount.coerceAtMost(preEqCutoffsHz.size)
         for (index in 0 until preEqBandCount) {

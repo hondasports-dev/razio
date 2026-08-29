@@ -7,9 +7,11 @@
     <string name="preset_narrow_am">Narrow AM</string>
     <string name="preset_vintage_speaker">Vintage speaker</string>
     <string name="preset_weak_signal">Weak signal</string>
+    <string name="preset_saturation">Saturation</string>
     <string name="preset_narrow_am_description">狭いAMラジオ風。250Hz以下と3.4kHz以上を強く抑え、500Hz〜2.4kHzを前に出します。</string>
     <string name="preset_vintage_speaker_description">70〜80年代ラジカセ風。低域を抑えつつ4.8kHzから丸め、350Hz〜3kHzを残します。</string>
     <string name="preset_weak_signal_description">弱い受信風。高域をさらに抑え、中域と音量を補いながら強く圧縮します。</string>
+    <string name="preset_saturation_description">入力を少し押し込み、強い圧縮とリミッターで熱いラジオ音を近似します。波形歪みは端末依存です。</string>
     <string name="equalizer_label">Equalizer: %1$s</string>
     <string name="dynamics_label">DynamicsProcessing: %1$s</string>
     <string name="poc_keep_alive_hint">ON のあいだ通知が出ます。これでバックグラウンドでも effect を維持します。ON は次回起動時にも復元します。</string>

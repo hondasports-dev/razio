@@ -19,6 +19,7 @@ enum class AudioPreset(
     val mbcThresholdDb: Float,
     val mbcPostGainDb: Float,
     val makeupGainDb: Float,
+    val inputGainDb: Float = 0f,
 ) {
     NARROW_AM(
         id = "narrow_am",
@@ -65,6 +66,23 @@ enum class AudioPreset(
         mbcThresholdDb = -30f,
         mbcPostGainDb = 8f,
         makeupGainDb = 10f,
+    ),
+    SATURATION(
+        id = "saturation",
+        // DynamicsProcessing has no wave-shaper. A moderate input push into
+        // a strong MBC/limiter gives a safe, audible saturation approximation.
+        lowCutHz = 100f,
+        midLowHz = 300f,
+        midHighHz = 3_000f,
+        highCutHz = 7_000f,
+        lowGainDb = -8f,
+        midGainDb = 2f,
+        highGainDb = -8f,
+        mbcRatio = 20f,
+        mbcThresholdDb = -18f,
+        mbcPostGainDb = 4f,
+        makeupGainDb = 4f,
+        inputGainDb = 10f,
     ),
     ;
 
@@ -127,6 +145,7 @@ enum class AudioPreset(
             mbcRatio = mbcRatio,
             mbcThresholdDb = mbcThresholdDb,
             effectiveMbcPostGainDb = effectiveMbcPostGainDb,
+            inputGainDb = inputGainDb,
         )
     }
 }
@@ -148,6 +167,7 @@ internal data class AudioPresetParameters(
     val mbcRatio: Float,
     val mbcThresholdDb: Float,
     val effectiveMbcPostGainDb: Float,
+    val inputGainDb: Float,
 ) {
     fun gainDbForCenterHz(centerHz: Float): Float {
         val hz = centerHz.coerceAtLeast(1f)
@@ -182,6 +202,7 @@ internal data class AudioPresetParameters(
                     to.effectiveMbcPostGainDb,
                     t,
                 ),
+                inputGainDb = lerp(from.inputGainDb, to.inputGainDb, t),
             )
         }
 

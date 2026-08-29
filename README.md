@@ -32,6 +32,8 @@ RAZIO は、YouTube、音楽アプリ、ゲーム、ブラウザなどの再生�
 - Compression
 - Limiter
 
+`Saturation` は、入力ゲインを少し上げて強い Compression / Limiterへ押し込み、公開AudioEffectだけで可能な範囲の飽和感を近似します。波形シェーパーによる倍音歪みは対象外です。
+
 `Vintage speaker` では、70〜80年代ラジカセを想定して 120 Hz 未満を抑え、
 4.8 kHz から高域を丸めつつ 350 Hz〜3 kHz をかまぼこ型に残します。
 

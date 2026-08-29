@@ -75,14 +75,14 @@ RAZIO で最も重要なテストです。
 | Android | 対象 OS version |
 | Target app | YouTube / music / Chrome |
 | Output | Speaker / Bluetooth / USB |
-| Preset | Narrow AM / Vintage speaker / Weak signal |
+| Preset | Narrow AM / Vintage speaker / Weak signal / Saturation |
 | RAZIO | ON / OFF |
 
 ### 必須確認
 
 - effect 初期化が成功する
 - ON / OFF に明確な差がある
-- Narrow AM / Vintage speaker / Weak signal の切替で音の傾向が変わり、選択状態が表示される
+- Narrow AM / Vintage speaker / Weak signal / Saturation の切替で音の傾向が変わり、選択状態が表示される
 - プリセット切替中も session `0` の effect が外れず、音が素通りする区間がない
 - 対象アプリ切り替え後も動作する
 - 音声 route 変更後の状態
@@ -102,6 +102,7 @@ RAZIO で最も重要なテストです。
 - Narrow AM が250 Hz以下／3.4 kHz以上を抑えた狭いAM放送風、Vintage speaker が350 Hz〜3 kHzのかまぼこ型として聞こえるか
 - OFF と比べて音量が過度に小さくならず、かつ不自然に大きくならないか
 - 長時間聞いて不快な歪みになっていないか
+- Saturation が他プリセットより明確に押し出され、過度なクリップや耳障りな歪みになっていないか
 
 ## Regression
 
@@ -125,9 +126,9 @@ Phase 2 の実機 regression（変更したとき）:
 6. OFF にして通知が消え、force-stop → 起動し、OFF のまま
 7. ON のまま Bluetooth 接続 / 切断し、効果が残るか（Pixel 10 Pro で確認済み。`audio devices removed/added`、`route change wantOn=true`、EQ / Dynamics `actual=true`、再接続後 session 0 の 2 effects）
 8. ON のままプリセットを切り替え、UI の選択状態・session 0 の EQ detail・聴感が切り替わること。切替中に `2 effects for session 0` が維持され、音量差が許容範囲であること
-9. Narrow AM → Vintage speaker → Weak signal を短時間に連続選択し、旧プリセットへ瞬間的に戻る音色ジャンプや素通り区間がないこと
+9. Narrow AM → Vintage speaker → Weak signal → Saturation を短時間に連続選択し、旧プリセットへ瞬間的に戻る音色ジャンプや素通り区間がないこと
 
-2026-08-29 の最終プリセット調整では、Pixel 10 Pro（Android 17）/ SoundCore 2 / Spotify で上記 8・9 を実施し、ユーザー聴感も受入済み。詳細な EQ 値・`dumpsys`・logcat は `docs/audio-research.md` に記録しています。
+2026-08-29 の最終プリセット調整では、Pixel 10 Pro（Android 17）/ SoundCore 2 / Spotify で上記 8・9 を実施し、ユーザー聴感も受入済み。Saturationの入力ゲイン・強い圧縮の聴感もユーザー確認済み。詳細な EQ 値・`dumpsys`・logcat は `docs/audio-research.md` に記録しています。
 
 ## テスト不能時
 

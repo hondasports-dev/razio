@@ -353,6 +353,15 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - User feedback: Narrow AM と Distant radio の差が聴き分けにくく、Distant radio は不要
 - Decision: Distant radio はプリセット候補・UIから外し、次の音作りは Saturation へ進む
 
+### 2026-08-29 / Saturation first pass
+
+- Scope: Global AudioEffect の既存 EQ / DynamicsProcessing / limiter を使い、入力ゲインを強い MBC に押し込む飽和近似。Android公開AudioEffectに汎用wave-shaperはないため、倍音を含む物理的なサチュレーションは保証しない
+- Saturation: 100 Hz 以下を -8 dB、300〜3 kHz を +2 dB、7 kHz 以上を -8 dB。input gain +10 dB、MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB（effective +8 dB）、limiter -1 dB
+- 実機: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、SoundCore 2（Bluetooth A2DP）、Spotify `PlaybackState=PLAYING`
+- UI detail: `状態: Active`、Equalizer は `session=0 preset=saturation bands=5 60Hz:-800mB 230Hz:-150mB 910Hz:200mB 3600Hz:50mB 14000Hz:-800mB`、DynamicsProcessing は `channels=2 preset=saturation preEq=flat inputGain=10.0dB mbcPost=8.0dB`
+- 4プリセットの連続切替（約20 ms間隔）後も session `0` の `EqualizerBundle` + `DynamicsProcessing` の2 effectsを維持し、`RazioAudioService` は foreground。直近 logcat にアプリのクラッシュ／AudioEffect例外なし
+- 実機聴感: **ユーザー確認済み（「おｋ」）。Saturationの押し出しと音量を受入**
+
 ## 判断基準
 
 ### Green

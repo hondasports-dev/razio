@@ -456,6 +456,7 @@ class GlobalAudioEffectController(
     ): String {
         return "session=$sessionId channels=${dynamics.channelCount} " +
             "preset=${selectedPreset.id} preEq=${if (usePreEqCurve) "curve" else "flat"} " +
+            "inputGain=${selectedPreset.inputGainDb}dB " +
             "mbcPost=${selectedPreset.effectiveMbcPostGainDb}dB"
     }
 
