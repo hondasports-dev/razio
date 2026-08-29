@@ -32,12 +32,13 @@ import dev.hondasports.razio.theme.RazioTheme
 @Composable
 fun RazioHomeRoute(
     controller: GlobalAudioEffectController,
+    onPowerChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
     RazioHomeScreen(
         state = state,
-        onPowerChange = controller::setEnabled,
+        onPowerChange = onPowerChange,
         modifier = modifier,
     )
 }

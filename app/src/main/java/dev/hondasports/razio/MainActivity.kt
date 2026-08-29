@@ -15,14 +15,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val controller = (application as RazioApp).audioEffects
+        val app = application as RazioApp
         setContent {
             RazioTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    RazioHomeRoute(controller = controller)
+                    RazioHomeRoute(
+                        controller = app.audioEffects,
+                        onPowerChange = app::setPowerOn,
+                    )
                 }
             }
         }

@@ -111,6 +111,13 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 まで実施します。
 
+Phase 2 の実機 regression（変更したとき）:
+
+1. RAZIO を ON にして YouTube で効果を確認
+2. `adb shell am force-stop dev.hondasports.razio` のあと起動し、ON が復元されて effect が付く
+3. OFF にして force-stop → 起動し、OFF のまま
+4. ON のまま Bluetooth 接続 / 切断し、効果が残るか（logcat `route change`）
+
 ## テスト不能時
 
 実機テストが必要なのに端末が接続されていない場合、テスト済みとは扱いません。commit して完了にもしません。

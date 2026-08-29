@@ -44,7 +44,7 @@ app/
 └─ MainActivity
 ```
 
-PoC では `GlobalAudioEffectController` を `Application` に保持する。Foreground Service はまだ入れない。プロセスが死ぬと session 0 の effect も消える。
+PoC では `GlobalAudioEffectController` を `Application` に保持する。Foreground Service はまだ入れない。プロセスが死ぬと session 0 の effect も消えるが、ON なら次回起動時に付け直す。出力先の増減では preset を付け直し、effect が死んでいれば作り直す。
 
 ## AudioEffectController
 
@@ -162,13 +162,13 @@ AudioPlaybackCapture
 
 MVP では複雑な DB は不要です。
 
-保存候補:
+保存:
 
-- RAZIO の ON/OFF
-- 選択中プリセット
-- 設定値
+- RAZIO の ON/OFF（DataStore Preferences）
 
-DataStore Preferences または DataStore Proto を使用し、Room は必要性が出るまで導入しません。
+選択中プリセットは現状 Normal AM 固定。Room は必要性が出るまで導入しません。
+
+起動時に保存済み ON なら `initialize` のあと `setEnabled(true)` する。UI のスイッチは `RazioApp.setPowerOn` 経由で effect と prefs を同時に更新する。
 
 ## 依存関係方針
 

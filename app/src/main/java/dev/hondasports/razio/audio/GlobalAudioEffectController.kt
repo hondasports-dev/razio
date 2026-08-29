@@ -55,6 +55,20 @@ class GlobalAudioEffectController(
         )
     }
 
+    fun handleRouteChange() {
+        val wantOn = _state.value.powerOn
+        AudioEffectLog.i("route change wantOn=$wantOn")
+        if (!wantOn) return
+        if (!enginesHealthy()) {
+            AudioEffectLog.i("route change recreate")
+            initialize()
+            setEnabled(true)
+            return
+        }
+        equalizer?.let(::applyEqualizerPreset)
+        setEnabled(true)
+    }
+
     fun release() {
         releaseEngines()
         attempted = false
@@ -102,6 +116,17 @@ class GlobalAudioEffectController(
             lastError = throwable
             AudioEffectLog.e("dynamics default create failed session=$sessionId", throwable)
             classify(lastError)
+        }
+    }
+
+    private fun enginesHealthy(): Boolean {
+        return try {
+            equalizer?.enabled
+            dynamics?.enabled
+            equalizer != null || dynamics != null
+        } catch (throwable: Throwable) {
+            AudioEffectLog.e("engine health check failed", throwable)
+            false
         }
     }
 

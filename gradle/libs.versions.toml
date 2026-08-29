@@ -3,6 +3,8 @@ androidGradlePlugin = "9.1.1"
 androidxCore = "1.19.0"
 androidxActivity = "1.13.0"
 androidxComposeBom = "2026.06.01"
+androidxDatastore = "1.1.7"
+kotlinxCoroutines = "1.10.2"
 junit = "4.13.2"
 kotlin = "2.4.10"
 
@@ -14,6 +16,8 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
