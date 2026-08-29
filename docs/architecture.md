@@ -112,6 +112,8 @@ Output
 
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
 
+2026-08-29: Pixel 10 Pro / Android 17 で YouTube・音楽アプリ・Chrome がスピーカーと Bluetooth に乗った。この端末では Global AudioEffect（session 0）を MVP とする。詳細は `docs/audio-research.md`。
+
 ## Phase 2 の代替アーキテクチャ
 
 Global AudioEffect が成立しない場合だけ AudioPlaybackCapture を検討します。

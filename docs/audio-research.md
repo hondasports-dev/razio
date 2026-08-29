@@ -192,7 +192,17 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Enable: **success**
 - Audible effect: **yes**（ユーザー。YouTube + Bluetooth）
 - logcat: `equalizer create ok session=0 bands=5 60Hz:-1500mB 230Hz:-1500mB 910Hz:347mB 3600Hz:-1500mB 14000Hz:-1500mB` / `setEnabled actual=true`
-- Conclusion: YouTube の他アプリ再生に session 0 が乗ることを確認。PoC の「主要メディアアプリ 1 つ以上」は満たした。スピーカー / 音楽アプリ / Chrome は未切り分け。Global AudioEffect を MVP 候補として継続。
+- Conclusion: YouTube の他アプリ再生に session 0 が乗ることを確認。PoC の「主要メディアアプリ 1 つ以上」は満たした。
+
+### 2026-08-29 / Pixel 10 Pro / remaining Phase 1 matrix
+
+- Device: Pixel 10 Pro (`blazer`)
+- Android: 17
+- Output: **本体スピーカー** と **Bluetooth イヤホン**
+- Target app: **YouTube** / **音楽アプリ**（名前未記録） / **Chrome**
+- Effect: session 0 Equalizer + DynamicsProcessing（暗い AM カーブ）
+- Audible effect: **yes**（ユーザー。4 アプリ系統 × スピーカー / BT）
+- Conclusion: この端末では主要アプリと主要出力先で global AudioEffect が成立。Phase 1 を **Green** とし、AudioPlaybackCapture へは進まない。他端末は未検証。
 
 ## 判断基準
 

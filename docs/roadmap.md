@@ -36,17 +36,17 @@
 
 実機確認:
 
-- [x] YouTube（Pixel 10 Pro、Bluetooth。効果あり）
-- [ ] 音楽アプリ
-- [ ] Chrome
-- [ ] 本体スピーカー
+- [x] YouTube（Pixel 10 Pro。効果あり）
+- [x] 音楽アプリ（Pixel 10 Pro。アプリ名未記録）
+- [x] Chrome（Pixel 10 Pro）
+- [x] 本体スピーカー（Pixel 10 Pro）
 - [x] Bluetooth（Pixel 10 Pro。イヤホン機種未記録）
 
-2026-08-29: YouTube + Bluetooth で他アプリへ効果あり。スピーカーは未試聴。記録は `docs/audio-research.md`。
+2026-08-29 Pixel 10 Pro / Android 17: YouTube / 音楽アプリ / Chrome がスピーカーと Bluetooth で効果あり。記録は `docs/audio-research.md`。この端末では Phase 1 を **Green** とし、Global AudioEffect を MVP とする。
 
 判断:
 
-### Green
+### Green（この端末）
 
 主要ケースで global effect が成立する。
 
