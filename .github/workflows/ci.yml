@@ -17,5 +17,7 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install compileSdk platform
         run: sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
       - name: Unit test, lint, assembleDebug
         run: ./gradlew test lint assembleDebug --stacktrace
