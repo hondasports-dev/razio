@@ -119,7 +119,7 @@ Phase 2 の実機 regression（変更したとき）:
 4. 画面 OFF にして約 90 秒放置し、FGS・session 0・聴感が残ること（Pixel 10 Pro で確認済み）
 5. `adb shell am force-stop dev.hondasports.razio` のあと起動し、ON が復元されて effect と FGS が付く
 6. OFF にして通知が消え、force-stop → 起動し、OFF のまま
-7. ON のまま Bluetooth 接続 / 切断し、効果が残るか（logcat `route change`）
+7. ON のまま Bluetooth 接続 / 切断し、効果が残るか（Pixel 10 Pro で確認済み。`audio devices removed/added`、`route change wantOn=true`、EQ / Dynamics `actual=true`、再接続後 session 0 の 2 effects）
 
 ## テスト不能時
 

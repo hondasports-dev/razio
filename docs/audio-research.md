@@ -250,6 +250,33 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
   5. 画面 OFF のまま他アプリを再生して聴く
 - Conclusion: この端末では画面 OFF でも FGS・session 0 effect・聴感が残る。
 
+### 2026-08-29 / Pixel 10 Pro / Bluetooth route reconnect
+
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
+- Android: 17
+- Build: `CP2A.260805.005`
+- Output: **Pixel Buds Pro 2**（Bluetooth A2DP）
+- Target app: **Spotify**（route 切断前に再生。切断時は OS が一時停止）
+- RAZIO: ON。UI `Active`、FGS は同じ pid `27462`
+- Disconnect: `cmd bluetooth_manager disable` 後 `bluetooth_on=0`、`BLE_ON`、接続台数 0
+- Reconnect: `cmd bluetooth_manager enable` 後 `bluetooth_on=1`、A2DP `STATE_CONNECTED`、接続台数 1
+- Route callback / reapply logcat (`RAZIO/AudioEffect`):
+  - `audio devices removed count=1`
+  - `route change wantOn=true`
+  - `equalizer setEnabled requested=true actual=true`
+  - `dynamics setEnabled requested=true actual=true`
+  - `audio devices added count=2` / `audio devices added count=1`
+  - 各追加イベントでも `route change wantOn=true` と EQ / Dynamics の `actual=true`
+- session 0 after reconnect: **success**（`2 effects for session 0`、EqualizerBundle + DynamicsProcessing、Enabled `y`、client pid `27462`）
+- Audible effect: Bluetooth 出力の同じ AM カーブは直前のユーザー試聴で **yes**。今回の切断直後は Spotify が一時停止したため、再接続後の聴感は同じ状態でユーザー確認可能
+- Reproduction steps:
+  1. RAZIO を ON、Bluetooth A2DP 接続、他アプリ音声を再生
+  2. Bluetooth adapter を OFF にして `bluetooth_on=0` / 接続台数 0 を確認
+  3. `audio devices removed` と `route change`、`actual=true` を確認
+  4. Bluetooth adapter を ON にして A2DP が再接続するまで待つ
+  5. `audio devices added` と `route change`、`actual=true`、session 0 の 2 effects を確認
+- Conclusion: この端末では Bluetooth route の切断・再接続で callback が発火し、session 0 effect が ON のまま再適用される。イヤホン再接続後も FGS と effect chain は維持された。
+
 ## 判断基準
 
 ### Green
