@@ -109,9 +109,9 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Vintage speaker（70〜80年代ラジカセのかまぼこ型へ再調整。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] Weak signal（高域カットと音量補正を追加。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] Saturation（入力ゲイン＋強いMBCによる飽和近似。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
-- [ ] Hiss
-- [ ] Crackle
-- [ ] Fading
+- [ ] Hiss（現行 global AudioEffect では独立ノイズ生成不可。AudioPlaybackCapture 検討待ち）
+- [ ] Crackle（現行 global AudioEffect では独立ノイズ生成不可。AudioPlaybackCapture 検討待ち）
+- [ ] Fading（DynamicsProcessing の input gain をゆっくり変動。実機聴感確認待ち）
 - [ ] Mono 感の強化
 
 AudioEffect API だけで困難な項目は backend の制約を確認してから実装します。
@@ -121,7 +121,7 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 - [ ] レトロラジオ風デザイン
 - [ ] tuning dial の表現
 - [ ] signal meter
-- [x] preset UI（Narrow AM / Vintage speaker / Weak signal）
+- [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）
 - [ ] dark / light 方針
 - [ ] icon / branding
 

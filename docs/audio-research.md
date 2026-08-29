@@ -362,6 +362,13 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - 4プリセットの連続切替（約20 ms間隔）後も session `0` の `EqualizerBundle` + `DynamicsProcessing` の2 effectsを維持し、`RazioAudioService` は foreground。直近 logcat にアプリのクラッシュ／AudioEffect例外なし
 - 実機聴感: **ユーザー確認済み（「おｋ」）。Saturationの押し出しと音量を受入**
 
+### 2026-08-29 / Hiss and Crackle backend constraint
+
+- Hiss / Crackle は、入力音声に存在しないノイズ信号を生成して元音声へ混合する必要がある
+- 現行の global AudioEffect は session `0` の既存ミックスへ Equalizer / DynamicsProcessing を挿入するだけで、独立した AudioTrack や wave-shaper を安全に追加する API ではない
+- AudioPlaybackCapture なら custom DSP でノイズを生成できる可能性はあるが、MediaProjection のユーザー許可、アプリごとの capture policy、元音声を確実に抑制できないことによる二重再生・遅延がある
+- Decision: 現行 backend では Hiss / Crackle を実装せず保留。AudioPlaybackCapture を再検討する場合は、まず capture 可否・二重再生・遅延を別 PoC として測定する
+
 ## 判断基準
 
 ### Green

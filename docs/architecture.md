@@ -114,17 +114,21 @@ Output
 | Vintage speaker | 120 Hz 以下を -18 dB | 350〜3,000 Hz を +4 dB | 4.8 kHz 以上を -20 dB（3 kHzからロールオフ） | 70〜80年代ラジカセの紙コーン／箱鳴り風。MBC 10:1 / post +6 dB / makeup +8 dB |
 | Weak signal | 320 Hz 以下を -18 dB | 850〜1,150 Hz を +4 dB | 1.45 kHz 以上を -24 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
 | Saturation | 100 Hz 以下を -8 dB | 300〜3,000 Hz を +2 dB | 7 kHz 以上を -8 dB | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
+| Fading | Narrow AM と同じ | Narrow AM と同じ | Narrow AM と同じ | input gain を約±3 dB、3.2 秒周期でゆっくり変動させる受信揺らぎ |
 
 音質カーブは原則 Equalizer に一度だけ適用します。Equalizer が生成できない端末では、DynamicsProcessing の pre-EQ をフォールバックとして使い、同じカーブを二重適用しません。
 - ダイナミックレンジを狭くする（Narrow / Vintage は MBC ratio 10:1、threshold -24 dB。Weak signal は 16:1、threshold -30 dB）
 - MBC 後段にプリセットごとの post / makeup gain を加え、EQ と圧縮による過度な音量低下を抑えます。最終ピークは limiter（-1 dB）で制限します。
 - Saturation だけは DynamicsProcessing の input gain を +10 dB にし、強い MBC（20:1）へ入力を押し込みます。Android AudioEffect に汎用 wave-shaper はないため、倍音を含む物理的な飽和とは区別して扱います。
+- Fading は独立したノイズ信号を生成せず、DynamicsProcessing の input gain を Handler で約 100 ms ごとに更新します。プリセット切替・OFF・route change・release では更新 Runnable を必ずキャンセルし、effect chain を解放した後に古い更新が走らないようにします。
 
 プリセット変更は既存の Equalizer / DynamicsProcessing を release せず、約 80 ms の補間でパラメータを更新します。切替中の再タップは、その時点の補間値を次の遷移の開始値にします。effect が壊れて更新できない場合だけ、従来通り再生成へ戻します。
 
 DynamicsProcessing は null config の既定値をプリセット適用済みとして扱いません。まず端末の実チャンネル数を probe して RAZIO の Config を作成し、対応する Config を作れない場合は `Failed` / `Unsupported` として表示します。これにより、既定値の未設定 band が残ったまま成功扱いになることを防ぎます。
 
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
+
+Hiss / Crackle のような独立ノイズは、現在の global AudioEffect（Equalizer / DynamicsProcessing）だけでは生成・混合できません。AudioPlaybackCapture を使う代替案は MediaProjection の許可、capture policy、元音声との二重再生を伴うため、別途成立性を確認するまで保留します。
 
 2026-08-29: Pixel 10 Pro / Android 17 で YouTube・音楽アプリ・Chrome がスピーカーと Bluetooth に乗った。この端末では Global AudioEffect（session 0）を MVP とする。詳細は `docs/audio-research.md`。
 

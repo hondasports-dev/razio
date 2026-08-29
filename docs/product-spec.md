@@ -59,6 +59,7 @@ UI は昔のポケットラジオを想起させる方向を候補とします�
 - Weak Signal
 - Vintage Speaker
 - Saturation
+- Fading
 - Shortwave-like
 
 ## 成功条件
