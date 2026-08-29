@@ -366,8 +366,29 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 
 - Hiss / Crackle は、入力音声に存在しないノイズ信号を生成して元音声へ混合する必要がある
 - 現行の global AudioEffect は session `0` の既存ミックスへ Equalizer / DynamicsProcessing を挿入するだけで、独立した AudioTrack や wave-shaper を安全に追加する API ではない
-- AudioPlaybackCapture なら custom DSP でノイズを生成できる可能性はあるが、MediaProjection のユーザー許可、アプリごとの capture policy、元音声を確実に抑制できないことによる二重再生・遅延がある
+- AudioPlaybackCapture なら custom DSP でノイズを生成できる可能性はあるが、MediaProjection のユーザー許可、アプリごとの capture policy、元音声を確実に抑制できないことによる二重再生・遅延が発生し得る
 - Decision: 現行 backend では Hiss / Crackle を実装せず保留。AudioPlaybackCapture を再検討する場合は、まず capture 可否・二重再生・遅延を別 PoC として測定する
+
+### 2026-08-29 / Hiss and Crackle AudioTrack overlay PoC plan
+
+- Goal: 他アプリの音声を捕捉・再生し直さず、RAZIO が生成したノイズだけを別 `AudioTrack` で同時再生し、Android の system mix で聴感上重ねられるかを確認する
+- Initial playback contract: `AudioAttributes.USAGE_MEDIA` + `CONTENT_TYPE_UNKNOWN`、AudioFocus は要求しない。`USAGE_ASSISTANCE_ACCESSIBILITY` を通常アプリの回避策として使わない
+- Background: PoC は RAZIO の画面を表示した状態で開始し、既存の `RazioAudioService` を foreground にしたまま Home / 画面 OFF へ移る。Android 17 の background audio hardening による無音化がないかも確認する
+- Target apps: YouTube / Spotify / radiko（再生許可・capture policyの影響を受けないため、まずは同時再生そのものを確認）
+- Outputs: Pixel 10 Pro 本体スピーカー / SoundCore 2 Bluetooth A2DP
+- ON/OFF: ノイズ開始、RAZIO OFFで即停止、再ONで再開。route切替・アプリを背景へ移した後も停止処理が残らないことを確認する
+- Acceptance: (1) 対象アプリがpause/意図しないduckを起こさない、(2) ノイズが聞こえる、(3) start/stopにクリック・残留音がない、(4) 元音声を捕捉して再生しないためsourceの二重再生がない、(5) `AudioHardening` / crash / ANRログがない
+- Evidence: `dumpsys media_session`（対象アプリがPLAYING）、`dumpsys audio`（出力route）、`dumpsys activity services dev.hondasports.razio`（FGS）、`dumpsys media.audio_flinger`（AudioTrackの出力）、filtered `logcat`（`AudioHardening|FATAL EXCEPTION|ANR|RAZIO/AudioEffect`）を同じ試行で保存する
+- Out of scope: AudioPlaybackCapture、元音声のミュート／差し替え、アプリごとの音量追従、DRM/capture policy回避、Hiss/Crackleの物理モデル再現
+- Status: **PoC実装・実機測定待ち**。global AudioEffect のHiss/Crackle非対応という判断は維持し、PoCが通った場合だけ「独立ノイズオーバーレイ」として別backend候補に昇格する
+
+### 2026-08-29 / Fading first pass
+
+- Scope: Hiss / Crackle のような独立ノイズを追加せず、global AudioEffect の DynamicsProcessing input gain だけを周期変動させる
+- Fading: Narrow AM と同じ EQ / MBC（input gain 0 dB）を維持し、input gain を ±3 dB、3.2 秒周期、100 ms tick で更新する
+- Lifecycle: プリセット遷移完了後に変調を開始し、別プリセットへの切替・OFF・route change・release で Runnable をキャンセルする。更新失敗時も変調を停止し、既存の effect failure path に任せる
+- Unit: `AudioPreset.FADING` の帯域、変調深度、周期を確認済み
+- 実機: **ビルド・インストール後の Pixel 10 Pro / SoundCore 2 / Spotify 聴感確認待ち**
 
 ## 判断基準
 

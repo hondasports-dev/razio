@@ -47,6 +47,18 @@ app/
 
 `GlobalAudioEffectController` は `Application` に保持する。ON のあいだ `RazioAudioService`（foregroundServiceType=`specialUse`）を起動し、プロセスが殺されにくくする。FGS は自前メディア再生ではないので `mediaPlayback` は使わない。プロセスが死んだ場合は ON なら次回起動時に effect と FGS を付け直す。出力先の増減では preset を付け直し、effect が死んでいれば作り直す。
 
+### Hiss / Crackle の独立ノイズオーバーレイ PoC
+
+Hiss / Crackle を試す場合は、元音声を `AudioPlaybackCapture` で取り込んで再再生するのではなく、RAZIO が生成したノイズだけを `AudioTrack` へ書き込み、Android の system mix に同時参加させる別経路を検証します。
+
+```text
+Other app playback ───────────────┐
+                                  ├─ Android system mix ── Speaker / BT / USB
+RAZIO generated noise → AudioTrack ┘
+```
+
+この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
+
 FGS の `startForeground` 失敗は logcat に出して隠さない。通知許可がなくても effect の enable は進める。
 
 ## AudioEffectController
@@ -128,7 +140,7 @@ DynamicsProcessing は null config の既定値をプリセット適用済みと
 
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
 
-Hiss / Crackle のような独立ノイズは、現在の global AudioEffect（Equalizer / DynamicsProcessing）だけでは生成・混合できません。AudioPlaybackCapture を使う代替案は MediaProjection の許可、capture policy、元音声との二重再生を伴うため、別途成立性を確認するまで保留します。
+Hiss / Crackle のような独立ノイズは、現在の global AudioEffect（Equalizer / DynamicsProcessing）だけでは生成・混合できません。AudioPlaybackCapture を使う代替案は MediaProjection の許可、capture policy、元音声との二重再生が発生し得るため、別途成立性を確認するまで保留します。
 
 2026-08-29: Pixel 10 Pro / Android 17 で YouTube・音楽アプリ・Chrome がスピーカーと Bluetooth に乗った。この端末では Global AudioEffect（session 0）を MVP とする。詳細は `docs/audio-research.md`。
 

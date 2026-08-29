@@ -109,8 +109,8 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Vintage speaker（70〜80年代ラジカセのかまぼこ型へ再調整。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] Weak signal（高域カットと音量補正を追加。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] Saturation（入力ゲイン＋強いMBCによる飽和近似。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
-- [ ] Hiss（現行 global AudioEffect では独立ノイズ生成不可。AudioPlaybackCapture 検討待ち）
-- [ ] Crackle（現行 global AudioEffect では独立ノイズ生成不可。AudioPlaybackCapture 検討待ち）
+- [ ] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoC待ち）
+- [ ] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoC待ち）
 - [ ] Fading（DynamicsProcessing の input gain をゆっくり変動。実機聴感確認待ち）
 - [ ] Mono 感の強化
 
