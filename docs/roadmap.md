@@ -4,13 +4,13 @@
 
 目的: AI / 人間のどちらでも実装開始できる状態にする。
 
-- [ ] Android プロジェクト作成
-- [ ] Kotlin + Jetpack Compose
-- [ ] Gradle Wrapper
-- [ ] package name 決定
-- [ ] unit test が実行可能
-- [ ] debug APK が build 可能
-- [ ] CI の最小構成
+- [x] Android プロジェクト作成
+- [x] Kotlin + Jetpack Compose
+- [x] Gradle Wrapper
+- [x] package name 決定（`dev.hondasports.razio`）
+- [x] unit test が実行可能
+- [x] debug APK が build 可能
+- [x] CI の最小構成
 
 完了条件:
 

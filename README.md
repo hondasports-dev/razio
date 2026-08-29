@@ -45,6 +45,18 @@ Global AudioEffect が成立しない場合は `AudioPlaybackCapture` を調査�
 
 したがって、現時点では第一選択ではありません。
 
+## 開発環境
+
+詳細は `docs/development.md`。最短は:
+
+```bash
+./gradlew test
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+package / applicationId は `dev.hondasports.razio`。
+
 ## ドキュメント
 
 詳細は `docs/` 配下を参照してください。

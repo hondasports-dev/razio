@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - name: Install compileSdk platform
+        run: sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Unit test, lint, assembleDebug
+        run: ./gradlew test lint assembleDebug --stacktrace
