@@ -4,8 +4,8 @@ package dev.hondasports.razio.audio.preset
 object AmPreset {
     const val LOW_CUT_HZ = 250f
     const val MID_LOW_HZ = 1000f
-    const val MID_HIGH_HZ = 2000f
-    const val HIGH_CUT_HZ = 3500f
+    const val MID_HIGH_HZ = 1100f
+    const val HIGH_CUT_HZ = 1800f
     const val LOW_GAIN_DB = -15f
     const val MID_GAIN_DB = 6f
     const val HIGH_GAIN_DB = -15f

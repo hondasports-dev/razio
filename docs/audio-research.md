@@ -173,13 +173,25 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Effect: 同じ session 0。EQ ±15 dB 上限、中域 +6 dB、MBC 10:1 / -24 dB / post +4 dB
 - session 0 initialization: **success**
 - Enable / disable: **success** (`Active`)
-- Audible effect: 再聴待ち
+- Audible effect: **yes / strong**（ユーザー。Bluetooth。まだ少し明るい）
 - logcat:
   - `equalizer create ok session=0 bands=5 60Hz:-1500mB 230Hz:-1500mB 910Hz:347mB 3600Hz:-1500mB 14000Hz:-1500mB`
   - `dynamics create ok session=0 channels=2 am-config`
   - `setEnabled requested=true actual=true` (equalizer / dynamics)
 - Reproduction steps: 再インストール後、RAZIO をバックグラウンドに残して Bluetooth で ON/OFF
-- Conclusion: 端末は新カーブを適用済み。5 band EQ の物理上限までカット。聴感はユーザー確認待ち。
+- Conclusion: 強さは足りた。ユーザーはもっとこもった音を要求。
+
+### 2026-08-29 / Pixel 10 Pro / darker AM high-cut
+
+- Device: Pixel 10 Pro (`blazer`)
+- Android: 17
+- Output: Bluetooth 再聴待ち
+- Effect: ピークを 1.0–1.1 kHz に狭め、1.8 kHz 以上を -15 dB。5 band EQ の表示はほぼ同じ（910 Hz は +3.5 dB のまま）。こもりの本体は DynamicsProcessing preEQ
+- session 0 initialization: **success**
+- Enable: **success**
+- Audible effect: 再聴待ち
+- logcat: `equalizer create ok session=0 bands=5 60Hz:-1500mB 230Hz:-1500mB 910Hz:347mB 3600Hz:-1500mB 14000Hz:-1500mB` / `setEnabled actual=true`
+- Conclusion: 暗くしたカーブを実機に載せた。聴感はユーザー確認待ち。
 
 ## 判断基準
 
