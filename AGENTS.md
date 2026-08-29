@@ -6,6 +6,7 @@
 - Loop overview: `.loop/README.md`
 - Task state: `.loop/templates/task-state.yaml`
 - Current stage helper: `skills/*/SKILL.md`
+- Domain skill の選び方: `docs/agent-skills.md`
 
 ## Agent Loop
 
@@ -34,7 +35,10 @@ Review / Incident / Process Learningは必要時だけです。PRは作らない
 
 1. `AGENTS.md`
 2. `.loop/process.yaml`
-3. current stageのSkill 1つ
+3. current stage の Loop skill（`skills/*/SKILL.md`）1つ
+4. 今回の変更に matching する domain skill（`.agents/skills/`）。選び方は `docs/agent-skills.md`
+
+Loop skill だけで実装・検証しない。domain skill は全部読まない。matching した SKILL.md だけ読み、reference は必要になってから。`npx skills` の手順と RAZIO override が衝突したら override を優先する。
 
 PREPARE後はGoal / scope / Acceptance Criteria / material assumptions / Risk / Verification plan / findings / revisionだけを引き継ぎます。Issue全文、chat履歴、前stage Skillを毎回再要約しません。
 
@@ -44,8 +48,8 @@ PREPARE後はGoal / scope / Acceptance Criteria / material assumptions / Risk / 
 
 ```text
 実装
-→ ./gradlew test
-→ ./gradlew assembleDebug
+→ gradle-run で test
+→ gradle-run で assembleDebug
 → adb devices
 → adb install -r <debug-apk>
 → 実機起動・変更箇所操作
@@ -55,6 +59,8 @@ PREPARE後はGoal / scope / Acceptance Criteria / material assumptions / Risk / 
 → 失敗地点に近いcheckから再開
 → 通ったら main へ commit / push
 ```
+
+Gradle は `.agents/skills/gradle-run` 経由。手順は `docs/agent-skills.md`。
 
 盲目的なretryは禁止です。Gradle出力、logcat、dumpsys等の一次Evidenceから原因を切り分けます。
 
@@ -130,4 +136,5 @@ RAZIOは、Android端末で再生される音声を昔のAMラジオのような
 - Audio investigation: `docs/audio-research.md`
 - Development: `docs/development.md`
 - Testing: `docs/testing.md`
+- Agent skills: `docs/agent-skills.md`
 - Roadmap: `docs/roadmap.md`

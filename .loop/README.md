@@ -12,8 +12,8 @@ PREPARE → IMPLEMENT → UNIT TEST → VERIFY ON DEVICE → COMMIT → DONE
 
 ```text
 実装
-→ ./gradlew test
-→ ./gradlew assembleDebug
+→ gradle-run で test
+→ gradle-run で assembleDebug
 → adb devices
 → adb install -r ...
 → 実機で変更箇所を操作
@@ -70,6 +70,7 @@ RAZIO は端末・Android バージョン・Audio HAL・出力先による差が
 1. `AGENTS.md`
 2. `.loop/process.yaml`
 3. 現在 stage の `skills/*/SKILL.md`
-4. `.loop/templates/task-state.yaml` を元にした compact task state
+4. matching する `.agents/skills/*/SKILL.md`（選び方は `docs/agent-skills.md`）
+5. `.loop/templates/task-state.yaml` を元にした compact task state
 
-追加資料は必要になった時だけ読みます。
+Loop skill は段階の進め方。domain skill は専門手順。両方使う。全部は読まない。追加資料は必要になった時だけ読みます。

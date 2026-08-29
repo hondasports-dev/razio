@@ -9,6 +9,7 @@ Reviewは標準Gateではありません。high risk、横断的なaudio archite
 - device / test Evidence
 - open findings
 - Android固有の仮定
+- 該当する domain skill（`docs/agent-skills.md`）に対する逸脱。RAZIO override より upstream を優先していないか
 
 ## Focus
 

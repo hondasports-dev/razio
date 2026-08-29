@@ -6,7 +6,7 @@
 
 1. Goal / scope を1〜3行で固定する。
 2. Acceptance Criteria を観測可能な結果として列挙する。
-3. cheapに確認できる不明点はコード・docs・Android公式仕様から確認する。
+3. cheapに確認できる不明点はコード・docs・Android公式仕様から確認する。Android公式が必要なら `.agents/skills/android-cli/SKILL.md` の docs。テスト基盤を変える計画なら `docs/agent-skills.md` の `testing-setup` override を先に読む。
 4. Android端末依存の仮定は、質問で確定したことにせず実機Verificationへ回す。
 5. Riskを low / medium / high で付ける。
 6. Verification planを最短の順序で作る。

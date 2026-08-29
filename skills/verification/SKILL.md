@@ -2,16 +2,24 @@
 
 RAZIOのVerificationは、Android実機での短いフィードバックループを中心にします。
 
+## Domain skills
+
+この Loop skill と併用する。選び方の正本は `docs/agent-skills.md`。
+
+- Gradle は `.agents/skills/gradle-run/SKILL.md`
+- 実機の install / 起動 / screenshot / layout / Android docs は `.agents/skills/android-cli/SKILL.md`
+- Compose UI test を書く/直す時は `.agents/skills/compose-ui-testing-patterns/SKILL.md`
+- `android-profiler` は性能調査を頼まれた時だけ。logcat / dumpsys の代替にしない
+
 ## Default order
 
-```bash
-./gradlew test
-./gradlew assembleDebug
-adb devices
-adb install -r <debug-apk>
-```
+1. `gradle-run` で `test`
+2. `gradle-run` で `assembleDebug`
+3. `adb devices`
+4. `adb install -r <debug-apk>`
 
 その後、変更したアプリ/画面/音声経路を実機で操作します。通ったら commit します。
+Windows の `gradle-run` 起動は `docs/agent-skills.md` の例に従う。
 
 
 ## Device check

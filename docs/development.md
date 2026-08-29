@@ -59,9 +59,9 @@ RAZIO は AudioEffect の端末依存性を検証する必要があるため、�
 ```text
 実装
     ↓
-./gradlew test
+gradle-run で test
     ↓
-./gradlew assembleDebug
+gradle-run で assembleDebug
     ↓
 adb install -r
     ↓
@@ -77,6 +77,8 @@ main へ commit / push
 PR は作らない。unit test または必須実機確認が落ちている間は commit して完了にしない。
 
 ## よく使うコマンド
+
+Agent が Gradle を回す時は `docs/agent-skills.md` の `gradle-run`。人間が手元で確認する時は wrapper でよい。
 
 ```bash
 ./gradlew test
@@ -153,28 +155,21 @@ AI エージェントには以下を任せて構いません。
 
 ## Agent skills
 
-Android / Kotlin / Compose 向けの agent skill は `npx skills` でプロジェクトへ入れている。実体は `.agents/skills/`、lock は `skills-lock.json`。
+正本は `docs/agent-skills.md`。
 
-入っているもの:
-
-- `android/skills`: `android-cli`, `testing-setup`, `edge-to-edge`, `android-profiler`
-- `chrisbanes/skills`: Compose state / component / UI test、Kotlin API / control-flow / coroutines-flow、`gradle-run`
-
-更新:
+- Loop skill: `skills/`（段階の進め方）
+- Domain skill: `.agents/skills/`（`npx skills` で導入。Kotlin / Compose / Gradle / Android CLI）
+- Agent は Loop skill だけで実装・検証せず、matching する domain skill も読む
 
 ```bash
 npx skills update
 ```
 
-Navigation 3、CameraX、Wear、Play Billing、Firebase は今の RAZIO に不要なので入れていません。必要になったらその時だけ足す。
-
-既存の `skills/`（PREPARE / IMPLEMENT / VERIFY / COMMIT などの Loop skill）とは別物です。Loop の正本は変わらない。
-
 ## MCP
 
 MCP は必須ではありません。
 
-Codex など CLI を操作できるエージェントなら、Gradle と ADB を直接実行する方を最初の構成とします。
+Codex など CLI を操作できるエージェントなら、Gradle は `gradle-run`、実機は `adb` を最初の構成とします。手順は `docs/agent-skills.md`。
 
 ADB MCP を導入するのは、以下を自律化したくなった場合です。
 

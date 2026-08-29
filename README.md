@@ -67,5 +67,6 @@ package / applicationId は `dev.hondasports.razio`。
 - `docs/development.md`
 - `docs/testing.md`
 - `docs/roadmap.md`
+- `docs/agent-skills.md`（`npx skills` で入れた skill の使い方）
 
 AI エージェント向けルールは `AGENTS.md` に記載します。

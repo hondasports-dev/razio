@@ -1,4 +1,4 @@
-version: 2
+version: 3
 name: razio-fast-device-loop
 default_base_branch: main
 entrypoint: AGENTS.md
@@ -37,8 +37,19 @@ context_policy:
     - current_revision
   rules:
     - Issue・chat・source全文をstageごとに再要約しない
-    - current state以外のSkillは必要になった時だけ読む
+    - current state以外のLoop skillは必要になった時だけ読む
+    - matchingするdomain skillはcurrent Loop skillと併用する。カタログは docs/agent-skills.md
+    - domain skillを全部読まない。SKILL.mdを先に読み、referenceは必要になってから
     - source再読は仕様衝突・影響範囲不明・新しいfinding発生時だけ行う
+
+domain_skills:
+  catalog: docs/agent-skills.md
+  root: .agents/skills
+  lock: skills-lock.json
+  rules:
+    - Loop skillの置き換えではない。段階の進め方は skills/、専門手順は .agents/skills/
+    - npx skills のupstream手順より docs/agent-skills.md のRAZIO overrideを優先する
+    - 今のRAZIOに不要なskillは先回りして足さない
 
 spec_confidence:
   c2_confirmed: implementation_allowed
@@ -80,13 +91,19 @@ prepare:
     - cheapに確認できる不明点は質問せず調査して確定する
     - material choiceが残る場合だけC0として止める
     - Android APIや端末依存の仮定は実機で証明する計画を入れる
+    - Android公式仕様が必要なら android-cli の docs を使う
     - PREPAREは短く、実装へすぐ入る
 
 implementation:
   skill: skills/implementation/SKILL.md
+  domain_skills:
+    - gradle-run when executing Gradle
+    - using-chrisbanes-skills when multiple Kotlin/Compose concerns overlap
+    - matching Kotlin/Compose skill from docs/agent-skills.md
   rules:
     - 最小差分で実装する
     - build失敗を溜めず、短い変更単位でcompileする
+    - Gradle実行は gradle-run。直の ./gradlew は使わない
     - audio pathの成立性をUI完成より優先する
     - deprecated API利用時は理由・fallback・観測方法を残す
     - 通常は main 上で実装する
@@ -94,15 +111,19 @@ implementation:
 verification:
   skill: skills/verification/SKILL.md
   fail_fast_order:
-    - ./gradlew test
-    - ./gradlew assembleDebug
+    - gradle-run test
+    - gradle-run assembleDebug
     - adb devices
     - adb install -r <debug-apk>
     - app_launch_and_changed_flow
     - logcat_check
     - dumpsys_when_audio_or_lifecycle_relevant
+  domain_skills:
+    - gradle-run
+    - android-cli
   rules:
     - 変更に無関係な高コストcheckは毎回実行しない
+    - Gradle実行は gradle-run。直の ./gradlew は使わない
     - unit testが失敗したら実機工程へ進まず先に修正する
     - user-visible変更は変更画面・操作を実機で踏む
     - AudioEffect・audio routing・permission・lifecycle変更は実機確認を必須とする
@@ -111,6 +132,7 @@ verification:
     - 必須実機確認が環境不足ならBLOCKEDとして環境復旧を試み、PASS扱いしない
     - 修正後は影響した最短checkから再開し、same contentのfull suiteを重複しない
     - lintは必須stageではない。Android変更で安いなら test と一緒に通してもよい
+    - android-profilerは性能調査を頼まれた時だけ。通常Verificationの代替にしない
 
 review:
   skill: skills/code-review/SKILL.md

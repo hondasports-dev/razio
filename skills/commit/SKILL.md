@@ -5,7 +5,7 @@
 ## Before commit
 
 - Acceptance Criteria が確認済み
-- `./gradlew test` が PASS
+- `gradle-run` 経由の `test` が PASS
 - 必須実機 Verification が PASS
 - blocking finding なし
 - Risk が要求する Review があるなら PASS

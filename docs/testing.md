@@ -25,6 +25,9 @@ Android framework の AudioEffect を unit test で無理に再現せず、contr
 
 ## 2. Android / UI test
 
+Compose UI test を書く/直す時は `.agents/skills/compose-ui-testing-patterns/SKILL.md`。
+テスト基盤そのものを足す時だけ `.agents/skills/testing-setup/SKILL.md` を読む。Hilt / Robolectric / Dropshots を初期セットだからと足さない。詳細は `docs/agent-skills.md`。
+
 最低限確認すること:
 
 - アプリ起動
@@ -98,12 +101,7 @@ RAZIO で最も重要なテストです。
 
 ## Regression
 
-AudioEffect 周辺を変更したら、commit 前に最低限:
-
-```bash
-./gradlew test
-./gradlew assembleDebug
-```
+AudioEffect 周辺を変更したら、commit 前に最低限 `gradle-run` で `test` と `assembleDebug`。手順は `docs/agent-skills.md`。
 
 実機が利用可能なら:
 
