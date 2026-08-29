@@ -346,7 +346,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - UI detail: Narrow AM は `60Hz:-1500mB 230Hz:-1500mB 910Hz:600mB 3600Hz:-1500mB 14000Hz:-1500mB` / `mbcPost=14.0dB`、Vintage speaker は `60Hz:-1500mB 230Hz:-747mB 910Hz:400mB 3600Hz:-400mB 14000Hz:-1500mB` / `mbcPost=14.0dB`、Weak signal は `60Hz:-1500mB 230Hz:-1500mB 910Hz:400mB 3600Hz:-1500mB 14000Hz:-1500mB` / `mbcPost=18.0dB`
 - 連続切替（約20 ms間隔）後も `状態: Active` と session `0` の `EqualizerBundle` + `DynamicsProcessing` の2 effectsを維持。`RazioAudioService` は `isForeground=true`。`dumpsys media_session` は Spotify `PLAYING`、`dumpsys audio` は SoundCore 2 `bt_a2dp`。直近400行の logcat に RAZIO のクラッシュ／AudioEffect例外なし
 - force-stop → 起動後も Narrow AM / `Active` / 同じ effect detail を復元
-- Audible effect: **今回の最終カーブの聴感（Narrow/Vintageの差、Weak signalの音量、高域量）はユーザー確認待ち**
+- Audible effect: **ユーザー確認済み（「ええ感じ」）。Narrow/Vintageの差、Weak signalの音量、高域量を受入**
 
 ## 判断基準
 

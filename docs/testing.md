@@ -127,6 +127,8 @@ Phase 2 の実機 regression（変更したとき）:
 8. ON のままプリセットを切り替え、UI の選択状態・session 0 の EQ detail・聴感が切り替わること。切替中に `2 effects for session 0` が維持され、音量差が許容範囲であること
 9. Narrow AM → Vintage speaker → Weak signal を短時間に連続選択し、旧プリセットへ瞬間的に戻る音色ジャンプや素通り区間がないこと
 
+2026-08-29 の最終プリセット調整では、Pixel 10 Pro（Android 17）/ SoundCore 2 / Spotify で上記 8・9 を実施し、ユーザー聴感も受入済み。詳細な EQ 値・`dumpsys`・logcat は `docs/audio-research.md` に記録しています。
+
 ## テスト不能時
 
 実機テストが必要なのに端末が接続されていない場合、テスト済みとは扱いません。commit して完了にもしません。

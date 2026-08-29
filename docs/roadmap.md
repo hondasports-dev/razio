@@ -105,9 +105,9 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 
 候補:
 
-- [ ] Narrow AM（AM実用帯域・声域重視へ再調整。実機聴感確認待ち）
-- [ ] Vintage speaker（70〜80年代ラジカセのかまぼこ型へ再調整。実機聴感確認待ち）
-- [ ] Weak signal（実装済み。実機聴感確認待ち）
+- [x] Narrow AM（AM実用帯域・声域重視へ再調整。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
+- [x] Vintage speaker（70〜80年代ラジカセのかまぼこ型へ再調整。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
+- [x] Weak signal（高域カットと音量補正を追加。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [ ] Distant radio
 - [ ] Saturation
 - [ ] Hiss
