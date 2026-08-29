@@ -106,11 +106,14 @@ Limiter
 Output
 ```
 
-目安:
+プリセットごとのカーブは次の通りです。どちらも端末 EQ の min / max で clamp します。
 
-- 300 Hz 以下を強く落とす（初期値 -15 dB。端末 EQ の min で clamp）
-- 1.6 kHz 以上を強く落とす（初期値 -15 dB。狭帯域の AM 寄り）
-- 950〜1,050 Hz を持ち上げる（初期値 +6 dB）
+| プリセット | 低域 | 中域 | 高域 | 狙い |
+| --- | --- | --- | --- | --- |
+| Narrow AM | 300 Hz 以下を -15 dB | 950〜1,050 Hz を +6 dB | 1.6 kHz 以上を -15 dB | 狭帯域の AM |
+| Vintage speaker | 220 Hz 以下を -12 dB | 700〜1,350 Hz を +4 dB | 2.8 kHz 以上を -12 dB | 小型の古いスピーカー |
+
+選択したカーブは Equalizer と DynamicsProcessing の pre-EQ に同じ値を使います。
 - ダイナミックレンジを狭くする（MBC ratio 10:1、threshold -24 dB）
 
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
@@ -168,10 +171,11 @@ MVP では複雑な DB は不要です。
 保存:
 
 - RAZIO の ON/OFF（DataStore Preferences）
+- 選択中プリセット（DataStore Preferences。未保存時は Narrow AM）
 
-選択中プリセットは現状 Narrow AM 固定。Room は必要性が出るまで導入しません。
+プリセット変更時は既存の session 0 effect を release して、選択したカーブで Equalizer / DynamicsProcessing を再生成します。Room は必要性が出るまで導入しません。
 
-起動時に保存済み ON なら `initialize` のあと effect を enable し、FGS も起動する。UI のスイッチは `RazioApp.setPowerOn` 経由で effect・FGS・prefs を同時に更新する。API 33 以上では ON 時に `POST_NOTIFICATIONS` を要求する。
+起動時に保存済みプリセットを復元してから effect を初期化し、保存済み ON なら effect を enable し、FGS も起動する。UI のスイッチは `RazioApp.setPowerOn` 経由、プリセット選択は `RazioApp.setPreset` 経由で effect と prefs を更新する。API 33 以上では ON 時に `POST_NOTIFICATIONS` を要求する。
 
 ## 依存関係方針
 

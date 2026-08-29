@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,12 +37,14 @@ import dev.hondasports.razio.audio.AudioEngineReport
 import dev.hondasports.razio.audio.AudioEffectUiState
 import dev.hondasports.razio.audio.GlobalAudioEffectController
 import dev.hondasports.razio.audio.RazioStatus
+import dev.hondasports.razio.audio.preset.AudioPreset
 import dev.hondasports.razio.theme.RazioTheme
 
 @Composable
 fun RazioHomeRoute(
     controller: GlobalAudioEffectController,
     onPowerChange: (Boolean) -> Unit,
+    onPresetChange: (AudioPreset) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
@@ -59,6 +63,7 @@ fun RazioHomeRoute(
                 onPowerChange(enabled)
             }
         },
+        onPresetChange = onPresetChange,
         modifier = modifier,
     )
 }
@@ -75,6 +80,7 @@ private fun needsNotificationPermission(context: Context): Boolean {
 fun RazioHomeScreen(
     state: AudioEffectUiState,
     onPowerChange: (Boolean) -> Unit,
+    onPresetChange: (AudioPreset) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -116,6 +122,44 @@ fun RazioHomeScreen(
             modifier = Modifier.padding(top = 16.dp),
         )
         Text(
+            text = stringResource(R.string.preset_label),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 20.dp),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AudioPreset.entries.forEach { preset ->
+                val buttonModifier = Modifier.weight(1f)
+                if (state.preset == preset) {
+                    Button(
+                        onClick = { onPresetChange(preset) },
+                        enabled = !state.initializing,
+                        modifier = buttonModifier,
+                    ) {
+                        Text(text = presetLabel(preset))
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onPresetChange(preset) },
+                        enabled = !state.initializing,
+                        modifier = buttonModifier,
+                    ) {
+                        Text(text = presetLabel(preset))
+                    }
+                }
+            }
+        }
+        Text(
+            text = presetDescription(state.preset),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        Text(
             text = stringResource(R.string.equalizer_label, reportText(state.equalizer)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -134,6 +178,24 @@ fun RazioHomeScreen(
             modifier = Modifier.padding(top = 24.dp),
         )
     }
+}
+
+@Composable
+private fun presetLabel(preset: AudioPreset): String {
+    val resId = when (preset) {
+        AudioPreset.NARROW_AM -> R.string.preset_narrow_am
+        AudioPreset.VINTAGE_SPEAKER -> R.string.preset_vintage_speaker
+    }
+    return stringResource(resId)
+}
+
+@Composable
+private fun presetDescription(preset: AudioPreset): String {
+    val resId = when (preset) {
+        AudioPreset.NARROW_AM -> R.string.preset_narrow_am_description
+        AudioPreset.VINTAGE_SPEAKER -> R.string.preset_vintage_speaker_description
+    }
+    return stringResource(resId)
 }
 
 @Composable
@@ -178,6 +240,7 @@ private fun RazioHomeScreenPreview() {
                 dynamics = AudioEngineReport.Ready(enabled = true, detail = "session=0 channels=2"),
             ),
             onPowerChange = {},
+            onPresetChange = {},
         )
     }
 }

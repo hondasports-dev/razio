@@ -12,14 +12,17 @@ internal object AmDynamicsConfig {
     private const val MBC_KNEE_DB = 6f
     private const val MBC_POST_GAIN_DB = 4f
 
-    fun build(channelCount: Int): DynamicsProcessing.Config {
+    fun build(
+        channelCount: Int,
+        preset: AudioPreset,
+    ): DynamicsProcessing.Config {
         val preEq = DynamicsProcessing.Eq(true, true, preEqCutoffsHz.size)
         preEqCutoffsHz.forEachIndexed { index, cutoffHz ->
             val previous = if (index == 0) 20f else preEqCutoffsHz[index - 1]
             val centerHz = kotlin.math.sqrt(previous * cutoffHz)
             preEq.setBand(
                 index,
-                DynamicsProcessing.EqBand(true, cutoffHz, AmPreset.gainDbForCenterHz(centerHz)),
+                DynamicsProcessing.EqBand(true, cutoffHz, preset.gainDbForCenterHz(centerHz)),
             )
         }
 

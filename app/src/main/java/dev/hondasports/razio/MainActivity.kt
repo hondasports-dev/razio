@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
                     RazioHomeRoute(
                         controller = app.audioEffects,
                         onPowerChange = app::setPowerOn,
+                        onPresetChange = app::setPreset,
                     )
                 }
             }

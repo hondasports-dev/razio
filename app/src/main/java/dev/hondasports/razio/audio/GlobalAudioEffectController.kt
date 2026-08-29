@@ -4,7 +4,7 @@ import android.media.audiofx.AudioEffect
 import android.media.audiofx.DynamicsProcessing
 import android.media.audiofx.Equalizer
 import dev.hondasports.razio.audio.preset.AmDynamicsConfig
-import dev.hondasports.razio.audio.preset.AmPreset
+import dev.hondasports.razio.audio.preset.AudioPreset
 import dev.hondasports.razio.domain.model.AudioSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +25,7 @@ class GlobalAudioEffectController(
     private var equalizer: Equalizer? = null
     private var dynamics: DynamicsProcessing? = null
     private var attempted: Boolean = false
+    private var selectedPreset: AudioPreset = AudioPreset.NARROW_AM
 
     fun initialize() {
         _state.update { it.copy(initializing = true, status = RazioStatus.Initializing) }
@@ -53,6 +54,16 @@ class GlobalAudioEffectController(
             equalizer = equalizerReport,
             dynamics = dynamicsReport,
         )
+    }
+
+    fun setPreset(preset: AudioPreset) {
+        if (selectedPreset == preset) return
+        val wasOn = _state.value.powerOn
+        selectedPreset = preset
+        initialize()
+        if (wasOn) {
+            setEnabled(true)
+        }
     }
 
     fun handleRouteChange() {
@@ -94,7 +105,7 @@ class GlobalAudioEffectController(
         var lastError: Throwable? = null
         for (channelCount in CHANNEL_COUNTS) {
             try {
-                val created = DynamicsProcessing(PRIORITY, sessionId, AmDynamicsConfig.build(channelCount))
+                val created = DynamicsProcessing(PRIORITY, sessionId, AmDynamicsConfig.build(channelCount, selectedPreset))
                 created.enabled = false
                 dynamics = created
                 val detail = "session=$sessionId channels=$channelCount am-config"
@@ -137,7 +148,7 @@ class GlobalAudioEffectController(
         val bandCount = equalizer.numberOfBands.toInt()
         for (band in 0 until bandCount) {
             val centerHz = equalizer.getCenterFreq(band.toShort()) / 1000f
-            equalizer.setBandLevel(band.toShort(), AmPreset.millibels(centerHz, min, max))
+            equalizer.setBandLevel(band.toShort(), selectedPreset.millibels(centerHz, min, max))
         }
     }
 
@@ -148,7 +159,7 @@ class GlobalAudioEffectController(
             val level = equalizer.getBandLevel(band.toShort())
             "${hz.toInt()}Hz:${level}mB"
         }
-        return "session=$sessionId bands=$bandCount $bands"
+        return "session=$sessionId preset=${selectedPreset.id} bands=$bandCount $bands"
     }
 
     private fun applyEnabled(
@@ -181,6 +192,7 @@ class GlobalAudioEffectController(
             AudioEffectUiState(
                 powerOn = powerOn,
                 initializing = initializing,
+                preset = selectedPreset,
                 status = razioStatus(
                     initializing = initializing,
                     attempted = attempted,

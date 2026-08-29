@@ -5,6 +5,7 @@ import dev.hondasports.razio.audio.AudioRouteMonitor
 import dev.hondasports.razio.audio.GlobalAudioEffectController
 import dev.hondasports.razio.audio.RazioAudioService
 import dev.hondasports.razio.audio.RazioPreferences
+import dev.hondasports.razio.audio.preset.AudioPreset
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +26,7 @@ class RazioApp : Application() {
         audioEffects.initialize()
         AudioRouteMonitor(this, audioEffects::handleRouteChange).start()
         applicationScope.launch {
+            audioEffects.setPreset(preferences.savedPreset())
             if (preferences.savedPowerOn()) {
                 applyPower(enabled = true, persist = false)
             }
@@ -33,6 +35,13 @@ class RazioApp : Application() {
 
     fun setPowerOn(enabled: Boolean) {
         applyPower(enabled = enabled, persist = true)
+    }
+
+    fun setPreset(preset: AudioPreset) {
+        audioEffects.setPreset(preset)
+        applicationScope.launch {
+            preferences.setPreset(preset)
+        }
     }
 
     private fun applyPower(

@@ -74,13 +74,14 @@ RAZIO で最も重要なテストです。
 | Android | 対象 OS version |
 | Target app | YouTube / music / Chrome |
 | Output | Speaker / Bluetooth / USB |
-| Preset | Narrow AM |
+| Preset | Narrow AM / Vintage speaker |
 | RAZIO | ON / OFF |
 
 ### 必須確認
 
 - effect 初期化が成功する
 - ON / OFF に明確な差がある
+- Narrow AM / Vintage speaker の切替で音の傾向が変わり、選択状態が表示される
 - 対象アプリ切り替え後も動作する
 - 音声 route 変更後の状態
 - アプリをバックグラウンドにしても期待通りか
@@ -120,6 +121,7 @@ Phase 2 の実機 regression（変更したとき）:
 5. `adb shell am force-stop dev.hondasports.razio` のあと起動し、ON が復元されて effect と FGS が付く
 6. OFF にして通知が消え、force-stop → 起動し、OFF のまま
 7. ON のまま Bluetooth 接続 / 切断し、効果が残るか（Pixel 10 Pro で確認済み。`audio devices removed/added`、`route change wantOn=true`、EQ / Dynamics `actual=true`、再接続後 session 0 の 2 effects）
+8. ON のままプリセットを切り替え、UI の選択状態・session 0 の EQ detail・聴感が切り替わること
 
 ## テスト不能時
 

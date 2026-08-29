@@ -290,6 +290,20 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Audible effect: **yes**（ユーザー確認: 「前よりこもってるからOK」）
 - Conclusion: Pixel 10 Pro + Bluetooth では Narrow AM の狭帯域化を受け入れ。ノイズ / crackle / fading は未実装のまま次の候補へ。
 
+### 2026-08-29 / Pixel 10 Pro / Vintage speaker listen
+
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
+- Android: 17
+- Build: `CP2A.260805.005`
+- Output: **Pixel Buds Pro 2**（Bluetooth A2DP）
+- Target app: **Spotify**
+- Preset: Vintage speaker（220 Hz 以下を -12 dB、700〜1,350 Hz を +4 dB、2.8 kHz 以上を -12 dB）
+- session 0: Equalizer + DynamicsProcessing、UI `Active`
+- UI detail: 5-band EQ は `60Hz:-1200mB 230Hz:-1166mB 910Hz:400mB 3600Hz:-1200mB 14000Hz:-1200mB`
+- Selection persistence: force-stop → 起動後も Vintage speaker / `Active` を復元
+- Audible effect: **yes**（実機試聴後、ユーザーがコミットを指示）
+- Conclusion: Narrow AMを既定として残したまま、Vintage speakerを切り替えて比較できる状態を受け入れ。ノイズ / crackle / fading は未実装のまま次の候補へ。
+
 ## 判断基準
 
 ### Green
