@@ -10,7 +10,14 @@ RAZIO の成立性を、Android の仕様と実機挙動の両面から記録し
 
 Android では audio session `0` を global output mix として扱う AudioEffect の利用方法が歴史的に存在します。
 
-ただし現在は deprecated な領域を含み、端末ごとの Audio HAL / effect implementation に依存する可能性があります。
+ただし insert effect（Equalizer など）を session `0` に付けることは **deprecated**。端末ごとの Audio HAL / effect implementation に依存し、生成できたことと他アプリへ効くことは別問題です。
+
+PoC 実装:
+
+- `Equalizer(priority, 0)` と `DynamicsProcessing(priority, 0, config)` を独立に試す
+- `MODIFY_AUDIO_SETTINGS` を manifest に入れる
+- 生成・enable・release の成否を `RAZIO/AudioEffect` タグで出す
+- 効果オブジェクトは `Application` 生存期間。FGS は未実装
 
 そのため、RAZIO では「API が存在する = 必ず全アプリに効く」と判断しません。
 
@@ -113,6 +120,20 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Reproduction steps:
 - Conclusion:
 ```
+
+### 2026-08-29 / device verification BLOCKED
+
+- Device: none attached (`adb devices` empty)
+- Android: n/a
+- Output: n/a
+- Target app: n/a
+- Effect: Equalizer + DynamicsProcessing session 0 (code path ready)
+- session 0 initialization: not observed on device
+- Audible effect: not observed
+- logcat: n/a
+- dumpsys: n/a
+- Reproduction steps: USB debugging 可能な実機を接続してから `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+- Conclusion: 実装と unit/lint/assembleDebug は通った。system-wide audio の成立判定は実機なしのため **BLOCKED**。PASS にしない。
 
 ## 判断基準
 

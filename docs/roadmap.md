@@ -27,12 +27,20 @@
 
 実装:
 
-- [ ] session `0` で Equalizer を生成
-- [ ] session `0` で DynamicsProcessing を検証
-- [ ] enable / disable
-- [ ] effect state を画面に表示
-- [ ] Normal AM の仮プリセット
-- [ ] logcat diagnostics
+- [x] session `0` で Equalizer を生成
+- [x] session `0` で DynamicsProcessing を検証
+- [x] enable / disable
+- [x] effect state を画面に表示
+- [x] Normal AM の仮プリセット
+- [x] logcat diagnostics
+
+実機確認:
+
+- [ ] YouTube
+- [ ] 音楽アプリ
+- [ ] Chrome
+- [ ] 本体スピーカー
+- [ ] Bluetooth
 
 実機確認:
 
