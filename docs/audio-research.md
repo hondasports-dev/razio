@@ -232,7 +232,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Android: 17
 - Build: `CP2A.260805.005`
 - Output: 既存経路。今回は画面 OFF の寿命確認
-- Target app: soak 中はメディア再生なし（`dumpsys audio` に `state:started` なし）
+- Target app: 他アプリ再生（ユーザー聴感。soak 直後の dumpsys 時点では `state:started` なし）
 - Effect: session 0 Equalizer + DynamicsProcessing + `RazioAudioService`
 - Screen: `KEYCODE_SLEEP` のあと約 90 秒。`dumpsys power` `mWakefulness=Dozing`
 - FGS: **success**（同一 `ServiceRecord`、`isForeground=true`、pid `27462` のまま）
@@ -241,13 +241,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
   - EqualizerBundle Enabled `y` Suspended `n`
   - DynamicsProcessing Enabled `y` Suspended `n`
   - client pid `27462`
-- Audible effect: **not observed in this soak**（再生トラックが無かった）。聴感はユーザー確認待ち
+- Audible effect: **yes**（ユーザー。画面 OFF のまま再生しても AM が残る）
 - Reproduction steps:
   1. RAZIO を ON
   2. `adb shell input keyevent KEYCODE_SLEEP`
   3. 約 90 秒待つ
   4. `dumpsys activity services` / `dumpsys media.audio_flinger`
-- Conclusion: 画面 OFF でも effect オブジェクトと FGS は残る。聴感の最終判定は画面 OFF のまま他アプリ再生が必要。
+  5. 画面 OFF のまま他アプリを再生して聴く
+- Conclusion: この端末では画面 OFF でも FGS・session 0 effect・聴感が残る。
 
 ## 判断基準
 
