@@ -204,6 +204,28 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Audible effect: **yes**（ユーザー。4 アプリ系統 × スピーカー / BT）
 - Conclusion: この端末では主要アプリと主要出力先で global AudioEffect が成立。Phase 1 を **Green** とし、AudioPlaybackCapture へは進まない。他端末は未検証。
 
+### 2026-08-29 / Pixel 10 Pro / specialUse FGS keep-alive
+
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)
+- Android: 17
+- Build: `CP2A.260805.005`
+- Output: 既存経路（スピーカー / Bluetooth）。今回は寿命確認
+- Target app: 他アプリ再生（ユーザー聴感）
+- Effect: session 0 Equalizer + DynamicsProcessing。ON 中は `RazioAudioService`（`foregroundServiceType=specialUse`）
+- session 0 initialization: **success**
+- Enable: **success**（force-stop 後の再起動でも `setEnabled actual=true`）
+- FGS: **success**
+  - logcat: `fgs started`
+  - `dumpsys activity services`: `RazioAudioService` `isForeground=true` `types=0x40000000`（SPECIAL_USE）
+  - ユーザー: ステータスバー通知あり
+  - OFF でサービス消滅、UI `Disabled`
+- Background keep-alive: **yes**（ユーザー。ホームへ送って放置しても effect が残る）
+- Reproduction steps:
+  1. RAZIO を ON
+  2. 通知が出ることを確認
+  3. Home へ送って他アプリを再生し、effect が残るか聴く
+- Conclusion: この端末では FGS によるバックグラウンド維持が成立。プロセス強制終了までは保証しない。
+
 ## 判断基準
 
 ### Green

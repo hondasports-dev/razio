@@ -115,9 +115,10 @@ Phase 2 の実機 regression（変更したとき）:
 
 1. RAZIO を ON にして YouTube で効果を確認
 2. ON 中に通知が出ること、`dumpsys activity services` で `RazioAudioService` が foreground であること
-3. `adb shell am force-stop dev.hondasports.razio` のあと起動し、ON が復元されて effect と FGS が付く
-4. OFF にして通知が消え、force-stop → 起動し、OFF のまま
-5. ON のまま Bluetooth 接続 / 切断し、効果が残るか（logcat `route change`）
+3. Home へ送って放置し、他アプリ再生で effect が残ること（Pixel 10 Pro で確認済み）
+4. `adb shell am force-stop dev.hondasports.razio` のあと起動し、ON が復元されて effect と FGS が付く
+5. OFF にして通知が消え、force-stop → 起動し、OFF のまま
+6. ON のまま Bluetooth 接続 / 切断し、効果が残るか（logcat `route change`）
 
 ## テスト不能時
 

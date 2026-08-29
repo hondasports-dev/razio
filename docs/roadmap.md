@@ -97,7 +97,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] route change 対応（AudioDeviceCallback で preset 付け直し / 再生成）
 - [x] エラーハンドリング（Unsupported / Error を画面表示）
 - [x] 最小 Compose UI
-- [x] 実機 regression 手順（起動時 ON 復元は Pixel 10 Pro で確認。BT 抜き差しは docs/testing.md）
+- [x] 実機 regression 手順（起動時 ON 復元・FGS 通知・Home 放置後の effect 維持は Pixel 10 Pro で確認。BT 抜き差しは docs/testing.md）
 
 ## Phase 3: Sound design
 
