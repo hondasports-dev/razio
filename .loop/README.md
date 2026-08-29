@@ -1,41 +1,41 @@
 # RAZIO Agent Loop
 
-RAZIO のループは、kakeibo / Re:Me の Risk-based / Evidence-based loop をベースにしつつ、Android 実機開発向けに短くしたものです。
+RAZIO のループは、Android 実機開発向けの短い単一路線です。PR は標準に入れません。
 
 ## 通常経路
 
 ```text
-PREPARE → IMPLEMENT → VERIFY ON DEVICE → DELIVER → PR AFTERCARE → DONE
+PREPARE → IMPLEMENT → UNIT TEST → VERIFY ON DEVICE → COMMIT → DONE
+```
+
+同じ反復の中身:
+
+```text
+実装
+→ ./gradlew test
+→ ./gradlew assembleDebug
+→ adb devices
+→ adb install -r ...
+→ 実機で変更箇所を操作
+→ logcat
+→ 必要なら dumpsys
+→ 通ったら main へ commit / push
 ```
 
 Review / Incident / Process Learning は必要時だけ起動します。
 
 ## 最優先事項
 
-RAZIO は端末・Android バージョン・Audio HAL・出力先による差が大きいため、ブラウザアプリのように build / unit test だけで完了判定しません。
+RAZIO は端末・Android バージョン・Audio HAL・出力先による差が大きいため、unit test だけで完了判定しません。
 
-音声経路・AudioEffect・permission・lifecycle・user-visible behavior を変更した場合は、可能な限り同じ反復内で次まで進めます。
-
-```text
-実装
-→ ./gradlew test
-→ ./gradlew lint
-→ ./gradlew assembleDebug
-→ adb devices
-→ adb install -r ...
-→ アプリ起動・変更箇所操作
-→ logcat
-→ 必要なら dumpsys audio / media.audio_flinger 等
-→ 修正
-→ 最短地点から再検証
-```
+音声経路・AudioEffect・permission・lifecycle・user-visible behavior を変更した場合は、可能な限り同じ反復内で実機確認まで進め、通ったらすぐ commit します。
 
 ## 高速化の考え方
 
 - Gate を増やさず Acceptance Criteria と Evidence で品質を担保する
+- PR / merge-ready / aftercare を標準に置かない
 - shared diff の writer は原則 1 体
 - reviewer は標準では起動しない。高 Risk / 横断変更だけ 1 回
-- 同じ内容の full test を local / CI で理由なく重複しない
 - 変更範囲に近い cheap check から開始する
 - stage ごとに Issue や chat 全文を再要約しない
 - logcat / build error がある時は原因を読んでから retry する
@@ -54,7 +54,7 @@ RAZIO は端末・Android バージョン・Audio HAL・出力先による差が
 
 ## BLOCKED の扱い
 
-必須の実機確認ができない場合、即座に完了扱いしません。
+必須の実機確認ができない場合、commit して完了扱いしません。
 
 1. `adb devices`、USB debugging、権限、APK install、端末状態を確認
 2. 復旧できるものはその場で復旧

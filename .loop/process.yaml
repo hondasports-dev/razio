@@ -1,4 +1,4 @@
-version: 1
+version: 2
 name: razio-fast-device-loop
 default_base_branch: main
 entrypoint: AGENTS.md
@@ -7,6 +7,7 @@ entry_state: prepare
 principles:
   - Gate数ではなくAcceptance CriteriaとEvidenceで品質を担保する
   - 通常タスクは高速な単一路線で進め、追加ReviewはRiskが要求する時だけ行う
+  - 標準経路は 実装 → unit test → 実機動作確認 → commit であり、PRは作らない
   - Android実機で確認できる変更は、実機Evidenceを完了条件に含める
   - 失敗時は盲目的に再試行せず、logcat・Gradle出力・dumpsysから原因を切り分ける
   - same contentのEvidenceを再利用し、変更差分だけ再検証する
@@ -58,7 +59,7 @@ risk:
     human_gate_when: irreversible_or_scope_change
 
 loop:
-  default_path: [prepare, implementation, verification, delivery, pr_aftercare, done]
+  default_path: [prepare, implementation, verification, commit, done]
   side_paths:
     review: risk_triggered_only
     incident: failure_or_unknown_retry
@@ -79,6 +80,7 @@ prepare:
     - cheapに確認できる不明点は質問せず調査して確定する
     - material choiceが残る場合だけC0として止める
     - Android APIや端末依存の仮定は実機で証明する計画を入れる
+    - PREPAREは短く、実装へすぐ入る
 
 implementation:
   skill: skills/implementation/SKILL.md
@@ -87,12 +89,12 @@ implementation:
     - build失敗を溜めず、短い変更単位でcompileする
     - audio pathの成立性をUI完成より優先する
     - deprecated API利用時は理由・fallback・観測方法を残す
+    - 通常は main 上で実装する
 
 verification:
   skill: skills/verification/SKILL.md
   fail_fast_order:
     - ./gradlew test
-    - ./gradlew lint
     - ./gradlew assembleDebug
     - adb devices
     - adb install -r <debug-apk>
@@ -101,13 +103,14 @@ verification:
     - dumpsys_when_audio_or_lifecycle_relevant
   rules:
     - 変更に無関係な高コストcheckは毎回実行しない
-    - static/unitが失敗したら実機工程へ進まず先に修正する
+    - unit testが失敗したら実機工程へ進まず先に修正する
     - user-visible変更は変更画面・操作を実機で踏む
     - AudioEffect・audio routing・permission・lifecycle変更は実機確認を必須とする
     - emulator成功をsystem-wide audio成立のEvidenceにしない
     - adb接続可能なのに実機確認を省略しない
     - 必須実機確認が環境不足ならBLOCKEDとして環境復旧を試み、PASS扱いしない
     - 修正後は影響した最短checkから再開し、same contentのfull suiteを重複しない
+    - lintは必須stageではない。Android変更で安いなら test と一緒に通してもよい
 
 review:
   skill: skills/code-review/SKILL.md
@@ -127,34 +130,25 @@ review:
 finding_policy:
   source_of_truth: task_state.findings
   rules:
-    - blocking findingがある間deliveryしない
+    - blocking findingがある間commitしない
     - 同じfindingを重複登録せず状態更新する
     - test_gapを記録だけして先送りしない
     - environment issueはincidentとして原因と復旧方法を切り分ける
 
-delivery:
-  skill: skills/delivery/SKILL.md
-  target: merge_ready
-  pre_publish_required:
+commit:
+  skill: skills/commit/SKILL.md
+  target: committed_to_main
+  pre_commit_required:
     - spec_confirmed
     - acceptance_criteria_verified
     - required_tests_pass
     - required_device_verification_pass
     - no_blocking_findings
     - required_review_pass
-  rule: PR作成はcheckpointであり通常完了ではない
-
-pr_aftercare:
-  skill: skills/pr-aftercare/SKILL.md
-  required:
-    - latest_revision_ci_success
-    - review_comments_reconciled
-    - requested_changes_resolved
-    - no_merge_conflict
-    - merge_ready
   rules:
-    - CI失敗はlogを読み原因を直す。盲目的rerunをしない
-    - review指摘は仕様・テスト・Android制約と照合してから反映する
+    - PRは作らない
+    - 検証後に main へ commit し origin/main へ push する
+    - 実行していない必須checkをPASSのように書かない
 
 process_learning:
   skill: skills/process-learning/SKILL.md
@@ -168,4 +162,4 @@ completion:
     - acceptance_criteria_verified
     - required_device_evidence_present
     - no_blocking_findings
-    - delivery_target_reached
+    - commit_completed

@@ -57,9 +57,7 @@ RAZIO は AudioEffect の端末依存性を検証する必要があるため、�
 基本ループ:
 
 ```text
-Issue / task
-    ↓
-AI agent implements
+実装
     ↓
 ./gradlew test
     ↓
@@ -67,16 +65,16 @@ AI agent implements
     ↓
 adb install -r
     ↓
-実機で対象アプリを再生
-    ↓
-RAZIO ON / OFF
+実機で対象アプリを再生 / 変更箇所を操作
     ↓
 logcat / dumpsys
     ↓
 結果を docs に記録
     ↓
-修正 or 次のタスク
+main へ commit / push
 ```
+
+PR は作らない。unit test または必須実機確認が落ちている間は commit して完了にしない。
 
 ## よく使うコマンド
 
@@ -170,7 +168,7 @@ npx skills update
 
 Navigation 3、CameraX、Wear、Play Billing、Firebase は今の RAZIO に不要なので入れていません。必要になったらその時だけ足す。
 
-既存の `skills/`（PREPARE / IMPLEMENT / VERIFY などの Loop skill）とは別物です。Loop の正本は変わらない。
+既存の `skills/`（PREPARE / IMPLEMENT / VERIFY / COMMIT などの Loop skill）とは別物です。Loop の正本は変わらない。
 
 ## MCP
 
@@ -187,19 +185,17 @@ ADB MCP を導入するのは、以下を自律化したくなった場合です
 
 MCP 自体を導入することを目的化しないでください。
 
-## ブランチ / PR
+## ブランチ / commit
 
 原則:
 
-- `main` へ直接実装しない
-- 小さな目的単位で branch を作る
-- PR に検証結果を記載する
-- AudioEffect の成立性に関わる変更では実機結果を必ず明記する
+- 通常は `main` で実装する
+- PR は作らない
+- 小さな目的単位で commit し、`origin/main` へ push する
+- AudioEffect の成立性に関わる変更では実機結果を commit 前に確認し、`docs/audio-research.md` に残す
 
-PR の最低記載事項:
+commit 前に嘘をつかないこと:
 
-- What
-- Why
-- Test
-- Device / Android version（実機検証時）
-- Known limitations
+- 自動テスト: 実施済み / 未実施
+- 実機テスト: 実施済み / 未実施
+- 未実施なら BLOCKED。完了扱いにしない

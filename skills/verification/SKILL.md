@@ -6,13 +6,13 @@ RAZIOのVerificationは、Android実機での短いフィードバックルー�
 
 ```bash
 ./gradlew test
-./gradlew lint
 ./gradlew assembleDebug
 adb devices
 adb install -r <debug-apk>
 ```
 
-その後、変更したアプリ/画面/音声経路を実機で操作します。
+その後、変更したアプリ/画面/音声経路を実機で操作します。通ったら commit します。
+
 
 ## Device check
 

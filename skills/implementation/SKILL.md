@@ -20,4 +20,4 @@ RAZIOでは短い変更単位で buildable な状態を維持します。
 ./gradlew assembleDebug
 ```
 
-compile/build failureを抱えたまま別機能へ進みません。
+compile/build failureを抱えたまま別機能へ進みません。unit test と必須の実機確認が通ったらすぐ commit します。

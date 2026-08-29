@@ -98,7 +98,7 @@ RAZIO で最も重要なテストです。
 
 ## Regression
 
-AudioEffect 周辺を変更した PR では最低限:
+AudioEffect 周辺を変更したら、commit 前に最低限:
 
 ```bash
 ./gradlew test
@@ -115,9 +115,9 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## テスト不能時
 
-実機テストが必要なのに端末が接続されていない場合、テスト済みとは扱いません。
+実機テストが必要なのに端末が接続されていない場合、テスト済みとは扱いません。commit して完了にもしません。
 
-PR には以下を明記します。
+残すこと:
 
 - 自動テスト: 実施済み / 未実施
 - build: 成功 / 失敗
