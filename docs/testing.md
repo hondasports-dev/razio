@@ -132,6 +132,20 @@ Phase 2 の実機 regression（変更したとき）:
 
 2026-08-29 の初回プリセット調整では、Pixel 10 Pro（Android 17）/ SoundCore 2 / Spotify で上記 8・9 を実施し、ユーザー聴感も受入済み。Saturationの入力ゲイン・強い圧縮の聴感もユーザー確認済み。続く全プリセット両端カット再調整（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）も同じ実機でユーザー受入済み。詳細な EQ 値・`dumpsys`・logcat は `docs/audio-research.md` に記録しています。
 
+### Retro radio UI first pass
+
+音声経路を変更しないUI変更でも、Pixelで表示崩れと操作可能性を確認します。
+
+1. `:app:testDebugUnitTest` / `:app:assembleDebug` を `gradle-run` で実行し、生成APKを `adb install -r` する
+2. `android screen capture` でsystem dark modeの画面を保存し、暖色背景・パネル枠・選択状態・ステータス表示が読めることを確認する
+3. `adb shell cmd uimode night no` でlight modeへ切り替え、同じ操作を確認した後、元のnight modeへ戻す
+4. `Vintage speaker` をタップし、選択状態と説明文が更新されることを確認する
+5. プリセット列を横スワイプし、`Weak signal` / `Saturation` / `Fading` が1行ラベルで表示されることを確認する
+6. `android layout` のUI treeで `RAZIO`、4つのパネル見出し、全プリセット名、Hiss / Crackleが取得できることを確認する
+7. filtered `logcat` で `FATAL EXCEPTION`、`ANR in`、アプリ由来の未処理Exceptionがないことを確認する
+
+2026-08-30 の初回実装では、Pixel 10 Pro / Android 17でdark / lightの両scheme、`Vintage speaker` 選択、プリセット横スクロール、UI tree、filtered logcatを確認した。tuning dial、signal meter、iconはまだ追加していない。詳細は `docs/audio-research.md`。
+
 ### Hiss / Crackle AudioTrack overlay PoC
 
 元音声を `AudioPlaybackCapture` でコピーして再生するのではなく、RAZIO生成ノイズだけを `AudioTrack` で同時再生する検証。PoCの実装・測定条件は `docs/audio-research.md` の計画に合わせる。

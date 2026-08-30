@@ -46,4 +46,5 @@
     <string name="engine_disabled">disabled</string>
     <string name="engine_unsupported">Unsupported (%1$s)</string>
     <string name="engine_failed">Error (%1$s)</string>
+    <string name="engine_status_heading">エンジン状態</string>
 </resources>

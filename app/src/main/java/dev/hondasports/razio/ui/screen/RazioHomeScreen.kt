@@ -6,22 +6,34 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -107,169 +119,250 @@ fun RazioHomeScreen(
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineLarge,
-        )
-        Text(
-            text = stringResource(R.string.poc_subtitle),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = stringResource(R.string.power_label),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Switch(
-                checked = state.powerOn,
-                onCheckedChange = onPowerChange,
-                enabled = !state.initializing,
-            )
+        RetroHeader(status = state.status, powerOn = state.powerOn)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        RetroPanel {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text(
+                        text = stringResource(R.string.power_label),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = stringResource(R.string.status_label, statusText(state.status)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+                Switch(
+                    checked = state.powerOn,
+                    onCheckedChange = onPowerChange,
+                    enabled = !state.initializing,
+                )
+            }
         }
-        Text(
-            text = stringResource(R.string.status_label, statusText(state.status)),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 16.dp),
-        )
-        Text(
-            text = stringResource(R.string.backend_label),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 20.dp),
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AudioEffectBackend.entries.forEach { backend ->
-                val buttonModifier = Modifier.weight(1f)
-                if (state.backend == backend) {
-                    Button(
-                        onClick = { onBackendChange(backend) },
-                        enabled = !state.initializing,
-                        modifier = buttonModifier,
-                    ) {
-                        Text(text = backendLabel(backend))
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { onBackendChange(backend) },
-                        enabled = !state.initializing,
-                        modifier = buttonModifier,
-                    ) {
-                        Text(text = backendLabel(backend))
+
+        RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
+            SectionHeading(text = stringResource(R.string.backend_label))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AudioEffectBackend.entries.forEach { backend ->
+                    val buttonModifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                    if (state.backend == backend) {
+                        Button(
+                            onClick = { onBackendChange(backend) },
+                            enabled = !state.initializing,
+                            modifier = buttonModifier,
+                        ) {
+                            Text(text = backendLabel(backend))
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { onBackendChange(backend) },
+                            enabled = !state.initializing,
+                            modifier = buttonModifier,
+                        ) {
+                            Text(text = backendLabel(backend))
+                        }
                     }
                 }
             }
-        }
-        Text(
-            text = backendDescription(state.backend),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Text(
-            text = stringResource(R.string.preset_label),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 20.dp),
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AudioPreset.entries.forEach { preset ->
-                val buttonModifier = Modifier.weight(1f)
-                if (state.preset == preset) {
-                    Button(
-                        onClick = { onPresetChange(preset) },
-                        enabled = !state.initializing,
-                        modifier = buttonModifier,
-                    ) {
-                        Text(text = presetLabel(preset))
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { onPresetChange(preset) },
-                        enabled = !state.initializing,
-                        modifier = buttonModifier,
-                    ) {
-                        Text(text = presetLabel(preset))
-                    }
-                }
-            }
-        }
-        Text(
-            text = presetDescription(state.preset),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Text(
-            text = stringResource(R.string.noise_overlay_label),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 20.dp),
-        )
-        NoiseToggleRow(
-            label = stringResource(R.string.noise_hiss_label),
-            checked = noiseState.hissEnabled,
-            enabled = state.powerOn && !state.initializing,
-            onCheckedChange = onHissChange,
-        )
-        NoiseToggleRow(
-            label = stringResource(R.string.noise_crackle_label),
-            checked = noiseState.crackleEnabled,
-            enabled = state.powerOn && !state.initializing,
-            onCheckedChange = onCrackleChange,
-        )
-        Text(
-            text = stringResource(
-                R.string.noise_overlay_status,
-                noiseStatusText(noiseState.status),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        if (noiseState.detail.isNotEmpty()) {
             Text(
-                text = noiseState.detail,
+                text = backendDescription(state.backend),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            SectionHeading(
+                text = stringResource(R.string.preset_label),
+                modifier = Modifier.padding(top = 18.dp),
+            )
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp),
+            ) {
+                items(AudioPreset.entries, key = { it.id }) { preset ->
+                    if (state.preset == preset) {
+                        Button(
+                            onClick = { onPresetChange(preset) },
+                            enabled = !state.initializing,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Text(text = presetLabel(preset), maxLines = 1)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { onPresetChange(preset) },
+                            enabled = !state.initializing,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Text(text = presetLabel(preset), maxLines = 1)
+                        }
+                    }
+                }
+            }
+            Text(
+                text = presetDescription(state.preset),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
-        Text(
-            text = stringResource(R.string.equalizer_label, reportText(state.equalizer)),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-        Text(
-            text = stringResource(R.string.dynamics_label, reportText(state.dynamics)),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+
+        RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
+            SectionHeading(text = stringResource(R.string.noise_overlay_label))
+            NoiseToggleRow(
+                label = stringResource(R.string.noise_hiss_label),
+                checked = noiseState.hissEnabled,
+                enabled = state.powerOn && !state.initializing,
+                onCheckedChange = onHissChange,
+            )
+            NoiseToggleRow(
+                label = stringResource(R.string.noise_crackle_label),
+                checked = noiseState.crackleEnabled,
+                enabled = state.powerOn && !state.initializing,
+                onCheckedChange = onCrackleChange,
+            )
+            Text(
+                text = stringResource(
+                    R.string.noise_overlay_status,
+                    noiseStatusText(noiseState.status),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            if (noiseState.detail.isNotEmpty()) {
+                Text(
+                    text = noiseState.detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
+
+        RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
+            SectionHeading(text = stringResource(R.string.engine_status_heading))
+            Text(
+                text = stringResource(R.string.equalizer_label, reportText(state.equalizer)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Text(
+                text = stringResource(R.string.dynamics_label, reportText(state.dynamics)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
         Text(
             text = stringResource(R.string.poc_keep_alive_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 24.dp),
+            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )
     }
+}
+
+@Composable
+private fun RetroHeader(
+    status: RazioStatus,
+    powerOn: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(R.string.poc_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .background(
+                        color = if (powerOn) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                        shape = CircleShape,
+                    )
+                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+            )
+            Text(
+                text = statusText(status),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RetroPanel(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+        content = {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                content = content,
+            )
+        },
+    )
+}
+
+@Composable
+private fun SectionHeading(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier,
+    )
 }
 
 @Composable

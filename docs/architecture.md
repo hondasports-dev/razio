@@ -105,6 +105,14 @@ Error
 - Unsupported: 端末 / OS / effect 実装として利用不能
 - Error: 本来利用できる可能性があるが初期化等に失敗
 
+## Product UI first pass
+
+音声経路の状態を隠さないまま、画面を暖色のベークライト／紙面系テーマへ寄せます。`RazioTheme` は端末壁紙の dynamic color を既定では使わず、system dark mode に応じて暖色の light / dark scheme を選びます。これにより、同じラジオ筐体の印象を保ちつつ、暗所では背景と文字のコントラストを落としません。
+
+`RazioHomeScreen` は電源・処理方式／プリセット・ノイズ・エンジン状態を独立した `RetroPanel` に分けます。`RetroPanel` は caller が配置できる `modifier` と `ColumnScope` の content slot を持ち、パネル固有の枠・角丸・内側余白だけを所有します。プリセットは `LazyRow` で横スクロールさせ、端末幅が狭くても `Narrow AM` / `Vintage speaker` などのラベルを縦方向へ潰しません。
+
+この段階では tuning dial、signal meter、icon / branding は追加しません。実際の信号強度やモノラル状態を持たないままメーターを描くと、AudioEffectの成立状態を誤認させるためです。
+
 ## AM プリセット
 
 初期 PoC では「正確な AM 放送規格」ではなく聴感を優先します。

@@ -477,6 +477,16 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - 実機readback: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP。SplitでNarrow/Fading `ratio=1.2`・post `0dB`、Vintage `ratio=1.5`・post `+2dB`、Weak `ratio=4`・post `+9dB`、Saturation `ratio=20`・input `+10dB`・post `+8dB` を確認し、SplitのVintage/Weak中域は端末EQ readbackで `910Hz:+5dB` になった。Dynamics onlyではNarrow/Fadingの中域 `+3dB`・高域 `-40dB`、Vintage/Weakの中域 `+3dB`・高域 `-40dB`、Saturationの中域 `+2dB`・高域 `-40dB` を確認した。Dynamics onlyのMBCは非SaturationがSplitと同じ穏和値、Saturationは `ratio=8`・input `+6dB`・post `0dB` のままや
 - 構造・安定性: Splitはsession `0` の2 effects、Dynamics onlyは1 effect。FGS `isForeground=true`、メディアセッション `PLAYING`、crash / ANR / `AudioHardening`なし。聴感の最終受入はユーザー確認待ち
 
+### 2026-08-30 / Retro radio UI first pass
+
+- Scope: 音声backendを変更せず、画面を暖色のベークライト／紙面系テーマへ変更。電源、処理方式／プリセット、ノイズ、エンジン状態を枠付きパネルへ整理し、プリセット選択を `LazyRow` の横スクロールへ変更した
+- Theme: Pixelのsystem dark modeでdark scheme（濃い茶色の筐体・琥珀色の選択状態）、light modeでlight scheme（紙面色・錆色の選択状態）を確認。dynamic colorは既定で無効にし、端末壁紙に色が引っ張られないようにした
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `339236eb848ce186f4c8fcfa78ed0a9d`）。APK SHA-256 `13A0C360AC71D87761C6E09145BDC3E3EF9BDD6F8C78F6D7E006EB938B20B3E3`
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)。debug APKをinstall後、dark / lightを切り替えて画面をcaptureし、darkへ戻した。画面は `Disabled` 状態で表示し、音声のON/OFFやbackend採用判断は今回の範囲外
+- Interaction: `Vintage speaker` をタップして選択状態と説明文が更新されることを確認。プリセット列を横スワイプし、`Weak signal` / `Saturation` / `Fading` が潰れずに表示されることを確認。`android layout` のUI treeにも各ラベルと4つのパネル見出しが存在した
+- Stability: UI確認後のfiltered logcatでアプリの `FATAL EXCEPTION` / `ANR in` / RAZIO由来Exceptionはなし。起動時の既存AudioEffect生成ログ（session `0` のEqualizer / DynamicsProcessing）は従来どおり出力された
+- Status: **UI初回実装・unit test・build・Pixel表示確認済み。最終デザインの聴感ではなく見た目の受入はユーザー確認待ち**。tuning dial / signal meter / iconは未着手
+
 ### 2026-08-30 / Mono 感の強化 feasibility check
 
 - Goal: 他アプリのステレオ再生を、現行の session `0` global AudioEffect の範囲で左右混合してモノラル化できるかを確認する
