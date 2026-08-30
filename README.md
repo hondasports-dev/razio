@@ -16,7 +16,7 @@ RAZIO は、YouTube、音楽アプリ、ゲーム、ブラウザなどの再生�
 - Jetpack Compose
 - Gradle
 - Android AudioEffect API
-- Equalizer / DynamicsProcessing
+- DynamicsProcessing（Post-EQ / MBC / Limiter）
 - ADB による実機検証
 - Codex / AI エージェントによる実装・テストループ
 

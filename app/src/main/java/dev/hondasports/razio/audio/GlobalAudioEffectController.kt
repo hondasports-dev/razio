@@ -2,7 +2,6 @@ package dev.hondasports.razio.audio
 
 import android.media.audiofx.AudioEffect
 import android.media.audiofx.DynamicsProcessing
-import android.media.audiofx.Equalizer
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -16,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * session 0 の global mix に Equalizer / DynamicsProcessing を載せる PoC。
+ * session 0 の global mix に DynamicsProcessing 単体を載せる PoC。
  * session 0 は deprecated で端末依存。生成失敗は隠さず [AudioEngineReport] にする。
  * Application に保持し、プロセスが生きている間だけ効果を維持する。
  */
@@ -26,10 +25,9 @@ class GlobalAudioEffectController(
     private val _state = MutableStateFlow(AudioEffectUiState())
     val state: StateFlow<AudioEffectUiState> = _state.asStateFlow()
 
-    private var equalizer: Equalizer? = null
     private var dynamics: DynamicsProcessing? = null
     private var attempted: Boolean = false
-    private var backend: AudioEffectBackend = AudioEffectBackend.SPLIT
+    private val backend: AudioEffectBackend = AudioEffectBackend.DYNAMICS_ONLY
     private var selectedPreset: AudioPreset = AudioPreset.NARROW_AM
     private val transitionHandler = Handler(Looper.getMainLooper())
     private var transitionState: PresetTransition? = null
@@ -47,12 +45,9 @@ class GlobalAudioEffectController(
         }
         logAvailableEffects()
         releaseEngines()
-        val equalizerReport = when (backend) {
-            AudioEffectBackend.SPLIT -> createEqualizer()
-            AudioEffectBackend.DYNAMICS_ONLY -> AudioEngineReport.NotUsed(
-                reason = "backend=${AudioEffectBackend.DYNAMICS_ONLY.id}",
-            )
-        }
+        val equalizerReport = AudioEngineReport.NotUsed(
+            reason = "backend=${AudioEffectBackend.DYNAMICS_ONLY.id}",
+        )
         val dynamicsReport = createDynamics()
         attempted = true
         publish(
@@ -64,32 +59,14 @@ class GlobalAudioEffectController(
         )
     }
 
-    /**
-     * Switches the experimental processing topology. Effects are recreated so
-     * the old chain cannot remain attached while the new one is being tested.
-     * Split remains the default and is intentionally not persisted.
-     */
-    fun setBackend(newBackend: AudioEffectBackend) {
-        if (backend == newBackend) return
-        stopFading()
-        cancelPresetTransition(applyFinalPreset = false)
-        val wasOn = _state.value.powerOn
-        AudioEffectLog.i("backend switch ${backend.id} -> ${newBackend.id} wasOn=$wasOn")
-        backend = newBackend
-        initialize()
-        if (wasOn) setEnabled(true)
-    }
-
     fun setEnabled(enabled: Boolean) {
         if (!enabled) {
             stopFading()
             cancelPresetTransition(applyFinalPreset = true)
         }
-        if (enabled && equalizer == null && dynamics == null) {
+        if (enabled && dynamics == null) {
             initialize()
         }
-        val preparedEqualizerReport = retryEqualizerPreset(_state.value.equalizer)
-        val equalizerReport = applyEnabled(equalizer, preparedEqualizerReport, enabled, "equalizer")
         val configuredDynamicsReport = applyDynamicsPreset(
             report = _state.value.dynamics,
             usePreEqCurve = shouldUseDynamicsPreEqCurve(),
@@ -100,7 +77,7 @@ class GlobalAudioEffectController(
             powerOn = enabled,
             initializing = false,
             backend = backend,
-            equalizer = equalizerReport,
+            equalizer = dynamicsOnlyEqualizerReport(),
             dynamics = dynamicsReport,
         )
         updateFadingSchedule()
@@ -140,7 +117,6 @@ class GlobalAudioEffectController(
             return
         }
         try {
-            equalizer?.let { applyEqualizerPreset(it, selectedPreset) }
             dynamics?.let {
                 AmDynamicsConfig.applyPreset(
                     dynamics = it,
@@ -162,24 +138,6 @@ class GlobalAudioEffectController(
         releaseEngines()
         attempted = false
         _state.value = AudioEffectUiState(backend = backend)
-    }
-
-    private fun createEqualizer(): AudioEngineReport {
-        var candidate: Equalizer? = null
-        return try {
-            candidate = Equalizer(PRIORITY, sessionId)
-            candidate.enabled = false
-            applyEqualizerPreset(candidate, selectedPreset)
-            val detail = equalizerDetail(candidate)
-            equalizer = candidate
-            candidate = null
-            AudioEffectLog.i("equalizer create ok $detail")
-            AudioEngineReport.Ready(enabled = false, detail = detail)
-        } catch (throwable: Throwable) {
-            candidate.releaseQuietly("equalizer candidate")
-            AudioEffectLog.e("equalizer create failed session=$sessionId", throwable)
-            classify(throwable)
-        }
     }
 
     private fun createDynamics(): AudioEngineReport {
@@ -213,6 +171,7 @@ class GlobalAudioEffectController(
                     ),
                 )
                 candidate.enabled = false
+                verifyPostEqConfiguration(candidate)
                 val detail = dynamicsDetail(
                     candidate,
                     usePreEqCurve = shouldUseDynamicsPreEqCurve(),
@@ -239,9 +198,10 @@ class GlobalAudioEffectController(
 
     private fun enginesHealthy(): Boolean {
         return try {
-            equalizer?.enabled
-            dynamics?.enabled
-            equalizer != null || dynamics != null
+            val effect = dynamics ?: return false
+            effect.enabled
+            verifyPostEqConfiguration(effect)
+            true
         } catch (throwable: Throwable) {
             AudioEffectLog.e("engine health check failed", throwable)
             false
@@ -253,9 +213,8 @@ class GlobalAudioEffectController(
         to: AudioPresetParameters,
         powerOn: Boolean,
     ): Boolean {
-        val currentEqualizer = equalizer
         val currentDynamics = dynamics
-        if (currentEqualizer == null && currentDynamics == null) return false
+        if (currentDynamics == null) return false
 
         val token = Any()
         val transition = PresetTransition(
@@ -266,7 +225,7 @@ class GlobalAudioEffectController(
         )
         transitionState = transition
         try {
-            applyPresetAtProgress(currentEqualizer, currentDynamics, from, to, 0f)
+            applyPresetAtProgress(currentDynamics, from, to, 0f)
             publishExisting(powerOn)
         } catch (throwable: Throwable) {
             transitionState = null
@@ -281,7 +240,6 @@ class GlobalAudioEffectController(
                 try {
                     val progress = transitionProgress(currentTransition)
                     applyPresetAtProgress(
-                        currentEqualizer,
                         currentDynamics,
                         currentTransition.from,
                         currentTransition.to,
@@ -305,23 +263,19 @@ class GlobalAudioEffectController(
     }
 
     private fun applyPresetAtProgress(
-        equalizer: Equalizer?,
-        dynamics: DynamicsProcessing?,
+        dynamics: DynamicsProcessing,
         from: AudioPresetParameters,
         to: AudioPresetParameters,
         progress: Float,
     ) {
-        equalizer?.let { applyEqualizerAtProgress(it, from, to, progress) }
-        dynamics?.let {
-            AmDynamicsConfig.applyPresetAtProgress(
-                dynamics = it,
-                from = from,
-                to = to,
-                progress = progress,
-                usePreEqCurve = shouldUseDynamicsPreEqCurve(),
-                usePostEqCurve = shouldUseDynamicsPostEqCurve(),
-            )
-        }
+        AmDynamicsConfig.applyPresetAtProgress(
+            dynamics = dynamics,
+            from = from,
+            to = to,
+            progress = progress,
+            usePreEqCurve = false,
+            usePostEqCurve = true,
+        )
     }
 
     private fun applyDynamicsPreset(
@@ -338,6 +292,7 @@ class GlobalAudioEffectController(
                 usePreEqCurve = usePreEqCurve,
                 usePostEqCurve = usePostEqCurve,
             )
+            verifyPostEqConfiguration(effect)
             val enabled = (report as? AudioEngineReport.Ready)?.enabled ?: effect.enabled
             AudioEngineReport.Ready(
                 enabled = enabled,
@@ -353,38 +308,63 @@ class GlobalAudioEffectController(
         }
     }
 
-    private fun retryEqualizerPreset(report: AudioEngineReport): AudioEngineReport {
-        val effect = equalizer ?: return report
-        if (report !is AudioEngineReport.Failed) return report
-        return try {
-            applyEqualizerPreset(effect, selectedPreset)
-            AudioEngineReport.Ready(enabled = effect.enabled, detail = equalizerDetail(effect))
-        } catch (throwable: Throwable) {
-            AudioEffectLog.e("equalizer preset retry failed", throwable)
-            classify(throwable)
-        }
-    }
+    // The production topology deliberately keeps Pre-EQ flat and applies the
+    // full tone curve once in Post-EQ after MBC.
+    private fun shouldUseDynamicsPreEqCurve(): Boolean = false
 
-    private fun shouldUseDynamicsPreEqCurve(): Boolean {
-        if (backend == AudioEffectBackend.DYNAMICS_ONLY) return false
-        val effect = equalizer ?: return true
-        return try {
-            // The report can be Failed even when the native effect stayed enabled.
-            // Use the native state so Dynamics never duplicates an active EQ curve.
-            !effect.enabled
-        } catch (throwable: Throwable) {
-            AudioEffectLog.e(
-                "equalizer enabled state unavailable; keep dynamics preEq flat",
-                throwable,
+    private fun shouldUseDynamicsPostEqCurve(): Boolean = true
+
+    /**
+     * The production path depends on a real Post-EQ stage rather than merely
+     * accepting a config object. Some HALs can construct DynamicsProcessing
+     * while silently disabling or truncating a stage, which would let high
+     * frequencies bypass the requested -48 dB curve.
+     */
+    private fun verifyPostEqConfiguration(effect: DynamicsProcessing) {
+        val config = effect.config
+        if (!config.isPostEqInUse || config.postEqBandCount != AmDynamicsConfig.POST_EQ_BAND_COUNT) {
+            throw UnsupportedOperationException(
+                "DynamicsProcessing Post-EQ not supported: " +
+                    "inUse=${config.isPostEqInUse} bands=${config.postEqBandCount}",
             )
-            false
         }
-    }
-
-    private fun shouldUseDynamicsPostEqCurve(): Boolean {
-        // Dynamics only uses the Post-EQ so the tone curve is applied after
-        // MBC makeup gain. Split keeps the existing dedicated Equalizer path.
-        return backend == AudioEffectBackend.DYNAMICS_ONLY
+        val channelCount = effect.channelCount.coerceAtLeast(1)
+        for (channelIndex in 0 until channelCount) {
+            val stage = config.getPostEqByChannelIndex(channelIndex)
+            if (!stage.isInUse || !stage.isEnabled ||
+                stage.bandCount != AmDynamicsConfig.POST_EQ_BAND_COUNT
+            ) {
+                throw UnsupportedOperationException(
+                    "DynamicsProcessing Post-EQ not supported: " +
+                        "channel=$channelIndex inUse=${stage.isInUse} " +
+                        "enabled=${stage.isEnabled} bands=${stage.bandCount}",
+                )
+            }
+            for (bandIndex in 0 until AmDynamicsConfig.POST_EQ_BAND_COUNT) {
+                val band = stage.getBand(bandIndex)
+                if (!band.isEnabled) {
+                    throw UnsupportedOperationException(
+                        "DynamicsProcessing Post-EQ band not supported: " +
+                        "channel=$channelIndex index=$bandIndex disabled",
+                    )
+                }
+                if (bandIndex >= AmDynamicsConfig.POST_EQ_HIGH_CUT_BAND_START_INDEX &&
+                    band.gain > AmDynamicsConfig.POST_EQ_HIGH_CUT_GAIN_DB + 0.5f
+                ) {
+                    throw UnsupportedOperationException(
+                        "DynamicsProcessing Post-EQ high cut not supported: " +
+                            "channel=$channelIndex index=$bandIndex gain=${band.gain}dB",
+                    )
+                }
+            }
+            val finalBand = stage.getBand(AmDynamicsConfig.POST_EQ_BAND_COUNT - 1)
+            if (finalBand.cutoffFrequency < AmDynamicsConfig.POST_EQ_FINAL_CUTOFF_HZ - 1f) {
+                throw UnsupportedOperationException(
+                    "DynamicsProcessing Post-EQ final cutoff not supported: " +
+                        "${finalBand.cutoffFrequency}Hz",
+                )
+            }
+        }
     }
 
     private fun cancelPresetTransition(applyFinalPreset: Boolean): AudioPresetParameters? {
@@ -402,13 +382,14 @@ class GlobalAudioEffectController(
             currentParameters
         }
         try {
-            applyPresetAtProgress(
-                equalizer = equalizer,
-                dynamics = dynamics,
-                from = targetParameters,
-                to = targetParameters,
-                progress = 1f,
-            )
+            dynamics?.let {
+                applyPresetAtProgress(
+                    dynamics = it,
+                    from = targetParameters,
+                    to = targetParameters,
+                    progress = 1f,
+                )
+            }
             if (applyFinalPreset) {
                 publishExisting(_state.value.powerOn)
             }
@@ -485,19 +466,6 @@ class GlobalAudioEffectController(
 
     private fun publishExisting(powerOn: Boolean) {
         attempted = true
-        val currentEqualizerReport = _state.value.equalizer
-        val equalizerReport = equalizer?.let {
-            if (currentEqualizerReport is AudioEngineReport.Unsupported ||
-                currentEqualizerReport is AudioEngineReport.Failed
-            ) {
-                return@let currentEqualizerReport
-            }
-            try {
-                AudioEngineReport.Ready(enabled = it.enabled, detail = equalizerDetail(it))
-            } catch (throwable: Throwable) {
-                classify(throwable)
-            }
-        } ?: _state.value.equalizer
         val currentDynamicsReport = _state.value.dynamics
         val dynamicsReport = dynamics?.let {
             if (currentDynamicsReport is AudioEngineReport.Unsupported ||
@@ -506,6 +474,7 @@ class GlobalAudioEffectController(
                 return@let currentDynamicsReport
             }
             try {
+                verifyPostEqConfiguration(it)
                 AudioEngineReport.Ready(
                     enabled = it.enabled,
                     detail = dynamicsDetail(
@@ -522,57 +491,14 @@ class GlobalAudioEffectController(
             powerOn = powerOn,
             initializing = false,
             backend = backend,
-            equalizer = equalizerReport,
+            equalizer = dynamicsOnlyEqualizerReport(),
             dynamics = dynamicsReport,
         )
     }
 
-    private fun applyEqualizerPreset(
-        equalizer: Equalizer,
-        preset: AudioPreset,
-    ) {
-        applyEqualizerAtProgress(
-            equalizer = equalizer,
-            from = preset.parameters(),
-            to = preset.parameters(),
-            progress = 1f,
-        )
-    }
-
-    private fun applyEqualizerAtProgress(
-        equalizer: Equalizer,
-        from: AudioPresetParameters,
-        to: AudioPresetParameters,
-        progress: Float,
-    ) {
-        val range = equalizer.bandLevelRange
-        val min = range.getOrNull(0) ?: return
-        val max = range.getOrNull(1) ?: return
-        val bandCount = equalizer.numberOfBands.toInt()
-        val t = progress.coerceIn(0f, 1f)
-        for (band in 0 until bandCount) {
-            val centerHz = equalizer.getCenterFreq(band.toShort()) / 1000f
-            val gainDb = lerp(
-                from.gainDbForCenterHz(centerHz),
-                to.gainDbForCenterHz(centerHz),
-                t,
-            )
-            equalizer.setBandLevel(
-                band.toShort(),
-                AudioPreset.millibelsForGainDb(gainDb, min, max),
-            )
-        }
-    }
-
-    private fun equalizerDetail(equalizer: Equalizer): String {
-        val bandCount = equalizer.numberOfBands.toInt()
-        val bands = (0 until bandCount).joinToString(separator = " ") { band ->
-            val hz = equalizer.getCenterFreq(band.toShort()) / 1000f
-            val level = equalizer.getBandLevel(band.toShort())
-            "${hz.toInt()}Hz:${level}mB"
-        }
-        return "session=$sessionId preset=${selectedPreset.id} bands=$bandCount $bands"
-    }
+    private fun dynamicsOnlyEqualizerReport(): AudioEngineReport = AudioEngineReport.NotUsed(
+        reason = "backend=${AudioEffectBackend.DYNAMICS_ONLY.id}",
+    )
 
     private fun dynamicsDetail(
         dynamics: DynamicsProcessing,
@@ -703,7 +629,6 @@ class GlobalAudioEffectController(
     }
 
     private fun releaseEngines() {
-        equalizer = equalizer.releaseQuietly("equalizer")
         dynamics = dynamics.releaseQuietly("dynamics")
     }
 

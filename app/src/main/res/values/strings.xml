@@ -35,11 +35,7 @@
     <string name="status_disabled">Disabled</string>
     <string name="status_unsupported">Unsupported</string>
     <string name="status_error">Error</string>
-    <string name="backend_label">処理方式</string>
-    <string name="backend_split">Split</string>
-    <string name="backend_dynamics_only">Dynamics only</string>
-    <string name="backend_split_description">現行経路。Equalizerで音域、DynamicsProcessingでCompression/Limiter。</string>
-    <string name="backend_dynamics_only_description">PoC経路。DynamicsProcessingのMBC + Post-EQ + Compression + Limiterのみ。</string>
+    <string name="processing_mode_dynamics_only">処理方式: DynamicsProcessingのみ（Equalizer不使用）</string>
     <string name="engine_idle">未初期化</string>
     <string name="engine_not_used">Not used (%1$s)</string>
     <string name="engine_enabled">enabled</string>

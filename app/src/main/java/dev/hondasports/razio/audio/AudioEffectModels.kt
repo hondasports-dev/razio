@@ -23,14 +23,14 @@ sealed class AudioEngineReport {
     ) : AudioEngineReport()
 }
 
+/** The production topology is intentionally fixed to one DynamicsProcessing effect. */
 enum class AudioEffectBackend(val id: String) {
-    SPLIT("split"),
     DYNAMICS_ONLY("dynamics_only"),
     ;
 
     companion object {
         fun fromId(id: String?): AudioEffectBackend =
-            entries.firstOrNull { it.id == id } ?: SPLIT
+            entries.firstOrNull { it.id == id } ?: DYNAMICS_ONLY
     }
 }
 
@@ -48,8 +48,8 @@ data class AudioEffectUiState(
     val initializing: Boolean = false,
     val status: RazioStatus = RazioStatus.Idle,
     val preset: AudioPreset = AudioPreset.NARROW_AM,
-    val backend: AudioEffectBackend = AudioEffectBackend.SPLIT,
-    val equalizer: AudioEngineReport = AudioEngineReport.Idle,
+    val backend: AudioEffectBackend = AudioEffectBackend.DYNAMICS_ONLY,
+    val equalizer: AudioEngineReport = AudioEngineReport.NotUsed("backend=dynamics_only"),
     val dynamics: AudioEngineReport = AudioEngineReport.Idle,
 )
 

@@ -19,11 +19,16 @@ internal object AmDynamicsConfig {
         // Keep the upper cutoff valid on common 44.1/48 kHz output routes.
         20_000f,
     )
+    internal const val POST_EQ_BAND_COUNT = 9
+    internal const val POST_EQ_HIGH_CUT_BAND_START_INDEX = 6
+    internal const val POST_EQ_FINAL_CUTOFF_HZ = 20_000f
+    internal const val POST_EQ_HIGH_CUT_GAIN_DB = -48f
     private val mbcCutoffsHz = floatArrayOf(250f, 2_000f, 8_000f)
     private const val MBC_ATTACK_MS = 5f
     private const val MBC_RELEASE_MS = 120f
     private const val MBC_KNEE_DB = 6f
-    // Both backends now use a gentler compressor for non-saturation presets
+    // The single DynamicsProcessing backend uses a gentler compressor for
+    // non-saturation presets
     // after the user reported a faint edge on AM/Vintage/Weak/Fading. The
     // Dynamics-only path also puts its final Post-EQ after MBC. The resulting
     // non-saturation profiles are approximately Narrow/Fading 1.2:1 / 0 dB,
@@ -65,11 +70,11 @@ internal object AmDynamicsConfig {
             DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
             channelCount,
             true,
-            eqCutoffsHz.size,
+            POST_EQ_BAND_COUNT,
             true,
             mbcCutoffsHz.size,
             usePostEqCurve,
-            if (usePostEqCurve) eqCutoffsHz.size else 0,
+            if (usePostEqCurve) POST_EQ_BAND_COUNT else 0,
             true,
         )
             .setInputGainAllChannelsTo(
@@ -108,7 +113,7 @@ internal object AmDynamicsConfig {
     }
 
     /**
-     * Applies an interpolated preset. Equalizer and MBC parameters are updated in place so
+     * Applies an interpolated preset. Post-EQ and MBC parameters are updated in place so
      * callers can spread a transition over several audio frames instead of dropping the chain.
      */
     fun applyPresetAtProgress(

@@ -26,8 +26,8 @@ class AmPresetTest {
 
     @Test
     fun highShelf_isStrongCut() {
-        assertEquals(-40f, AmPreset.gainDbForCenterHz(3000f), 0.01f)
-        assertEquals(-40f, AmPreset.gainDbForCenterHz(8000f), 0.01f)
+        assertEquals(-48f, AmPreset.gainDbForCenterHz(3000f), 0.01f)
+        assertEquals(-48f, AmPreset.gainDbForCenterHz(8000f), 0.01f)
     }
 
     @Test

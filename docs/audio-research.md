@@ -6,15 +6,15 @@ RAZIO の成立性を、Android の仕様と実機挙動の両面から記録し
 
 ## 重要な前提
 
-### Global AudioEffect
+### Global AudioEffect（現行はDynamicsProcessing単独）
 
 Android では audio session `0` を global output mix として扱う AudioEffect の利用方法が歴史的に存在します。
 
 ただし insert effect（Equalizer など）を session `0` に付けることは **deprecated**。端末ごとの Audio HAL / effect implementation に依存し、生成できたことと他アプリへ効くことは別問題です。
 
-PoC 実装:
+初期PoC（履歴）では次を独立に試しました。通常のEqualizerは現在の製品経路では生成しません。
 
-- `Equalizer(priority, 0)` と `DynamicsProcessing(priority, 0, config)` を独立に試す
+- `Equalizer(priority, 0)` と `DynamicsProcessing(priority, 0, config)` を独立に試す（旧Split検証）
 - `MODIFY_AUDIO_SETTINGS` を manifest に入れる
 - 生成・enable・release の成否を `RAZIO/AudioEffect` タグで出す
 - 効果オブジェクトは `Application` 生存期間。ON 中は `RazioAudioService`（specialUse FGS）でプロセスを維持する
@@ -25,10 +25,12 @@ PoC 実装:
 
 ### 1. Effect の生成
 
-- `Equalizer(priority, 0)` が生成できるか
 - `DynamicsProcessing(0, ...)` が生成できるか
+- Post-EQの `inUse` / `enabled`、9 band、9 / 18 / 20 kHzの有効状態と`-48dB` readbackを確認できるか
 - `enabled = true` が成功するか
 - 例外 / error code
+
+Equalizerの生成可否は旧Split PoCの履歴としてのみ記録し、現行経路の合否条件には含めません。
 
 ### 2. 実際の効果
 
@@ -444,6 +446,8 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 
 ### 2026-08-29 / DynamicsProcessing-only EQ A/B PoC plan
 
+> **Historical / Superseded:** このA/B計画では一時的にEqualizer + DynamicsProcessingを比較した。2026-08-30以降の製品経路はDynamicsProcessing単独で固定している。
+
 - Timing: 今回の全プリセット両端カット再調整をユーザー聴感で受入れた直後、Hiss / Crackle の AudioTrack オーバーレイ実装へ着手する前に実施する。既定経路の置換ではなく、検証用のA/B切替として1回の実機サイクルに限定する
 - Goal: EQも含めてDynamicsProcessing単体（MBC + Post-EQ + Limiter）へまとめた場合に、現行のEqualizer + DynamicsProcessingより音質・安定性が改善するかを確認する
 - A（現行）: Equalizerが音域カーブ、DynamicsProcessingはPre-EQ flat + MBC + Limiter
@@ -459,7 +463,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `e9f43090d5c99cc531f6d81c5f761468`）。APK SHA-256 `B7DBB40BCDD74BC55150B1F310BD15AE65950CB7EEA299960D123B4633E5E311`
 - 再調整後構造再確認 (2026-08-29): Pixel 10 Pro / Android 17 / Pixel Buds Pro 2 Bluetooth A2DP / Spotify `PlaybackState=PLAYING` で、`状態: Active`、`Equalizer: Not used`、`preEq=flat postEq=curve`、`postEqBands` の `90Hz:-24dB` / `250Hz:-24dB` / `4500Hz:-30dB` / `20000Hz:-30dB` を確認。native MBC readbackはNarrow AM/Fadingがratio `2:1`・threshold `-18dB`・attack/release `20/230ms`・post `+3dB`、Vintage speakerがratio `3:1`・post `+4dB`、Weak signalがratio `6.4:1`・post `+6dB`、Saturationがinput `+6dB`・ratio `8:1`・post `0dB`。全プリセットで session `0` の1 effect（DynamicsProcessingのみ）、FGS `isForeground=true`、Spotify再生継続、アプリのcrash/ANRなしを確認した。歪み低減の聴感はユーザー確認待ち
 - ユーザー聴感メモ（再調整前）: `Narrow AM` は「結構歪んでる」、`Vintage speaker` は「少し歪んでる」、`Weak signal` は「歪んでない」、`Fading` は「AMと同じぐらい歪んでる」と報告。これを受けてNarrow/Fadingの圧縮・post gainを最小側へ、Vintageを中間へ下げ、Weakは変更せずに聴感差を保つ方針とした。Saturationは従来どおり意図的な強い質感として別評価にする
-- Status: **プリセット別MBC再調整・構造実機確認済み・聴感受入待ち**。現行のEqualizer + DynamicsProcessingを既定経路として保持する
+- Status: **プリセット別MBC再調整・構造実機確認済み・聴感受入待ち**。当時はEqualizer + DynamicsProcessingを既定経路としていたが、後述の2026-08-30判断で廃止した
 
 ### 2026-08-29 / non-saturation distortion retune
 
@@ -495,6 +499,19 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - 判断: `channelCount=1` を指定しても、global mixのステレオ入力を確実に `(L + R) / 2` へ変換できるとは言えない。effect生成失敗、片チャンネル処理、端末依存のchannel mappingを成功扱いにする危険があるため、Monoトグルや「Mono化できた」という実機未確認の表示は追加しない
 - 代替案: 他アプリ音声を真にモノラル化するには `AudioPlaybackCapture` でPCMを取得し、DSPで左右を混合して `AudioTrack` へ再生する必要がある。公式仕様上、MediaProjectionに加え、対象プレイヤーのusage・capture policy・manifest許可に依存する（[AudioPlaybackCaptureConfiguration](https://developer.android.com/reference/android/media/AudioPlaybackCaptureConfiguration.html)）。元音声を抑制できない場合は加工音との二重再生になるため、現行のglobal backendから直接置き換えない
 - Verification scope: これは公開APIと現行コードの静的な成立性確認であり、APK変更・実機音質受入は行っていない。Mono は AudioPlaybackCapture/自前再生の別PoCを開始するまでロードマップ上で保留する
+
+### 2026-08-30 / DynamicsProcessing-only production path and deeper high cut
+
+- User decision: 通常の `Equalizer` 経路を廃止し、`DynamicsProcessing` 単体（Pre-EQ flat → MBC → Post-EQ → Limiter）を現行経路に固定する。処理方式のA/B切替UIとEqualizer生成・適用・再試行を削除し、Equalizerの状態は `Not used (backend=dynamics_only)` として観測可能なまま残す
+- High-cut adjustment: 全プリセットの `highGainDb` を `-40dB` から `-48dB` へ変更した。10 kHz付近は全プリセットで高域目標へ到達済みなので、`highCutHz`を動かすのではなく終端ゲインを下げる。Post-EQは20 kHz bandまで持つため、Equalizerの端末下限（Pixelで約`-15dB`）に依存しない
+- Failure policy: DynamicsProcessingの生成・enableに失敗した場合は `Unsupported` / `Error` を表示し、Equalizerへ暗黙に戻さない。これにより採用経路と端末対応可否を一致させる
+- Verification plan: `:app:testDebugUnitTest` / `:app:assembleDebug`、Pixel 10 Pro（Android 17 / Pixel Buds Pro 2 Bluetooth A2DP / Spotify）でsession `0` のeffect数が1、`Equalizer: Not used`、`preEq=flat`、`postEq=curve`、20 kHz band `-48dB` readback、プリセット切替・route change・FGS・crash/ANRを確認する。聴感では10 kHz付近の高域残り、音量、クリック、歪みを比較する
+- Unit / build: workflow `03f704c0c89ce0dc3fd3a9daeeae36e9` で `:app:testDebugUnitTest` と `:app:assembleDebug` がPASS。最終APK SHA-256は `116EC8C867447EB6CCE2E2A75AA1431A9229D0307CC875067609B71AF4FAF19D`
+- Device structure: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Pixel Buds Pro 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING` で確認。UIは `Equalizer: Not used (backend=dynamics_only)`、`preEq=flat`、`postEq=curve`。最終APKで Narrow AM / Vintage speaker / Weak signal / Saturation / Fadingを切替え、各Post-EQの9 / 18 / 20 kHz bandが `-48.0dB` になった
+- Effect / lifecycle: `dumpsys media.audio_flinger` は session `0` の `DynamicsProcessing` 1 effect（Equalizerなし）。ON/OFFは `Active` ↔ `Disabled`、`dynamics setEnabled actual=true/false` を確認。FGSは `isForeground=true`、Spotify再生は継続した。Bluetoothのdisable / enableでroute change callbackを発生させた後も `DynamicsProcessing` 1 effectとenableを維持し、Pixel Buds Pro 2へ復帰した
+- Stability: 検証範囲のfiltered logcatにRAZIO由来のcrash / ANR / `AudioHardening`はなし。`AudioEffect.queryEffects()`の能力一覧にEqualizerBundleが出ても、実際のsession `0` chainへは生成していない
+- Post-EQ guard: 生成・再利用時にPost-EQのstage / band数 / 有効状態 / 9・18・20 kHzの高域ゲインをnative readbackし、20 kHz帯が維持できない構成を`Ready`扱いにしない。最終APKでもguard通過後に`Active`を確認した
+- Status: **DynamicsProcessing単独化・高域`-48dB`のunit test / build / Pixel構造確認PASS。10 kHz付近の聴感（高域残り・音量・クリック・歪み）はユーザー確認待ち**
 
 ## 判断基準
 

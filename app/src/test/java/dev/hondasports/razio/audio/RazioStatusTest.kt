@@ -12,70 +12,14 @@ class RazioStatusTest {
                 initializing = true,
                 attempted = false,
                 powerOn = false,
-                equalizer = AudioEngineReport.Idle,
+                equalizer = AudioEngineReport.NotUsed("backend=dynamics_only"),
                 dynamics = AudioEngineReport.Idle,
             ),
         )
     }
 
     @Test
-    fun readyAndOn_isActive() {
-        assertEquals(
-            RazioStatus.Active,
-            razioStatus(
-                initializing = false,
-                attempted = true,
-                powerOn = true,
-                equalizer = AudioEngineReport.Ready(enabled = true, detail = "eq"),
-                dynamics = AudioEngineReport.Failed("no dp"),
-            ),
-        )
-    }
-
-    @Test
-    fun readyAndOff_isDisabled() {
-        assertEquals(
-            RazioStatus.Disabled,
-            razioStatus(
-                initializing = false,
-                attempted = true,
-                powerOn = false,
-                equalizer = AudioEngineReport.Ready(enabled = false, detail = "eq"),
-                dynamics = AudioEngineReport.Unsupported("no dp"),
-            ),
-        )
-    }
-
-    @Test
-    fun bothUnsupported_isUnsupported() {
-        assertEquals(
-            RazioStatus.Unsupported,
-            razioStatus(
-                initializing = false,
-                attempted = true,
-                powerOn = true,
-                equalizer = AudioEngineReport.Unsupported("eq"),
-                dynamics = AudioEngineReport.Unsupported("dp"),
-            ),
-        )
-    }
-
-    @Test
-    fun failedWithoutReady_isError() {
-        assertEquals(
-            RazioStatus.Error,
-            razioStatus(
-                initializing = false,
-                attempted = true,
-                powerOn = true,
-                equalizer = AudioEngineReport.Failed("eq"),
-                dynamics = AudioEngineReport.Unsupported("dp"),
-            ),
-        )
-    }
-
-    @Test
-    fun dynamicsOnlyReady_isActiveEvenWhenEqualizerIsNotUsed() {
+    fun dynamicsReadyAndOn_isActive() {
         assertEquals(
             RazioStatus.Active,
             razioStatus(
@@ -89,8 +33,50 @@ class RazioStatusTest {
     }
 
     @Test
-    fun unknownBackendId_fallsBackToSplit() {
-        assertEquals(AudioEffectBackend.SPLIT, AudioEffectBackend.fromId("unknown"))
+    fun readyAndOff_isDisabled() {
+        assertEquals(
+            RazioStatus.Disabled,
+            razioStatus(
+                initializing = false,
+                attempted = true,
+                powerOn = false,
+                equalizer = AudioEngineReport.NotUsed("backend=dynamics_only"),
+                dynamics = AudioEngineReport.Ready(enabled = false, detail = "dp"),
+            ),
+        )
+    }
+
+    @Test
+    fun dynamicsUnsupported_isUnsupported() {
+        assertEquals(
+            RazioStatus.Unsupported,
+            razioStatus(
+                initializing = false,
+                attempted = true,
+                powerOn = true,
+                equalizer = AudioEngineReport.NotUsed("backend=dynamics_only"),
+                dynamics = AudioEngineReport.Unsupported("dp"),
+            ),
+        )
+    }
+
+    @Test
+    fun dynamicsFailedWithoutReady_isError() {
+        assertEquals(
+            RazioStatus.Error,
+            razioStatus(
+                initializing = false,
+                attempted = true,
+                powerOn = true,
+                equalizer = AudioEngineReport.NotUsed("backend=dynamics_only"),
+                dynamics = AudioEngineReport.Failed("dp"),
+            ),
+        )
+    }
+
+    @Test
+    fun unknownBackendId_fallsBackToDynamicsOnly() {
+        assertEquals(AudioEffectBackend.DYNAMICS_ONLY, AudioEffectBackend.fromId("unknown"))
         assertEquals(AudioEffectBackend.DYNAMICS_ONLY, AudioEffectBackend.fromId("dynamics_only"))
     }
 }

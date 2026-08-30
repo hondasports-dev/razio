@@ -8,7 +8,7 @@ object AmPreset {
     const val HIGH_CUT_HZ = 3000f
     const val LOW_GAIN_DB = -30f
     const val MID_GAIN_DB = 6f
-    const val HIGH_GAIN_DB = -40f
+    const val HIGH_GAIN_DB = -48f
 
     fun gainDbForCenterHz(centerHz: Float): Float {
         return AudioPreset.NARROW_AM.gainDbForCenterHz(centerHz)

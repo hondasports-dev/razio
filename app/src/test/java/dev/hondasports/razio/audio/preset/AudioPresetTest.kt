@@ -12,7 +12,7 @@ class AudioPresetTest {
         assertEquals(6f, AudioPreset.NARROW_AM.gainDbForCenterHz(550f), 0.01f)
         assertEquals(6f, AudioPreset.NARROW_AM.gainDbForCenterHz(1_000f), 0.01f)
         assertEquals(6f, AudioPreset.NARROW_AM.gainDbForCenterHz(2_200f), 0.01f)
-        assertEquals(-40f, AudioPreset.NARROW_AM.gainDbForCenterHz(3_000f), 0.01f)
+        assertEquals(-48f, AudioPreset.NARROW_AM.gainDbForCenterHz(3_000f), 0.01f)
     }
 
     @Test
@@ -22,7 +22,7 @@ class AudioPresetTest {
         assertEquals(-30f, preset.gainDbForCenterHz(180f), 0.01f)
         assertEquals(5f, preset.gainDbForCenterHz(450f), 0.01f)
         assertEquals(5f, preset.gainDbForCenterHz(2_600f), 0.01f)
-        assertEquals(-40f, preset.gainDbForCenterHz(4_000f), 0.01f)
+        assertEquals(-48f, preset.gainDbForCenterHz(4_000f), 0.01f)
         assertTrue(preset.gainDbForCenterHz(6_000f) < preset.midGainDb)
     }
 
@@ -39,7 +39,7 @@ class AudioPresetTest {
         assertEquals(-30f, preset.gainDbForCenterHz(380f), 0.01f)
         assertEquals(5f, preset.gainDbForCenterHz(900f), 0.01f)
         assertEquals(5f, preset.gainDbForCenterHz(1_100f), 0.01f)
-        assertEquals(-40f, preset.gainDbForCenterHz(1_350f), 0.01f)
+        assertEquals(-48f, preset.gainDbForCenterHz(1_350f), 0.01f)
         assertEquals(16f, preset.mbcRatio, 0.01f)
         assertEquals(-30f, preset.mbcThresholdDb, 0.01f)
         assertEquals(8f, preset.mbcPostGainDb, 0.01f)
@@ -53,7 +53,7 @@ class AudioPresetTest {
 
         assertEquals(-24f, preset.gainDbForCenterHz(180f), 0.01f)
         assertEquals(2f, preset.gainDbForCenterHz(450f), 0.01f)
-        assertEquals(-40f, preset.gainDbForCenterHz(5_000f), 0.01f)
+        assertEquals(-48f, preset.gainDbForCenterHz(5_000f), 0.01f)
         assertEquals(10f, preset.inputGainDb, 0.01f)
         assertEquals(20f, preset.mbcRatio, 0.01f)
         assertEquals(-18f, preset.mbcThresholdDb, 0.01f)
@@ -66,7 +66,7 @@ class AudioPresetTest {
 
         assertEquals(-30f, preset.gainDbForCenterHz(300f), 0.01f)
         assertEquals(6f, preset.gainDbForCenterHz(1_000f), 0.01f)
-        assertEquals(-40f, preset.gainDbForCenterHz(3_000f), 0.01f)
+        assertEquals(-48f, preset.gainDbForCenterHz(3_000f), 0.01f)
         assertEquals(3f, preset.fadeDepthDb, 0.01f)
         assertEquals(3_200L, preset.fadePeriodMs)
         assertEquals(0f, preset.inputGainDb, 0.01f)
@@ -77,6 +77,13 @@ class AudioPresetTest {
         val value = AudioPreset.VINTAGE_SPEAKER.millibels(100f, -600, 600)
 
         assertEquals(-600, value.toInt())
+    }
+
+    @Test
+    fun allPresets_useDeeperTenKilohertzCut() {
+        AudioPreset.entries.forEach { preset ->
+            assertEquals(-48f, preset.gainDbForCenterHz(10_000f), 0.01f)
+        }
     }
 
     @Test

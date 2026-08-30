@@ -15,12 +15,14 @@ RAZIO は Android の AudioEffect API を第一候補として、他アプリを
                ▼
         Android audio mix
                │
-               ▼
+       ▼
       Global AudioEffect
       session = 0 (PoC)
-        ├─ Equalizer
-        ├─ DynamicsProcessing
-        └─ Limiter
+        └─ DynamicsProcessing
+           ├─ Pre-EQ (flat)
+           ├─ MBC
+           ├─ Post-EQ
+           └─ Limiter
                │
                ▼
        Speaker / BT / USB
@@ -64,7 +66,7 @@ RAZIO generated noise → AudioTrack ┘
 
 `DynamicsProcessing` は `channelCount` 個のチャンネルを持つ同じ構造の処理段（Pre-EQ / MBC / Post-EQ / Limiter）として動き、各チャンネルのパラメータは独立しています。`setAllChannelsTo` も同じ設定を各チャンネルへコピーするだけで、左右を加算して `mono = (L + R) / 2` にするミックス、チャンネルの入れ替え、出力チャンネル数の変換は行いません。公式リファレンスの構成図もチャンネルごとに Input → stages → Output が分離した構造です（[DynamicsProcessing](https://developer.android.com/reference/android/media/audiofx/DynamicsProcessing)）。
 
-そのため、現行の session `0` global AudioEffect（Equalizer / DynamicsProcessing）へ `channelCount=1` を渡しても、他アプリのステレオ音声を確実にモノラル化できる根拠にはなりません。端末のeffect実装で生成に失敗するか、片チャンネルだけを処理するだけになる可能性があり、見かけだけの Mono トグルは追加しません。
+そのため、現行の session `0` global DynamicsProcessingへ `channelCount=1` を渡しても、他アプリのステレオ音声を確実にモノラル化できる根拠にはなりません。端末のeffect実装で生成に失敗するか、片チャンネルだけを処理するだけになる可能性があり、見かけだけの Mono トグルは追加しません。
 
 真のモノラル化には、RAZIOが所有するPCMをDSPで左右混合してから再生する経路が必要です。自前プレイヤーなら `AudioTrack` の前段で実装できますが、他アプリ音声を対象にする場合は `AudioPlaybackCapture` → `AudioRecord` → `AudioTrack` の差し替え経路になります。この経路は MediaProjection と再生側の capture policy / manifest 設定に依存し、加工前の元音声を抑制できない場合は二重再生になります（[AudioPlaybackCaptureConfiguration](https://developer.android.com/reference/android/media/AudioPlaybackCaptureConfiguration.html)）。Mono はこの代替経路のPoCを開始するまでロードマップ上で保留します。
 
@@ -81,7 +83,7 @@ FGS の `startForeground` 失敗は logcat に出して隠さない。通知許�
 - 例外を状態へ変換
 - release
 
-Equalizer と DynamicsProcessing は独立に生成し、片方の失敗でももう片方を使えるようにする。session `0` への insert effect は deprecated なので、失敗を隠さない。
+DynamicsProcessingを1つだけ生成し、Pre-EQ flat / MBC / Post-EQ / Limiterを同じeffect内で適用する。session `0` への insert effect は deprecated なので、生成・enable失敗を隠さず `Unsupported` / `Error` に反映する。
 
 `MODIFY_AUDIO_SETTINGS` は manifest で宣言する。runtime permission ではない。
 
@@ -121,56 +123,48 @@ Error
 
 ```text
 Input
-  ↓
-Low-frequency attenuation
-  ↓
-High-frequency attenuation
-  ↓
-Mid emphasis
-  ↓
-Compression
-  ↓
-Limiter
+  ↓ DynamicsProcessing input gain
+  ↓ Pre-EQ (flat)
+  ↓ MBC / compression
+  ↓ Post-EQ (low cut / mid emphasis / high cut)
+  ↓ Limiter
   ↓
 Output
 ```
 
-プリセットごとのカーブは次の通りです。すべて端末 EQ の min / max で clamp します。
+プリセットごとのカーブは次の通りです。音域カーブはDynamicsProcessingのPost-EQへ直接渡し、端末のEqualizer下限には依存しません。
 
 | プリセット | 低域 | 中域 | 高域 | 狙い |
 | --- | --- | --- | --- | --- |
-| Narrow AM | 300 Hz 以下を -30 dB | 550〜2,200 Hz を +6 dB | 3.0 kHz 以上を -40 dB（2.2 kHzからロールオフ） | 狭いAMラジオ。MBC 10:1 / post +6 dB / makeup +8 dB |
-| Vintage speaker | 180 Hz 以下を -30 dB | 450〜2,600 Hz を +5 dB | 4.0 kHz 以上を -40 dB（2.6 kHzからロールオフ） | 70〜80年代ラジカセの紙コーン／箱鳴り風。MBC 10:1 / post +6 dB / makeup +8 dB |
-| Weak signal | 380 Hz 以下を -30 dB | 900〜1,100 Hz を +5 dB | 1.35 kHz 以上を -40 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
-| Saturation | 180 Hz 以下を -24 dB | 450〜2,400 Hz を +2 dB | 5.0 kHz 以上を -40 dB（2.4 kHzからロールオフ） | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
+| Narrow AM | 300 Hz 以下を -30 dB | 550〜2,200 Hz を +6 dB | 3.0 kHz 以上を -48 dB（2.2 kHzからロールオフ） | 狭いAMラジオ。MBC 10:1 / post +6 dB / makeup +8 dB |
+| Vintage speaker | 180 Hz 以下を -30 dB | 450〜2,600 Hz を +5 dB | 4.0 kHz 以上を -48 dB（2.6 kHzからロールオフ） | 70〜80年代ラジカセの紙コーン／箱鳴り風。MBC 10:1 / post +6 dB / makeup +8 dB |
+| Weak signal | 380 Hz 以下を -30 dB | 900〜1,100 Hz を +5 dB | 1.35 kHz 以上を -48 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
+| Saturation | 180 Hz 以下を -24 dB | 450〜2,400 Hz を +2 dB | 5.0 kHz 以上を -48 dB（2.4 kHzからロールオフ） | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
 | Fading | Narrow AM と同じ | Narrow AM と同じ | Narrow AM と同じ | input gain を約±3 dB、3.2 秒周期でゆっくり変動させる受信揺らぎ |
 
-音質カーブは原則 Equalizer に一度だけ適用します。Equalizer が生成できない端末では、DynamicsProcessing の pre-EQ をフォールバックとして使い、同じカーブを二重適用しません。
-- 非Saturation（Narrow / Vintage / Weak / Fading）は、実機での歪み報告を受けて両backendとも穏和化したMBCを使います。Dynamics onlyの目安は Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`。Dynamics onlyのPost-EQは中域を最大 `+3dB` まで許容します。SaturationはSplitでは基準値の強いMBC、Dynamics onlyでは入力を抑えた強いMBCを使い、意図した質感を残します。
-- MBC 後段にプリセットごとの post / makeup gain を加え、EQ と圧縮による過度な音量低下を抑えます。Dynamics onlyのPost-EQ正ブーストは `+3dB` までに制限し、最終ピークは limiter（-1 dB）で制限します。
+表のMBC比率・入力ゲインはプリセットの音作り上の目標値です。現行のDynamicsProcessing単独経路では、歪みと音量低下を抑える安全マッピングを通してからnative effectへ渡します。実機readbackの目安は Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`、Saturation `8:1`・input `+6dB`・post `0dB` です。
+
+音質カーブはDynamicsProcessingのPost-EQに一度だけ適用します。Pre-EQはflat、Equalizerは生成・適用せず、端末のEqualizer下限による浅い高域カットを避けます。DynamicsProcessingが生成できない端末では `Unsupported` / `Error` を表示し、Equalizerへ戻す暗黙のフォールバックは行いません。
+- 非Saturation（Narrow / Vintage / Weak / Fading）は、実機での歪み報告を受けて穏和化したMBCを使います。目安は Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`。Post-EQは中域を最大 `+3dB` まで許容します。Saturationは入力を抑えた強いMBCで意図した質感を残します。
+- MBC後段にプリセットごとのPost-EQを置き、makeup gainで低域・高域のカットが戻らないようにします。最終ピークはlimiter（-1 dB）で制限します。
 - Saturation だけは DynamicsProcessing の input gain を +10 dB にし、強い MBC（20:1）へ入力を押し込みます。Android AudioEffect に汎用 wave-shaper はないため、倍音を含む物理的な飽和とは区別して扱います。
 - Fading は独立したノイズ信号を生成せず、DynamicsProcessing の input gain を Handler で約 100 ms ごとに更新します。プリセット切替・OFF・route change・release では更新 Runnable を必ずキャンセルし、effect chain を解放した後に古い更新が走らないようにします。
 
-プリセット変更は既存の Equalizer / DynamicsProcessing を release せず、約 80 ms の補間でパラメータを更新します。切替中の再タップは、その時点の補間値を次の遷移の開始値にします。effect が壊れて更新できない場合だけ、従来通り再生成へ戻します。
+プリセット変更は既存のDynamicsProcessingをreleaseせず、約80 msの補間でPost-EQ / MBCパラメータを更新します。切替中の再タップは、その時点の補間値を次の遷移の開始値にします。effectが壊れて更新できない場合だけ再生成へ戻します。
 
 DynamicsProcessing は null config の既定値をプリセット適用済みとして扱いません。まず端末の実チャンネル数を probe して RAZIO の Config を作成し、対応する Config を作れない場合は `Failed` / `Unsupported` として表示します。これにより、既定値の未設定 band が残ったまま成功扱いになることを防ぎます。
 
-実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
+Equalizerは現行の製品経路から外しました。端末ごとに異なるband数・min/maxへ依存せず、DynamicsProcessingの20 kHzまでのPost-EQ bandを観測対象にします。
 
-Hiss / Crackle のような独立ノイズは、現在の global AudioEffect（Equalizer / DynamicsProcessing）だけでは生成・混合できません。AudioPlaybackCapture を使う代替案は MediaProjection の許可、capture policy、元音声との二重再生が発生し得るため、別途成立性を確認するまで保留します。現在は `NoiseOverlayController` が生成したPCMを通常の `AudioTrack` で別経路再生するPoCを実装し、元音声を捕捉・再再生しない構成で実機構造確認とユーザー聴感受入まで完了しています。製品採用はこの独立オーバーレイ方式を基礎にし、VLC側のループ再生や長時間バックグラウンド無音化は別検証として扱います。
+生成直後と既存effectの再利用時には、Post-EQが `inUse` / `enabled` であること、9 bandが欠落・追加なく存在すること、全bandが有効であることをreadbackします。9 / 18 / 20 kHz帯のゲインが高域目標（`-48dB`）を保ち、終端cutoffが20 kHz付近に届かない端末は、音が素通りする可能性があるため `Unsupported` / `Error` として扱い、`Ready` や `Active` にはしません。
 
-### DynamicsProcessing 単体化の A/B PoC
+Hiss / Crackle のような独立ノイズは、現在の global DynamicsProcessingだけでは生成・混合できません。AudioPlaybackCaptureを使う代替案はMediaProjectionの許可、capture policy、元音声との二重再生が発生し得るため、別途成立性を確認するまで保留します。現在は `NoiseOverlayController` が生成したPCMを通常の `AudioTrack` で別経路再生するPoCを実装し、元音声を捕捉・再再生しない構成で実機構造確認とユーザー聴感受入まで完了しています。製品採用はこの独立オーバーレイ方式を基礎にし、VLC側のループ再生や長時間バックグラウンド無音化は別検証として扱います。
 
-現行MVPは、実機で成立を確認できた `Equalizer + DynamicsProcessing` を既定経路として維持します。DynamicsProcessing には Pre-EQ / MBC / Post-EQ / Limiter があるため、EQも含めて1つの effect に収められる可能性があります。ただし、DynamicsProcessing の端末実装差と、現在の Equalizer 経路で得られた実機受入を同時に失わないよう、いきなり既定経路を置き換えません。
+### DynamicsProcessing単独化の決定
 
-PoCは、今回の全プリセット両端カット再調整をユーザー聴感で受入れた後、Hiss / Crackle の AudioTrack オーバーレイ実装へ着手する前に、1回の実機A/B検証として実施します。
+2026-08-30に、ユーザー判断によりA/B PoCのB案を現行経路として採用しました。`GlobalAudioEffectController` はDynamicsProcessingを1つだけ生成し、Pre-EQ flat → MBC → Post-EQ → Limiterの順で全プリセットを処理します。Equalizerは生成せず、UIには `Not used (backend=dynamics_only)` と表示します。これにより端末Equalizerの浅い下限に縛られず、10 kHz付近を含む高域へ`-48 dB`の目標を渡せます。
 
-比較する経路:
-
-- A（現行）: Equalizer が音域カーブ、DynamicsProcessing は Pre-EQ flat + MBC + Limiter
-- B（候補）: Equalizerを生成せず、DynamicsProcessing の MBC + Post-EQ + Limiter で全カーブを処理。Post-EQをMBCの後段に置き、makeup gainで低域・高域のカットが戻らないようにする。BだけMBCを穏やかにし、Narrow AM/Fading `1.2:1`・post `0dB`、Vintage speaker `1.5:1`・post `+2dB`、Weak signal `4:1`・post `+9dB`、Saturation `8:1`・input `+6dB`・post `0dB`（共通 attack/release `20/230ms`、knee `12dB`）として過度な圧縮歪みを避ける。Post-EQの正のブーストは `+3dB` を上限とする
-
-Bが端末・出力先で安定し、Aより低域/高域のカット量と声域の明瞭度が良く、音量差・クリック・歪みが許容範囲なら、対応端末だけBを優先する候補にします。Bが失敗または聴感で劣る場合はAを維持し、Equalizerが使えない端末だけ既存のDynamicsProcessing Pre-EQフォールバックを使います。PoC実装では画面の「処理方式」から `Split` / `Dynamics only` を選べます。切替時は二つのchainを同時に残さないよう既存effectをreleaseして再生成し、ON状態だけ復元します。設定は永続化せず、起動時は `Split` に戻します。詳細な実施条件は `docs/audio-research.md`、チェック手順は `docs/testing.md` に記録します。
+DynamicsProcessingの生成・enableに失敗した場合は状態を `Unsupported` / `Error` として表示します。Equalizerを代替経路として再生成しないため、対応端末条件は従来より明確になります。プリセット切替・route change・OFF・releaseでは、単一effectのlifecycleと約80 msの補間を維持します。
 
 2026-08-29: Pixel 10 Pro / Android 17 で YouTube・音楽アプリ・Chrome がスピーカーと Bluetooth に乗った。この端末では Global AudioEffect（session 0）を MVP とする。詳細は `docs/audio-research.md`。
 
@@ -227,7 +221,7 @@ MVP では複雑な DB は不要です。
 - RAZIO の ON/OFF（DataStore Preferences）
 - 選択中プリセット（DataStore Preferences。未保存時は Narrow AM）
 
-プリセット変更時は既存の session 0 effect を release せず、Equalizer / DynamicsProcessing のパラメータを約 80 ms かけて段階更新します。段数や effect が壊れている場合だけ再生成へフォールバックします。Room は必要性が出るまで導入しません。
+プリセット変更時は既存の session 0 DynamicsProcessing を release せず、Post-EQ / MBC のパラメータを約 80 ms かけて段階更新します。段数や effect が壊れている場合だけ再生成へフォールバックします。Room は必要性が出るまで導入しません。
 
 起動時に保存済みプリセットを復元してから effect を初期化し、保存済み ON なら effect を enable し、FGS も起動する。UI のスイッチは `RazioApp.setPowerOn` 経由、プリセット選択は `RazioApp.setPreset` 経由で effect と prefs を更新する。短時間の連続操作では古い DataStore 書き込みをキャンセルし、最後の選択が後から上書きされないようにする。API 33 以上では ON 時に `POST_NOTIFICATIONS` を要求する。
 

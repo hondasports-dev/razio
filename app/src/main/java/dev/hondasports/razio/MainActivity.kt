@@ -27,7 +27,6 @@ class MainActivity : ComponentActivity() {
                         noiseOverlay = app.noiseOverlay,
                         onPowerChange = app::setPowerOn,
                         onPresetChange = app::setPreset,
-                        onBackendChange = app::setBackend,
                         onHissChange = app::setHissEnabled,
                         onCrackleChange = app::setCrackleEnabled,
                     )

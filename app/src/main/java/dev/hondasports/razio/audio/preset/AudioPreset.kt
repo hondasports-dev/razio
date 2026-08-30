@@ -4,7 +4,7 @@ package dev.hondasports.razio.audio.preset
  * Sound curves that can be applied to the session 0 AudioEffect chain.
  *
  * The values are intentionally expressed as a small, platform-independent
- * domain type. The Android Equalizer range is applied only by [millibels].
+ * domain type and applied by DynamicsProcessing's Post-EQ.
  */
 enum class AudioPreset(
     val id: String,
@@ -26,16 +26,17 @@ enum class AudioPreset(
     NARROW_AM(
         id = "narrow_am",
         // Keep the voice band present while trimming the extremes that made
-        // the first wider pass sound too hi-fi on modern speakers. The deeper
-        // targets also help DynamicsProcessing fallback devices; Equalizer
-        // implementations still clamp them to their native minimum.
+        // the first wider pass sound too hi-fi on modern speakers. Keep the
+        // upper band substantially below the voice range. The
+        // DynamicsProcessing-only path can retain this deeper target instead
+        // of being limited by a device Equalizer's shallow floor.
         lowCutHz = 300f,
         midLowHz = 550f,
         midHighHz = 2_200f,
         highCutHz = 3_000f,
         lowGainDb = -30f,
         midGainDb = 6f,
-        highGainDb = -40f,
+        highGainDb = -48f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,
@@ -51,7 +52,7 @@ enum class AudioPreset(
         highCutHz = 4_000f,
         lowGainDb = -30f,
         midGainDb = 5f,
-        highGainDb = -40f,
+        highGainDb = -48f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,
@@ -65,7 +66,7 @@ enum class AudioPreset(
         highCutHz = 1_350f,
         lowGainDb = -30f,
         midGainDb = 5f,
-        highGainDb = -40f,
+        highGainDb = -48f,
         mbcRatio = 16f,
         mbcThresholdDb = -30f,
         mbcPostGainDb = 8f,
@@ -81,7 +82,7 @@ enum class AudioPreset(
         highCutHz = 5_000f,
         lowGainDb = -24f,
         midGainDb = 2f,
-        highGainDb = -40f,
+        highGainDb = -48f,
         mbcRatio = 20f,
         mbcThresholdDb = -18f,
         mbcPostGainDb = 4f,
@@ -98,7 +99,7 @@ enum class AudioPreset(
         highCutHz = 3_000f,
         lowGainDb = -30f,
         midGainDb = 6f,
-        highGainDb = -40f,
+        highGainDb = -48f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,

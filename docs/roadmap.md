@@ -27,7 +27,7 @@
 
 実装:
 
-- [x] session `0` で Equalizer を生成
+- [x] session `0` で Equalizer を生成（旧Split PoC。現行経路では生成しない）
 - [x] session `0` で DynamicsProcessing を検証
 - [x] enable / disable
 - [x] effect state を画面に表示
@@ -98,7 +98,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] エラーハンドリング（Unsupported / Error を画面表示）
 - [x] 最小 Compose UI
 - [x] 実機 regression 手順（起動時 ON 復元・FGS 通知・Home 放置・画面 OFF 後の effect 維持・Bluetooth route 再接続は Pixel 10 Pro で確認。詳細は `docs/audio-research.md` / `docs/testing.md`）
-- [ ] DynamicsProcessing 単体 A/B PoC（UI切替・Post-EQ/MBC穏和化済み。AM/Fading/Vintage/Weak の両backend歪み低減、Weak の音量補正、全プリセットの中域・高域再調整を反映し、Post-EQ上限を+3dBへ調整。修正版の構造実機確認済み、最終聴感受入後に既定経路を判断）
+- [x] DynamicsProcessing 単体 A/B PoC（B案を採用。Equalizerを生成せず、Post-EQ/MBC/Limiterを1 effectへ集約。Pixel 10 Proでsession `0` の1 effect構成を確認）
 
 ## Phase 3: Sound design
 
@@ -112,6 +112,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Saturation（入力ゲイン＋強いMBCによる飽和近似。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] 全プリセット両端カット再調整（低域・高域のロールオフを強化。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
 - [ ] 両端カット第2段（全プリセットの低域・高域目標をさらに約6dB深く調整。Pixel 10 Pro / Pixel Buds Pro 2で構造確認済み、最終聴感受入待ち）
+- [ ] 高域カット第3段（DynamicsProcessing単独化に合わせ、全プリセットの10 kHz付近を `-40dB` から `-48dB` へ変更。Pixel実機readback確認済み、聴感受入待ち）
 - [x] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）

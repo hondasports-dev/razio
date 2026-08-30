@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import dev.hondasports.razio.R
 import dev.hondasports.razio.audio.AudioEngineReport
-import dev.hondasports.razio.audio.AudioEffectBackend
 import dev.hondasports.razio.audio.AudioEffectUiState
 import dev.hondasports.razio.audio.GlobalAudioEffectController
 import dev.hondasports.razio.audio.NoiseOverlayController
@@ -64,7 +63,6 @@ fun RazioHomeRoute(
     noiseOverlay: NoiseOverlayController,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
-    onBackendChange: (AudioEffectBackend) -> Unit = {},
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -87,7 +85,6 @@ fun RazioHomeRoute(
             }
         },
         onPresetChange = onPresetChange,
-        onBackendChange = onBackendChange,
         noiseState = noiseState,
         onHissChange = onHissChange,
         onCrackleChange = onCrackleChange,
@@ -108,7 +105,6 @@ fun RazioHomeScreen(
     state: AudioEffectUiState,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
-    onBackendChange: (AudioEffectBackend) -> Unit = {},
     noiseState: NoiseOverlayUiState = NoiseOverlayUiState(),
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
@@ -154,43 +150,15 @@ fun RazioHomeScreen(
         }
 
         RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
-            SectionHeading(text = stringResource(R.string.backend_label))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AudioEffectBackend.entries.forEach { backend ->
-                    val buttonModifier = Modifier.weight(1f).heightIn(min = 48.dp)
-                    if (state.backend == backend) {
-                        Button(
-                            onClick = { onBackendChange(backend) },
-                            enabled = !state.initializing,
-                            modifier = buttonModifier,
-                        ) {
-                            Text(text = backendLabel(backend))
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { onBackendChange(backend) },
-                            enabled = !state.initializing,
-                            modifier = buttonModifier,
-                        ) {
-                            Text(text = backendLabel(backend))
-                        }
-                    }
-                }
-            }
             Text(
-                text = backendDescription(state.backend),
+                text = stringResource(R.string.processing_mode_dynamics_only),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 6.dp),
             )
             SectionHeading(
                 text = stringResource(R.string.preset_label),
-                modifier = Modifier.padding(top = 18.dp),
+                modifier = Modifier.padding(top = 14.dp),
             )
             LazyRow(
                 modifier = Modifier
@@ -401,24 +369,6 @@ private fun presetLabel(preset: AudioPreset): String {
 }
 
 @Composable
-private fun backendLabel(backend: AudioEffectBackend): String {
-    val resId = when (backend) {
-        AudioEffectBackend.SPLIT -> R.string.backend_split
-        AudioEffectBackend.DYNAMICS_ONLY -> R.string.backend_dynamics_only
-    }
-    return stringResource(resId)
-}
-
-@Composable
-private fun backendDescription(backend: AudioEffectBackend): String {
-    val resId = when (backend) {
-        AudioEffectBackend.SPLIT -> R.string.backend_split_description
-        AudioEffectBackend.DYNAMICS_ONLY -> R.string.backend_dynamics_only_description
-    }
-    return stringResource(resId)
-}
-
-@Composable
 private fun presetDescription(preset: AudioPreset): String {
     val resId = when (preset) {
         AudioPreset.NARROW_AM -> R.string.preset_narrow_am_description
@@ -481,12 +431,11 @@ private fun RazioHomeScreenPreview() {
             state = AudioEffectUiState(
                 powerOn = true,
                 status = RazioStatus.Active,
-                equalizer = AudioEngineReport.Ready(enabled = true, detail = "session=0 bands=5"),
+                equalizer = AudioEngineReport.NotUsed(reason = "backend=dynamics_only"),
                 dynamics = AudioEngineReport.Ready(enabled = true, detail = "session=0 channels=2"),
             ),
             onPowerChange = {},
             onPresetChange = {},
-            onBackendChange = {},
             noiseState = NoiseOverlayUiState(
                 powerOn = true,
                 hissEnabled = true,
