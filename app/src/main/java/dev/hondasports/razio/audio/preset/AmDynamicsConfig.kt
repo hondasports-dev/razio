@@ -28,12 +28,11 @@ internal object AmDynamicsConfig {
     private const val MBC_RELEASE_MS = 120f
     private const val MBC_KNEE_DB = 6f
     // The single DynamicsProcessing backend uses a gentler compressor for
-    // non-saturation presets
-    // after the user reported a faint edge on AM/Vintage/Weak/Fading. The
-    // Dynamics-only path also puts its final Post-EQ after MBC. The resulting
-    // non-saturation profiles are approximately Narrow/Fading 1.2:1 / 0 dB,
-    // Vintage 1.5:1 / 2 dB, and Weak 4:1 / 9 dB. Saturation keeps its strong
-    // backend-specific character instead of being softened by this change.
+    // non-saturation presets after the first distortion report. A second
+    // relief pass is controlled by AudioPresetParameters.distortionRelief:
+    // Weak signal is deliberately 0 (unchanged), while the other presets get
+    // extra headroom. The Dynamics-only path also puts its final Post-EQ after
+    // MBC, so the relief is applied before the final tone curve.
     private const val DP_ONLY_MBC_RATIO_BASE_SCALE = 0.12f
     private const val DP_ONLY_MBC_RATIO_WIDE_SCALE = 0.03f
     private const val DP_ONLY_MBC_RATIO_STRONG_SCALE = 0.13f
@@ -42,21 +41,29 @@ internal object AmDynamicsConfig {
     private const val DP_ONLY_MBC_THRESHOLD_FLOOR_DB = -18f
     private const val DP_ONLY_MBC_POST_GAIN_MAX_DB = 9f
     private const val DP_ONLY_INPUT_GAIN_MAX_DB = 6f
-    // Keep the voice lift below the limiter headroom. Saturation's native
-    // +2 dB mid boost is unchanged; the cap mainly limits the +4 to +6 dB
-    // lift used by the other presets that was causing a faint limiter edge.
+    private const val DP_ONLY_RELAXED_THRESHOLD_DB = -12f
+    private const val DP_ONLY_RELAXED_MBC_RATIO_TARGET = 1f
+    private const val DP_ONLY_RELAXED_SATURATION_RATIO_TARGET = 4f
+    private const val DP_ONLY_RELAXED_INPUT_GAIN_TARGET_DB = 0f
+    private const val DP_ONLY_RELAXED_MBC_POST_GAIN_TARGET_DB = 0f
+    // Keep the voice lift below the limiter headroom. The relief pass lowers
+    // the +3 dB cap toward +2 dB without changing Weak signal's +3 dB target.
     private const val DP_ONLY_POST_EQ_MAX_BOOST_DB = 3f
+    private const val DP_ONLY_RELAXED_POST_EQ_MAX_BOOST_DB = 2f
     private const val DP_ONLY_MBC_ATTACK_MS = 20f
     private const val DP_ONLY_MBC_RELEASE_MS = 230f
     private const val DP_ONLY_MBC_KNEE_DB = 12f
+    private const val DP_ONLY_RELAXED_MBC_ATTACK_MS = 30f
+    private const val DP_ONLY_RELAXED_MBC_RELEASE_MS = 300f
+    private const val DP_ONLY_RELAXED_MBC_KNEE_DB = 18f
 
     fun build(
         channelCount: Int,
         preset: AudioPreset,
         usePreEqCurve: Boolean = true,
         usePostEqCurve: Boolean = false,
+        parameters: AudioPresetParameters = preset.parameters(),
     ): DynamicsProcessing.Config {
-        val parameters = preset.parameters()
         val preEq = buildEq(parameters, useCurve = usePreEqCurve)
         val postEq = buildEq(
             parameters,
@@ -101,11 +108,12 @@ internal object AmDynamicsConfig {
         preset: AudioPreset,
         usePreEqCurve: Boolean,
         usePostEqCurve: Boolean = false,
+        parameters: AudioPresetParameters = preset.parameters(),
     ) {
         applyPresetAtProgress(
             dynamics = dynamics,
-            from = preset.parameters(),
-            to = preset.parameters(),
+            from = parameters,
+            to = parameters,
             progress = 1f,
             usePreEqCurve = usePreEqCurve,
             usePostEqCurve = usePostEqCurve,
@@ -187,8 +195,8 @@ internal object AmDynamicsConfig {
                 DynamicsProcessing.MbcBand(
                     true,
                     cutoffHz,
-                    lerp(attackMs(fromGentle), attackMs(toGentle), t),
-                    lerp(releaseMs(fromGentle), releaseMs(toGentle), t),
+                    lerp(attackMs(from, fromGentle), attackMs(to, toGentle), t),
+                    lerp(releaseMs(from, fromGentle), releaseMs(to, toGentle), t),
                     lerp(
                         mbcRatio(from, gentle = fromGentle),
                         mbcRatio(to, gentle = toGentle),
@@ -199,7 +207,7 @@ internal object AmDynamicsConfig {
                         mbcThresholdDb(to, gentle = toGentle),
                         t,
                     ),
-                    lerp(kneeDb(fromGentle), kneeDb(toGentle), t),
+                    lerp(kneeDb(from, fromGentle), kneeDb(to, toGentle), t),
                     -80f,
                     1f,
                     0f,
@@ -259,11 +267,11 @@ internal object AmDynamicsConfig {
         return DynamicsProcessing.MbcBand(
             true,
             cutoffHz,
-            attackMs(gentle),
-            releaseMs(gentle),
+            attackMs(parameters, gentle),
+            releaseMs(parameters, gentle),
             mbcRatio(parameters, gentle),
             mbcThresholdDb(parameters, gentle),
-            kneeDb(gentle),
+            kneeDb(parameters, gentle),
             -80f,
             1f,
             0f,
@@ -275,53 +283,60 @@ internal object AmDynamicsConfig {
         parameters: AudioPresetParameters,
         gentle: Boolean,
     ): Float {
-        return if (gentle) {
-            parameters.inputGainDb.coerceAtMost(DP_ONLY_INPUT_GAIN_MAX_DB)
-        } else {
-            parameters.inputGainDb
-        }
+        if (!gentle) return parameters.inputGainDb
+        val baseGain = parameters.inputGainDb.coerceAtMost(DP_ONLY_INPUT_GAIN_MAX_DB)
+        return lerp(
+            baseGain,
+            DP_ONLY_RELAXED_INPUT_GAIN_TARGET_DB,
+            parameters.distortionRelief,
+        )
     }
 
     private fun mbcRatio(
         parameters: AudioPresetParameters,
         gentle: Boolean,
     ): Float {
-        return if (gentle) {
-            (parameters.mbcRatio * dpOnlyRatioScale(parameters))
-                .coerceIn(DP_ONLY_MBC_RATIO_MIN, DP_ONLY_MBC_RATIO_MAX)
+        if (!gentle) return parameters.mbcRatio
+        val baseRatio = (parameters.mbcRatio * dpOnlyRatioScale(parameters))
+            .coerceIn(DP_ONLY_MBC_RATIO_MIN, DP_ONLY_MBC_RATIO_MAX)
+        val targetRatio = if (isSaturation(parameters)) {
+            DP_ONLY_RELAXED_SATURATION_RATIO_TARGET
         } else {
-            parameters.mbcRatio
+            DP_ONLY_RELAXED_MBC_RATIO_TARGET
         }
+        return lerp(baseRatio, targetRatio, parameters.distortionRelief)
+            .coerceIn(DP_ONLY_MBC_RATIO_MIN, DP_ONLY_MBC_RATIO_MAX)
     }
 
     private fun mbcThresholdDb(
         parameters: AudioPresetParameters,
         gentle: Boolean,
     ): Float {
-        return if (gentle) {
-            parameters.mbcThresholdDb.coerceAtLeast(DP_ONLY_MBC_THRESHOLD_FLOOR_DB)
-        } else {
-            parameters.mbcThresholdDb
-        }
+        if (!gentle) return parameters.mbcThresholdDb
+        val baseThreshold = parameters.mbcThresholdDb
+            .coerceAtLeast(DP_ONLY_MBC_THRESHOLD_FLOOR_DB)
+        return lerp(baseThreshold, DP_ONLY_RELAXED_THRESHOLD_DB, parameters.distortionRelief)
     }
 
     private fun mbcPostGainDb(
         parameters: AudioPresetParameters,
         gentle: Boolean,
     ): Float {
-        return if (gentle) {
-            val reductionDb = if (isSaturation(parameters)) {
-                8f
-            } else {
-                14f -
-                    2f * dpOnlyWideShape(parameters) -
-                    5f * dpOnlyStrongShape(parameters)
-            }
-            (parameters.effectiveMbcPostGainDb - reductionDb)
-                .coerceIn(0f, DP_ONLY_MBC_POST_GAIN_MAX_DB)
+        if (!gentle) return parameters.effectiveMbcPostGainDb
+        val reductionDb = if (isSaturation(parameters)) {
+            8f
         } else {
-            parameters.effectiveMbcPostGainDb
+            14f -
+                2f * dpOnlyWideShape(parameters) -
+                5f * dpOnlyStrongShape(parameters)
         }
+        val basePostGain = (parameters.effectiveMbcPostGainDb - reductionDb)
+            .coerceIn(0f, DP_ONLY_MBC_POST_GAIN_MAX_DB)
+        return lerp(
+            basePostGain,
+            DP_ONLY_RELAXED_MBC_POST_GAIN_TARGET_DB,
+            parameters.distortionRelief,
+        )
     }
 
     private fun dpOnlyRatioScale(parameters: AudioPresetParameters): Float {
@@ -340,20 +355,44 @@ internal object AmDynamicsConfig {
     private fun postEqGainDb(
         parameters: AudioPresetParameters,
         centerHz: Float,
-    ): Float = parameters.gainDbForCenterHz(centerHz)
-        .coerceAtMost(DP_ONLY_POST_EQ_MAX_BOOST_DB)
+    ): Float {
+        val maxBoost = lerp(
+            DP_ONLY_POST_EQ_MAX_BOOST_DB,
+            DP_ONLY_RELAXED_POST_EQ_MAX_BOOST_DB,
+            parameters.distortionRelief,
+        )
+        return parameters.gainDbForCenterHz(centerHz).coerceAtMost(maxBoost)
+    }
 
     private fun isSaturation(parameters: AudioPresetParameters): Boolean =
         parameters.inputGainDb >= 5f
 
-    private fun attackMs(gentle: Boolean): Float =
-        if (gentle) DP_ONLY_MBC_ATTACK_MS else MBC_ATTACK_MS
+    private fun attackMs(
+        parameters: AudioPresetParameters,
+        gentle: Boolean,
+    ): Float = if (gentle) {
+        lerp(DP_ONLY_MBC_ATTACK_MS, DP_ONLY_RELAXED_MBC_ATTACK_MS, parameters.distortionRelief)
+    } else {
+        MBC_ATTACK_MS
+    }
 
-    private fun releaseMs(gentle: Boolean): Float =
-        if (gentle) DP_ONLY_MBC_RELEASE_MS else MBC_RELEASE_MS
+    private fun releaseMs(
+        parameters: AudioPresetParameters,
+        gentle: Boolean,
+    ): Float = if (gentle) {
+        lerp(DP_ONLY_MBC_RELEASE_MS, DP_ONLY_RELAXED_MBC_RELEASE_MS, parameters.distortionRelief)
+    } else {
+        MBC_RELEASE_MS
+    }
 
-    private fun kneeDb(gentle: Boolean): Float =
-        if (gentle) DP_ONLY_MBC_KNEE_DB else MBC_KNEE_DB
+    private fun kneeDb(
+        parameters: AudioPresetParameters,
+        gentle: Boolean,
+    ): Float = if (gentle) {
+        lerp(DP_ONLY_MBC_KNEE_DB, DP_ONLY_RELAXED_MBC_KNEE_DB, parameters.distortionRelief)
+    } else {
+        MBC_KNEE_DB
+    }
 
     private fun buildLimiter(): DynamicsProcessing.Limiter {
         return DynamicsProcessing.Limiter(true, true, 0, 1f, 60f, 10f, -1f, 0f)

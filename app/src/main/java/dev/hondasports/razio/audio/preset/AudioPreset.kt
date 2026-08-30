@@ -20,6 +20,8 @@ enum class AudioPreset(
     val mbcPostGainDb: Float,
     val makeupGainDb: Float,
     val inputGainDb: Float = 0f,
+    /** 0 keeps the existing character; 1 applies the strongest safe softening. */
+    val distortionRelief: Float = 0f,
     val fadeDepthDb: Float = 0f,
     val fadePeriodMs: Long = 0L,
 ) {
@@ -41,6 +43,7 @@ enum class AudioPreset(
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,
         makeupGainDb = 8f,
+        distortionRelief = 1f,
     ),
     VINTAGE_SPEAKER(
         id = "vintage_speaker",
@@ -57,6 +60,7 @@ enum class AudioPreset(
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,
         makeupGainDb = 8f,
+        distortionRelief = 0.8f,
     ),
     WEAK_SIGNAL(
         id = "weak_signal",
@@ -71,6 +75,7 @@ enum class AudioPreset(
         mbcThresholdDb = -30f,
         mbcPostGainDb = 8f,
         makeupGainDb = 10f,
+        distortionRelief = 0f,
     ),
     SATURATION(
         id = "saturation",
@@ -88,6 +93,7 @@ enum class AudioPreset(
         mbcPostGainDb = 4f,
         makeupGainDb = 4f,
         inputGainDb = 10f,
+        distortionRelief = 0.75f,
     ),
     FADING(
         id = "fading",
@@ -104,6 +110,7 @@ enum class AudioPreset(
         mbcThresholdDb = -24f,
         mbcPostGainDb = 6f,
         makeupGainDb = 8f,
+        distortionRelief = 1f,
         fadeDepthDb = 3f,
         fadePeriodMs = 3_200L,
     ),
@@ -156,21 +163,124 @@ enum class AudioPreset(
         }
     }
 
+    /** Returns the editable runtime defaults shown by the tuning panel. */
+    fun defaultTuning(): AudioPresetTuning = AudioPresetTuning(
+        lowCutHz = lowCutHz,
+        midLowHz = midLowHz,
+        midHighHz = midHighHz,
+        highCutHz = highCutHz,
+        lowGainDb = lowGainDb,
+        midGainDb = midGainDb,
+        highGainDb = highGainDb,
+        mbcRatio = mbcRatio,
+        mbcThresholdDb = mbcThresholdDb,
+        mbcPostGainDb = mbcPostGainDb,
+        makeupGainDb = makeupGainDb,
+        inputGainDb = inputGainDb,
+        distortionRelief = distortionRelief,
+        fadeDepthDb = fadeDepthDb,
+        fadePeriodMs = fadePeriodMs,
+    )
+
     internal fun parameters(): AudioPresetParameters {
-        return AudioPresetParameters(
-            lowCutHz = lowCutHz,
-            midLowHz = midLowHz,
-            midHighHz = midHighHz,
-            highCutHz = highCutHz,
-            lowGainDb = lowGainDb,
-            midGainDb = midGainDb,
-            highGainDb = highGainDb,
-            mbcRatio = mbcRatio,
-            mbcThresholdDb = mbcThresholdDb,
-            effectiveMbcPostGainDb = effectiveMbcPostGainDb,
-            inputGainDb = inputGainDb,
+        return defaultTuning().toParameters()
+    }
+}
+
+/** Runtime-adjustable values for the selected preset. Changes are not persisted. */
+data class AudioPresetTuning(
+    val lowCutHz: Float,
+    val midLowHz: Float,
+    val midHighHz: Float,
+    val highCutHz: Float,
+    val lowGainDb: Float,
+    val midGainDb: Float,
+    val highGainDb: Float,
+    val mbcRatio: Float,
+    val mbcThresholdDb: Float,
+    val mbcPostGainDb: Float,
+    val makeupGainDb: Float,
+    val inputGainDb: Float,
+    val distortionRelief: Float,
+    val fadeDepthDb: Float,
+    val fadePeriodMs: Long,
+) {
+    /** Keeps sliders inside safe ranges and preserves the frequency ordering. */
+    fun sanitized(): AudioPresetTuning {
+        val safeLowCutHz = lowCutHz.coerceIn(MIN_LOW_CUT_HZ, MAX_LOW_CUT_HZ)
+        val safeMidLowHz = midLowHz.coerceIn(
+            safeLowCutHz + FREQUENCY_GUARD_HZ,
+            MAX_MID_LOW_HZ,
+        )
+        val safeMidHighHz = midHighHz.coerceIn(
+            safeMidLowHz + FREQUENCY_GUARD_HZ,
+            MAX_MID_HIGH_HZ,
+        )
+        val safeHighCutHz = highCutHz.coerceIn(
+            safeMidHighHz + FREQUENCY_GUARD_HZ,
+            MAX_HIGH_CUT_HZ,
+        )
+        return copy(
+            lowCutHz = safeLowCutHz,
+            midLowHz = safeMidLowHz,
+            midHighHz = safeMidHighHz,
+            highCutHz = safeHighCutHz,
+            lowGainDb = lowGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
+            midGainDb = midGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
+            highGainDb = highGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
+            mbcRatio = mbcRatio.coerceIn(MIN_MBC_RATIO, MAX_MBC_RATIO),
+            mbcThresholdDb = mbcThresholdDb.coerceIn(MIN_THRESHOLD_DB, MAX_THRESHOLD_DB),
+            mbcPostGainDb = mbcPostGainDb.coerceIn(MIN_POST_GAIN_DB, MAX_POST_GAIN_DB),
+            makeupGainDb = makeupGainDb.coerceIn(MIN_MAKEUP_GAIN_DB, MAX_MAKEUP_GAIN_DB),
+            inputGainDb = inputGainDb.coerceIn(MIN_INPUT_GAIN_DB, MAX_INPUT_GAIN_DB),
+            distortionRelief = distortionRelief.coerceIn(0f, 1f),
+            fadeDepthDb = fadeDepthDb.coerceIn(0f, MAX_FADE_DEPTH_DB),
+            fadePeriodMs = fadePeriodMs.coerceIn(0L, MAX_FADE_PERIOD_MS),
         )
     }
+
+    companion object {
+        const val MIN_LOW_CUT_HZ = 20f
+        const val MAX_LOW_CUT_HZ = 2_000f
+        const val MAX_MID_LOW_HZ = 4_000f
+        const val MAX_MID_HIGH_HZ = 10_000f
+        const val MAX_HIGH_CUT_HZ = 20_000f
+        const val FREQUENCY_GUARD_HZ = 10f
+        const val MIN_GAIN_DB = -48f
+        const val MAX_GAIN_DB = 12f
+        const val MIN_MBC_RATIO = 1f
+        const val MAX_MBC_RATIO = 20f
+        const val MIN_THRESHOLD_DB = -60f
+        const val MAX_THRESHOLD_DB = 0f
+        const val MIN_POST_GAIN_DB = -24f
+        const val MAX_POST_GAIN_DB = 24f
+        const val MIN_MAKEUP_GAIN_DB = -24f
+        const val MAX_MAKEUP_GAIN_DB = 24f
+        const val MIN_INPUT_GAIN_DB = -12f
+        const val MAX_INPUT_GAIN_DB = 12f
+        const val MAX_FADE_DEPTH_DB = 12f
+        const val MAX_FADE_PERIOD_MS = 10_000L
+    }
+}
+
+internal fun AudioPresetTuning.toParameters(): AudioPresetParameters {
+    val tuning = sanitized()
+    return AudioPresetParameters(
+        lowCutHz = tuning.lowCutHz,
+        midLowHz = tuning.midLowHz,
+        midHighHz = tuning.midHighHz,
+        highCutHz = tuning.highCutHz,
+        lowGainDb = tuning.lowGainDb,
+        midGainDb = tuning.midGainDb,
+        highGainDb = tuning.highGainDb,
+        mbcRatio = tuning.mbcRatio,
+        mbcThresholdDb = tuning.mbcThresholdDb,
+        effectiveMbcPostGainDb = tuning.mbcPostGainDb + tuning.makeupGainDb,
+        inputGainDb = tuning.inputGainDb,
+        distortionRelief = tuning.distortionRelief,
+        fadeDepthDb = tuning.fadeDepthDb,
+        fadePeriodMs = tuning.fadePeriodMs,
+    )
 }
 
 /**
@@ -191,6 +301,9 @@ internal data class AudioPresetParameters(
     val mbcThresholdDb: Float,
     val effectiveMbcPostGainDb: Float,
     val inputGainDb: Float,
+    val distortionRelief: Float,
+    val fadeDepthDb: Float,
+    val fadePeriodMs: Long,
 ) {
     fun gainDbForCenterHz(centerHz: Float): Float {
         val hz = centerHz.coerceAtLeast(1f)
@@ -226,6 +339,13 @@ internal data class AudioPresetParameters(
                     t,
                 ),
                 inputGainDb = lerp(from.inputGainDb, to.inputGainDb, t),
+                distortionRelief = lerp(from.distortionRelief, to.distortionRelief, t),
+                fadeDepthDb = lerp(from.fadeDepthDb, to.fadeDepthDb, t),
+                fadePeriodMs = lerp(
+                    from.fadePeriodMs.toFloat(),
+                    to.fadePeriodMs.toFloat(),
+                    t,
+                ).toLong(),
             )
         }
 

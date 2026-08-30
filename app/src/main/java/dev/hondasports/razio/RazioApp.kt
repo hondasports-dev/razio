@@ -11,6 +11,7 @@ import dev.hondasports.razio.audio.RazioAudioService
 import dev.hondasports.razio.audio.RazioPreferences
 import dev.hondasports.razio.audio.SpectrumAnalyzerController
 import dev.hondasports.razio.audio.preset.AudioPreset
+import dev.hondasports.razio.audio.preset.AudioPresetTuning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -59,6 +60,11 @@ class RazioApp : Application() {
         presetPersistenceJob = applicationScope.launch {
             preferences.setPreset(preset)
         }
+    }
+
+    /** Applies a runtime-only tuning change to the currently selected preset. */
+    fun setPresetTuning(tuning: AudioPresetTuning) {
+        audioEffects.setPresetTuning(tuning)
     }
 
     fun setHissEnabled(enabled: Boolean) {

@@ -48,6 +48,15 @@ class AudioPresetTest {
     }
 
     @Test
+    fun weakSignal_keepsDistortionReliefDisabled() {
+        assertEquals(0f, AudioPreset.WEAK_SIGNAL.distortionRelief, 0.01f)
+        assertTrue(AudioPreset.NARROW_AM.distortionRelief > 0f)
+        assertTrue(AudioPreset.VINTAGE_SPEAKER.distortionRelief > 0f)
+        assertTrue(AudioPreset.SATURATION.distortionRelief > 0f)
+        assertTrue(AudioPreset.FADING.distortionRelief > 0f)
+    }
+
+    @Test
     fun saturation_pushesInputIntoStrongCompression() {
         val preset = AudioPreset.SATURATION
 
@@ -98,5 +107,43 @@ class AudioPresetTest {
         assertEquals(5.5f, middle.midGainDb, 0.01f)
         assertEquals(10f, middle.mbcRatio, 0.01f)
         assertEquals(14f, middle.effectiveMbcPostGainDb, 0.01f)
+        assertEquals(0.9f, middle.distortionRelief, 0.01f)
+    }
+
+    @Test
+    fun tuning_sanitizesFrequencyOrderAndValueRanges() {
+        val safe = AudioPreset.NARROW_AM.defaultTuning().copy(
+            lowCutHz = 50_000f,
+            midLowHz = 100f,
+            midHighHz = 80f,
+            highCutHz = 50_000f,
+            lowGainDb = -100f,
+            distortionRelief = 2f,
+            fadePeriodMs = 99_999L,
+        ).sanitized()
+
+        assertTrue(safe.lowCutHz < safe.midLowHz)
+        assertTrue(safe.midLowHz < safe.midHighHz)
+        assertTrue(safe.midHighHz < safe.highCutHz)
+        assertEquals(AudioPresetTuning.MAX_HIGH_CUT_HZ, safe.highCutHz, 0.01f)
+        assertEquals(AudioPresetTuning.MIN_GAIN_DB, safe.lowGainDb, 0.01f)
+        assertEquals(1f, safe.distortionRelief, 0.01f)
+        assertEquals(AudioPresetTuning.MAX_FADE_PERIOD_MS, safe.fadePeriodMs)
+    }
+
+    @Test
+    fun tuning_toParametersIncludesMakeupAndFadingValues() {
+        val tuning = AudioPreset.FADING.defaultTuning().copy(
+            mbcPostGainDb = 2f,
+            makeupGainDb = 3f,
+            fadeDepthDb = 5f,
+            fadePeriodMs = 4_000L,
+        )
+
+        val parameters = tuning.toParameters()
+
+        assertEquals(5f, parameters.effectiveMbcPostGainDb, 0.01f)
+        assertEquals(5f, parameters.fadeDepthDb, 0.01f)
+        assertEquals(4_000L, parameters.fadePeriodMs)
     }
 }

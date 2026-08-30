@@ -1,6 +1,7 @@
 package dev.hondasports.razio.audio
 
 import dev.hondasports.razio.audio.preset.AudioPreset
+import dev.hondasports.razio.audio.preset.AudioPresetTuning
 
 sealed class AudioEngineReport {
     data object Idle : AudioEngineReport()
@@ -48,6 +49,7 @@ data class AudioEffectUiState(
     val initializing: Boolean = false,
     val status: RazioStatus = RazioStatus.Idle,
     val preset: AudioPreset = AudioPreset.NARROW_AM,
+    val tuning: AudioPresetTuning = AudioPreset.NARROW_AM.defaultTuning(),
     val backend: AudioEffectBackend = AudioEffectBackend.DYNAMICS_ONLY,
     val equalizer: AudioEngineReport = AudioEngineReport.NotUsed("backend=dynamics_only"),
     val dynamics: AudioEngineReport = AudioEngineReport.Idle,

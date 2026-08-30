@@ -136,6 +136,24 @@ Error
 
 この段階では tuning dial、製品向けsignal meter、icon / branding は追加しません。検証用スペクトラムは実際に取得した入力・出力の状態を表示しますが、AudioEffectの成立や聴感を単独で保証するメーターではありません。
 
+### プリセット値の試聴調整
+
+プリセット選択パネルの下に、選択中プリセットをその場で試せる折りたたみ式の調整パネルを置きます。UIはAndroid標準のCompose `Slider`で、周波数4点（低域カット開始／中域開始／中域終了／高域カット開始）には一定刻みの`−` / `＋`ボタンも併設します。ゲイン、MBC、入力ゲイン、歪み緩和、Fading深度・周期も同じパネルから変更できます。
+
+```text
+Slider / −＋ buttons
+        ↓ AudioPresetTuning.sanitized()
+selected preset tuning map (in memory)
+        ↓ AudioPresetTuning.toParameters()
+80 ms in-place interpolation
+        ↓
+DynamicsProcessing: Pre-EQ(flat) → MBC → Post-EQ → Limiter
+```
+
+`AudioPresetTuning.sanitized()` は周波数を `lowCut < midLow < midHigh < highCut` の順に保ち、各値を端末で安全に扱える範囲へ収めます。調整は現在の `DynamicsProcessing` をreleaseせず、既存の約80 ms遷移へ合流させるため、スライダー操作で一瞬effectが外れる経路を作りません。DynamicsProcessing単独経路の歪み緩和マッピングは調整値にも適用され、UIのMBC目標値とnative readback値が異なる場合があります。
+
+値はプリセットごとにプロセス内だけで保持し、DataStoreへは保存しません。アプリ再起動では初期値へ戻ります。`初期値へ戻す` は選択中プリセットの定義値を再適用します。これは音作りを決めるための試聴用UIであり、製品向けのtuning dialや永続設定とは別扱いです。
+
 ## AM プリセット
 
 初期 PoC では「正確な AM 放送規格」ではなく聴感を優先します。
@@ -241,6 +259,7 @@ MVP では複雑な DB は不要です。
 
 - RAZIO の ON/OFF（DataStore Preferences）
 - 選択中プリセット（DataStore Preferences。未保存時は Narrow AM）
+- プリセット値の試聴調整は保存しない（プロセス内のみ）
 
 プリセット変更時は既存の session 0 DynamicsProcessing を release せず、Post-EQ / MBC のパラメータを約 80 ms かけて段階更新します。段数や effect が壊れている場合だけ再生成へフォールバックします。Room は必要性が出るまで導入しません。
 

@@ -38,12 +38,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -68,8 +73,10 @@ import dev.hondasports.razio.audio.SpectrumAnalyzerUiState
 import dev.hondasports.razio.audio.SpectrumMath
 import dev.hondasports.razio.audio.SpectrumSnapshot
 import dev.hondasports.razio.audio.preset.AudioPreset
+import dev.hondasports.razio.audio.preset.AudioPresetTuning
 import dev.hondasports.razio.theme.RazioTheme
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun RazioHomeRoute(
@@ -78,6 +85,7 @@ fun RazioHomeRoute(
     spectrumAnalyzer: SpectrumAnalyzerController,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
+    onPresetTuningChange: (AudioPresetTuning) -> Unit = {},
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
     onSpectrumStartWithoutProjection: () -> Unit = {},
@@ -130,6 +138,7 @@ fun RazioHomeRoute(
             }
         },
         onPresetChange = onPresetChange,
+        onPresetTuningChange = onPresetTuningChange,
         noiseState = noiseState,
         onHissChange = onHissChange,
         onCrackleChange = onCrackleChange,
@@ -163,6 +172,7 @@ fun RazioHomeScreen(
     state: AudioEffectUiState,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
+    onPresetTuningChange: (AudioPresetTuning) -> Unit = {},
     noiseState: NoiseOverlayUiState = NoiseOverlayUiState(),
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
@@ -254,6 +264,48 @@ fun RazioHomeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
+        }
+
+        var tuningExpanded by rememberSaveable(state.preset.id) { mutableStateOf(false) }
+        RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                SectionHeading(text = stringResource(R.string.preset_tuning_heading))
+                OutlinedButton(
+                    onClick = { tuningExpanded = !tuningExpanded },
+                    enabled = !state.initializing,
+                    modifier = Modifier.heightIn(min = 44.dp),
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (tuningExpanded) {
+                                R.string.preset_tuning_toggle_close
+                            } else {
+                                R.string.preset_tuning_toggle_open
+                            },
+                        ),
+                        maxLines = 1,
+                    )
+                }
+            }
+            if (tuningExpanded) {
+                Text(
+                    text = stringResource(R.string.preset_tuning_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+                PresetTuningEditor(
+                    tuning = state.tuning,
+                    enabled = !state.initializing,
+                    onTuningChange = onPresetTuningChange,
+                    onReset = { onPresetTuningChange(state.preset.defaultTuning()) },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
         }
 
         RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
@@ -388,6 +440,353 @@ private fun createProjectionIntent(manager: MediaProjectionManager): Intent {
         manager.createScreenCaptureIntent()
     }
 }
+
+@Composable
+private fun PresetTuningEditor(
+    tuning: AudioPresetTuning,
+    enabled: Boolean,
+    onTuningChange: (AudioPresetTuning) -> Unit,
+    onReset: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val safeTuning = tuning.sanitized()
+    val lowCutRange = orderedRange(
+        AudioPresetTuning.MIN_LOW_CUT_HZ,
+        (safeTuning.midLowHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_LOW_CUT_HZ),
+    )
+    val midLowRange = orderedRange(
+        (safeTuning.lowCutHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_LOW_HZ),
+        (safeTuning.midHighHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_LOW_HZ),
+    )
+    val midHighRange = orderedRange(
+        (safeTuning.midLowHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_HIGH_HZ),
+        (safeTuning.highCutHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_HIGH_HZ),
+    )
+    val highCutRange = orderedRange(
+        (safeTuning.midHighHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_HIGH_CUT_HZ),
+        AudioPresetTuning.MAX_HIGH_CUT_HZ,
+    )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        FrequencyTuningSlider(
+            label = stringResource(R.string.preset_tuning_low_cut),
+            value = safeTuning.lowCutHz,
+            valueRange = lowCutRange,
+            step = 10f,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(lowCutHz = value)) },
+            onStep = { delta ->
+                onTuningChange(
+                    safeTuning.copy(
+                        lowCutHz = adjustFrequency(safeTuning.lowCutHz, delta, lowCutRange),
+                    ),
+                )
+            },
+        )
+        FrequencyTuningSlider(
+            label = stringResource(R.string.preset_tuning_mid_low),
+            value = safeTuning.midLowHz,
+            valueRange = midLowRange,
+            step = 10f,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(midLowHz = value)) },
+            onStep = { delta ->
+                onTuningChange(
+                    safeTuning.copy(
+                        midLowHz = adjustFrequency(safeTuning.midLowHz, delta, midLowRange),
+                    ),
+                )
+            },
+        )
+        FrequencyTuningSlider(
+            label = stringResource(R.string.preset_tuning_mid_high),
+            value = safeTuning.midHighHz,
+            valueRange = midHighRange,
+            step = 50f,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(midHighHz = value)) },
+            onStep = { delta ->
+                onTuningChange(
+                    safeTuning.copy(
+                        midHighHz = adjustFrequency(safeTuning.midHighHz, delta, midHighRange),
+                    ),
+                )
+            },
+        )
+        FrequencyTuningSlider(
+            label = stringResource(R.string.preset_tuning_high_cut),
+            value = safeTuning.highCutHz,
+            valueRange = highCutRange,
+            step = 100f,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(highCutHz = value)) },
+            onStep = { delta ->
+                onTuningChange(
+                    safeTuning.copy(
+                        highCutHz = adjustFrequency(safeTuning.highCutHz, delta, highCutRange),
+                    ),
+                )
+            },
+        )
+
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_low_gain),
+            value = safeTuning.lowGainDb,
+            valueRange = AudioPresetTuning.MIN_GAIN_DB..AudioPresetTuning.MAX_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(lowGainDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_mid_gain),
+            value = safeTuning.midGainDb,
+            valueRange = AudioPresetTuning.MIN_GAIN_DB..AudioPresetTuning.MAX_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(midGainDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_high_gain),
+            value = safeTuning.highGainDb,
+            valueRange = AudioPresetTuning.MIN_GAIN_DB..AudioPresetTuning.MAX_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(highGainDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_mbc_ratio),
+            value = safeTuning.mbcRatio,
+            valueRange = AudioPresetTuning.MIN_MBC_RATIO..AudioPresetTuning.MAX_MBC_RATIO,
+            step = 0.5f,
+            valueFormatter = { value -> String.format(Locale.US, "%.1f:1", value) },
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(mbcRatio = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_mbc_threshold),
+            value = safeTuning.mbcThresholdDb,
+            valueRange = AudioPresetTuning.MIN_THRESHOLD_DB..AudioPresetTuning.MAX_THRESHOLD_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(mbcThresholdDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_mbc_post),
+            value = safeTuning.mbcPostGainDb,
+            valueRange = AudioPresetTuning.MIN_POST_GAIN_DB..AudioPresetTuning.MAX_POST_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(mbcPostGainDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_makeup),
+            value = safeTuning.makeupGainDb,
+            valueRange = AudioPresetTuning.MIN_MAKEUP_GAIN_DB..AudioPresetTuning.MAX_MAKEUP_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(makeupGainDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_input_gain),
+            value = safeTuning.inputGainDb,
+            valueRange = AudioPresetTuning.MIN_INPUT_GAIN_DB..AudioPresetTuning.MAX_INPUT_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(inputGainDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_distortion_relief),
+            value = safeTuning.distortionRelief,
+            valueRange = 0f..1f,
+            step = 0.05f,
+            valueFormatter = { value -> String.format(Locale.US, "%.0f%%", value * 100f) },
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(distortionRelief = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_fade_depth),
+            value = safeTuning.fadeDepthDb,
+            valueRange = 0f..AudioPresetTuning.MAX_FADE_DEPTH_DB,
+            step = 0.5f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(fadeDepthDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_fade_period),
+            value = safeTuning.fadePeriodMs.toFloat(),
+            valueRange = 0f..AudioPresetTuning.MAX_FADE_PERIOD_MS.toFloat(),
+            step = 100f,
+            valueFormatter = { value -> "${value.roundToInt()} ms" },
+            enabled = enabled,
+            onValueChange = { value ->
+                onTuningChange(safeTuning.copy(fadePeriodMs = value.roundToInt().toLong()))
+            },
+        )
+
+        OutlinedButton(
+            onClick = onReset,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp)
+                .padding(top = 8.dp),
+        ) {
+            Text(text = stringResource(R.string.preset_tuning_reset))
+        }
+    }
+}
+
+@Composable
+private fun FrequencyTuningSlider(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    step: Float,
+    enabled: Boolean,
+    onValueChange: (Float) -> Unit,
+    onStep: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var sliderValue by remember(value) {
+        mutableStateOf(value.coerceIn(valueRange.start, valueRange.endInclusive))
+    }
+    val safeSliderValue = sliderValue.coerceIn(valueRange.start, valueRange.endInclusive)
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedButton(
+                onClick = { onStep(-step) },
+                enabled = enabled && safeSliderValue > valueRange.start,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Text(text = "−")
+            }
+            Text(
+                text = formatTuningHz(safeSliderValue),
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(horizontal = 6.dp),
+            )
+            OutlinedButton(
+                onClick = { onStep(step) },
+                enabled = enabled && safeSliderValue < valueRange.endInclusive,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Text(text = "＋")
+            }
+        }
+        Slider(
+            value = safeSliderValue,
+            onValueChange = { next ->
+                sliderValue = snapToStep(next, valueRange, step)
+            },
+            onValueChangeFinished = {
+                if (safeSliderValue != value) onValueChange(safeSliderValue)
+            },
+            valueRange = valueRange,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun TuningSlider(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    valueFormatter: (Float) -> String,
+    enabled: Boolean,
+    onValueChange: (Float) -> Unit,
+    step: Float = 0f,
+    modifier: Modifier = Modifier,
+) {
+    var sliderValue by remember(value) {
+        mutableStateOf(value.coerceIn(valueRange.start, valueRange.endInclusive))
+    }
+    val safeSliderValue = sliderValue.coerceIn(valueRange.start, valueRange.endInclusive)
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = valueFormatter(safeSliderValue),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Slider(
+            value = safeSliderValue,
+            onValueChange = { next ->
+                sliderValue = if (step > 0f) {
+                    snapToStep(next, valueRange, step)
+                } else {
+                    next.coerceIn(valueRange.start, valueRange.endInclusive)
+                }
+            },
+            onValueChangeFinished = {
+                if (safeSliderValue != value) onValueChange(safeSliderValue)
+            },
+            valueRange = valueRange,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+private fun orderedRange(
+    start: Float,
+    end: Float,
+): ClosedFloatingPointRange<Float> {
+    val safeStart = start.coerceAtLeast(0f)
+    return safeStart..end.coerceAtLeast(safeStart)
+}
+
+private fun snapToStep(
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    step: Float,
+): Float {
+    val clamped = value.coerceIn(valueRange.start, valueRange.endInclusive)
+    if (step <= 0f) return clamped
+    val snapped = valueRange.start +
+        (((clamped - valueRange.start) / step).roundToInt() * step)
+    return snapped.coerceIn(valueRange.start, valueRange.endInclusive)
+}
+
+private fun adjustFrequency(
+    value: Float,
+    delta: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+): Float = (value + delta).coerceIn(valueRange.start, valueRange.endInclusive)
+
+private fun formatTuningHz(value: Float): String = "${value.roundToInt()} Hz"
+
+private fun formatTuningDb(value: Float): String =
+    String.format(Locale.US, "%.1f dB", value)
 
 @Composable
 private fun SpectrumMeter(

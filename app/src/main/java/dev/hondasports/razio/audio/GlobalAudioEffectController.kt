@@ -8,6 +8,8 @@ import android.os.SystemClock
 import dev.hondasports.razio.audio.preset.AmDynamicsConfig
 import dev.hondasports.razio.audio.preset.AudioPreset
 import dev.hondasports.razio.audio.preset.AudioPresetParameters
+import dev.hondasports.razio.audio.preset.AudioPresetTuning
+import dev.hondasports.razio.audio.preset.toParameters
 import dev.hondasports.razio.domain.model.AudioSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +31,9 @@ class GlobalAudioEffectController(
     private var attempted: Boolean = false
     private val backend: AudioEffectBackend = AudioEffectBackend.DYNAMICS_ONLY
     private var selectedPreset: AudioPreset = AudioPreset.NARROW_AM
+    private val tunings = AudioPreset.entries
+        .associateWith { it.defaultTuning() }
+        .toMutableMap()
     private val transitionHandler = Handler(Looper.getMainLooper())
     private var transitionState: PresetTransition? = null
     private var fadingRunnable: Runnable? = null
@@ -89,10 +94,11 @@ class GlobalAudioEffectController(
         val previousPreset = selectedPreset
         val wasOn = _state.value.powerOn
         val currentParameters = cancelPresetTransition(applyFinalPreset = false)
+            ?: parametersFor(previousPreset)
         selectedPreset = preset
         if (startPresetTransition(
-                from = currentParameters ?: previousPreset.parameters(),
-                to = preset.parameters(),
+                from = currentParameters,
+                to = parametersFor(preset),
                 powerOn = wasOn,
             )
         ) {
@@ -102,6 +108,30 @@ class GlobalAudioEffectController(
         if (wasOn) {
             setEnabled(true)
         }
+    }
+
+    /** Updates the selected preset in place so a slider can be auditioned immediately. */
+    fun setPresetTuning(tuning: AudioPresetTuning) {
+        val preset = selectedPreset
+        val currentParameters = cancelPresetTransition(applyFinalPreset = false)
+            ?: parametersFor(preset)
+        val sanitized = tuning.sanitized()
+        tunings[preset] = sanitized
+        val wasOn = _state.value.powerOn
+        if (dynamics != null) {
+            if (startPresetTransition(
+                    from = currentParameters,
+                    to = sanitized.toParameters(),
+                    powerOn = wasOn,
+                )
+            ) {
+                return
+            }
+            initialize()
+            if (wasOn) setEnabled(true)
+            return
+        }
+        publishExisting(wasOn)
     }
 
     fun handleRouteChange() {
@@ -123,6 +153,7 @@ class GlobalAudioEffectController(
                     preset = selectedPreset,
                     usePreEqCurve = shouldUseDynamicsPreEqCurve(),
                     usePostEqCurve = shouldUseDynamicsPostEqCurve(),
+                    parameters = parametersFor(selectedPreset),
                 )
             }
         } catch (throwable: Throwable) {
@@ -168,6 +199,7 @@ class GlobalAudioEffectController(
                         preset = selectedPreset,
                         usePreEqCurve = shouldUseDynamicsPreEqCurve(),
                         usePostEqCurve = shouldUseDynamicsPostEqCurve(),
+                        parameters = parametersFor(selectedPreset),
                     ),
                 )
                 candidate.enabled = false
@@ -291,6 +323,7 @@ class GlobalAudioEffectController(
                 preset = selectedPreset,
                 usePreEqCurve = usePreEqCurve,
                 usePostEqCurve = usePostEqCurve,
+                parameters = parametersFor(selectedPreset),
             )
             verifyPostEqConfiguration(effect)
             val enabled = (report as? AudioEngineReport.Ready)?.enabled ?: effect.enabled
@@ -377,7 +410,7 @@ class GlobalAudioEffectController(
         transitionHandler.removeCallbacksAndMessages(transition.token)
         transitionState = null
         val targetParameters = if (applyFinalPreset) {
-            selectedPreset.parameters()
+            parametersFor(selectedPreset)
         } else {
             currentParameters
         }
@@ -408,11 +441,12 @@ class GlobalAudioEffectController(
     private fun updateFadingSchedule() {
         stopFading()
         val preset = selectedPreset
+        val parameters = parametersFor(preset)
         val effect = dynamics ?: return
         if (!_state.value.powerOn || transitionState != null) return
         val report = _state.value.dynamics
         if (report !is AudioEngineReport.Ready || !report.enabled) return
-        if (preset.fadeDepthDb <= 0f || preset.fadePeriodMs <= 0L) return
+        if (parameters.fadeDepthDb <= 0f || parameters.fadePeriodMs <= 0L) return
 
         val startedAtMs = SystemClock.uptimeMillis()
         val runnable = object : Runnable {
@@ -429,10 +463,10 @@ class GlobalAudioEffectController(
                     return
                 }
                 val elapsedMs = SystemClock.uptimeMillis() - startedAtMs
-                val phase = (elapsedMs.toDouble() / preset.fadePeriodMs.toDouble()) *
+                val phase = (elapsedMs.toDouble() / parameters.fadePeriodMs.toDouble()) *
                     (2.0 * kotlin.math.PI)
-                val gainDb = preset.inputGainDb +
-                    kotlin.math.sin(phase).toFloat() * preset.fadeDepthDb
+                val gainDb = parameters.inputGainDb +
+                    kotlin.math.sin(phase).toFloat() * parameters.fadeDepthDb
                 try {
                     currentDynamics.setInputGainAllChannelsTo(gainDb)
                 } catch (throwable: Throwable) {
@@ -445,8 +479,8 @@ class GlobalAudioEffectController(
         }
         fadingRunnable = runnable
         AudioEffectLog.i(
-            "fading modulation started depth=${preset.fadeDepthDb}dB " +
-                "period=${preset.fadePeriodMs}ms tick=${FADING_TICK_MS}ms",
+            "fading modulation started depth=${parameters.fadeDepthDb}dB " +
+                "period=${parameters.fadePeriodMs}ms tick=${FADING_TICK_MS}ms",
         )
         transitionHandler.post(runnable)
     }
@@ -505,6 +539,7 @@ class GlobalAudioEffectController(
         usePreEqCurve: Boolean,
         usePostEqCurve: Boolean,
     ): String {
+        val parameters = parametersFor(selectedPreset)
         val config = dynamics.config
         val inputGain = runCatching {
             dynamics.getInputGainByChannelIndex(0)
@@ -527,12 +562,12 @@ class GlobalAudioEffectController(
             "preset=${selectedPreset.id} preEq=${if (usePreEqCurve) "curve" else "flat"} " +
             "postEq=$postEqMode " +
             "postEqBands=$postEqBands " +
-            "inputGain=${inputGain ?: selectedPreset.inputGainDb}dB " +
+            "inputGain=${inputGain ?: parameters.inputGainDb}dB " +
             "mbc=${mbc?.let { "ratio=${it.ratio} threshold=${it.threshold}dB " +
                 "attack=${it.attackTime}ms release=${it.releaseTime}ms post=${it.postGain}dB" }
-                ?: "ratio=${selectedPreset.mbcRatio} threshold=${selectedPreset.mbcThresholdDb}dB " +
-                "post=${selectedPreset.effectiveMbcPostGainDb}dB"} " +
-            "fade=${selectedPreset.fadeDepthDb}dB/${selectedPreset.fadePeriodMs}ms"
+                ?: "ratio=${parameters.mbcRatio} threshold=${parameters.mbcThresholdDb}dB " +
+                "post=${parameters.effectiveMbcPostGainDb}dB"} " +
+            "fade=${parameters.fadeDepthDb}dB/${parameters.fadePeriodMs}ms"
     }
 
     private fun eqBandsDetail(
@@ -601,6 +636,7 @@ class GlobalAudioEffectController(
                 powerOn = powerOn,
                 initializing = initializing,
                 preset = selectedPreset,
+                tuning = tuningFor(selectedPreset),
                 backend = backend,
                 status = razioStatus(
                     initializing = initializing,
@@ -613,6 +649,14 @@ class GlobalAudioEffectController(
                 dynamics = dynamics,
             )
         }
+    }
+
+    private fun tuningFor(preset: AudioPreset): AudioPresetTuning {
+        return tunings[preset] ?: preset.defaultTuning().also { tunings[preset] = it }
+    }
+
+    private fun parametersFor(preset: AudioPreset): AudioPresetParameters {
+        return tuningFor(preset).toParameters()
     }
 
     private fun logAvailableEffects() {

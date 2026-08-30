@@ -528,6 +528,17 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Evidence: 最新debug APK（SHA-256 `B1D5F296860613B2793F7AAFA944BCCEE3FD45012456D0946446DDFFA061A4F5`）でUIが`Active（入力・出力）`、detailが`入力tap=AudioPlaybackCapture / 出力mix tap=Visualizer(session 0) / 前後位置は端末依存 / 元音声は再生しない`となった。最終再確認時の一時値は入力RMS約`-9.9 dB`、Peak約`-0.5 dB`、出力RMS`0.0 dB`、Peak`0.0 dB`（曲・音量・フレームに依存）。`dumpsys media_session`でSpotify `PLAYING`、`dumpsys activity services dev.hondasports.razio`で`isForeground=true`かつProjection型（`0x20`）を確認。停止後`dumpsys media_projection`は`null`、effectのみのspecialUse FGS（`0x40000000`）が残った
 - Status: **Pixel 10 Proで入力・出力tap、FFT表示、同意後のFGS順序、停止・Projection解放までPASS**。Visualizer / AudioPlaybackCaptureの仕様上、アプリや出力先によって`Partial`になり得る。これは可視化による検証機能であり、custom DSP / 元音声ミュート / 加工音再生を追加したことを意味しない
 
+### 2026-08-30 / プリセット値の試聴調整UI
+
+- User request: プリセットの各値をスライダーで試せるようにし、周波数4点には明示的な増減操作を追加する
+- Design: `AudioPresetTuning` を公開UIモデル、`AudioPresetParameters` をDynamicsProcessing内部モデルとして分離した。周波数（低域カット開始／中域開始／中域終了／高域カット開始）、低／中／高ゲイン、MBC ratio／threshold／後段ゲイン、makeup、入力ゲイン、歪み緩和、Fading深度／周期を調整対象とする。Compose `Slider` は一定刻みへ丸め、周波数には`−` / `＋`ボタンを置いた
+- Safety: `sanitized()` で周波数順序 `lowCut < midLow < midHigh < highCut` と各値の範囲を保証する。`toParameters()` でMBC後段ゲインとmakeupを合成し、既存のDynamics-only歪み緩和マッピングを経由してnative effectへ渡す。調整ごとに既存の約80 ms in-place遷移へ合流し、effectをrelease／再生成しない
+- Persistence: プリセットごとの調整値はcontroller内のメモリにだけ保持する。DataStoreへ保存せず、再起動で定義済み初期値へ戻る。パネルの`初期値へ戻す`は選択中プリセットだけを初期化する
+- Unit / build: workflow `fd74255730a073f1c0512f3c3801348d` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `DECA69FDC4C1ACDAD86911DF518F0BEFDFDB31B52E9F8EDDE0F437AD47EBFE24`
+- Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Pixel Buds Pro 2 Bluetooth A2DP。最終APKで`Narrow AM`を選択し、調整パネルの全周波数・ゲイン・MBC・入力・歪み緩和・Fadingスライダーと周波数の`−` / `＋`、リセットを確認した
+- Interaction evidence: 低域カット開始を`300 Hz → 310 Hz → 300 Hz`（`＋` / `−`）へ変更し、スライダーでは`330 Hz`へ移動できた。入力ゲインを`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizer `Not used (backend=dynamics_only)`、session `0`のDynamicsProcessing effectを維持した
+- Stability: `dumpsys activity services dev.hondasports.razio` のeffect用FGSは`isForeground=true`。操作後のfiltered logcatにRAZIO由来のcrash / ANRはなし。各スライダー値がどの音色を最終採用するかは聴感評価で決める
+
 ## 判断基準
 
 ### Green

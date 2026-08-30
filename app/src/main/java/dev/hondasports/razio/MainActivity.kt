@@ -28,6 +28,7 @@ class MainActivity : ComponentActivity() {
                         spectrumAnalyzer = app.spectrumAnalyzer,
                         onPowerChange = app::setPowerOn,
                         onPresetChange = app::setPreset,
+                        onPresetTuningChange = app::setPresetTuning,
                         onHissChange = app::setHissEnabled,
                         onCrackleChange = app::setCrackleEnabled,
                         onSpectrumStartWithoutProjection = app::startSpectrumWithoutProjection,
