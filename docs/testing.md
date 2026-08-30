@@ -153,8 +153,8 @@ Phase 2 の実機 regression（変更したとき）:
 必須確認:
 
 1. `:app:testDebugUnitTest` / `:app:assembleDebug` を `gradle-run` で通し、debug APKをPixelへinstallする
-2. RAZIOをONにしてプリセットを選び、「調整を開く」でパネルが表示されること。表示中に画面を縦スクロールして全スライダーへ到達できること
-3. 同調ダイヤルが表示され、カット帯・中域帯の色分けと6つの縦目盛りが周波数カーブの境界位置と一致すること。ダイヤルは表示専用で、調整は下のスライダーから行うこと
+2. RAZIOをONにしてプリセットを選び、周波数カーブが常時表示されること。`DETAILS / 開く` でパネルが展開され、表示中に画面を縦スクロールして全スライダーへ到達できること
+3. カーブのカット帯・中域帯の色分けと6つの縦境界線が周波数境界位置と一致すること。詳細パネルの6本のスライダーは表示中のカーブへ追従すること
 4. 低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始のスライダーを動かし、各`−` / `＋`ボタンで刻み幅どおりに値が増減すること。周波数の順序が逆転せず、同調ダイヤルと周波数カーブの6境界線・網掛け・カーブが変更値へ追従すること
 5. ゲイン、MBC、入力ゲイン、歪み緩和、Fading深度・周期を動かし、値表示とエンジンdetailの反映が変わること。調整中もsession `0` のDynamicsProcessingが維持されること
 6. 「初期値へ戻す」で選択中プリセットの値へ戻ること。別プリセットへ切り替えて戻ったときは、同一起動中の調整値がプリセット単位で保持されること
@@ -168,6 +168,24 @@ Phase 2 の実機 regression（変更したとき）:
 - 周波数カーブ見出し、`+6`〜`-48` dBの縦軸、20 Hz〜20 kHzの細分化した対数軸ラベル、低域／高域カット帯・中域帯の網掛け、6つの境界線を表示した。低域カット中間を`420 Hz → 430 Hz → 420 Hz`、高域カット中間を`2600 Hz → 2650 Hz → 2600 Hz`（`＋` / `−`）へ変更すると表示値とカーブ境界が追従した
 - 既存確認として、スライダーでは低域カットを`330 Hz`へ変更でき、入力ゲインは`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizerは`Not used (backend=dynamics_only)`を維持し、session `0` のDynamicsProcessing effectが外れなかった
 - `dumpsys activity services dev.hondasports.razio` でeffect用FGS `isForeground=true`を確認し、操作後のfiltered logcatにRAZIO由来のcrash / ANRはなかった。これは操作・構造確認であり、各値の最終的な聴感プリセット決定はユーザー確認待ち
+
+### Ghost Terminal UI（現行）
+
+画像リファレンスの端末コンソール調を、音声経路を変えずに `RazioHomeScreen` へ適用します。画面全体は緑黒の局所カラースキーム、モノスペース見出し、角丸を抑えた枠線パネルで構成し、ヘッダーのON/OFFスイッチと状態LEDは既存の `onPowerChange` へ接続します。`DETAILS / 開く` は折りたたみ状態を `rememberSaveable(state.preset.id)` で保持し、開くと開発用パラメータ（6周波数境界、ゲイン、MBC、入力、歪み緩和、Fading）をその下へ展開します。`プリセット初期値に戻す` は閉じた状態でも押せ、選択中プリセットのdefault tuningだけを再適用します。
+
+必須確認:
+
+1. debug APKをPixelへinstallし、トップに `RAZIO`、`GHOST TERMINAL`、ON/OFF表示、`PRESET ARRAY`、`RESPONSE CURVE` が表示されること
+2. `DETAILS / 開く` を押して `DETAILS / 閉じる` へ変わり、従来の同調ダイヤル、`FREQ // 6 BOUNDARIES`、6つのラベル（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）がUI treeに現れること
+3. 6本のうち1本を `＋` またはスライダーで変更し、値表示と常時表示カーブの境界線が更新されること。`プリセット初期値に戻す` で変更値が定義値へ戻ること
+4. 詳細の開閉・リセット後も `Equalizer: Not used`、session `0` のDynamicsProcessing、Hiss / Crackle、スペクトラム／出力メーターの既存操作が崩れないこと
+5. 操作後のfiltered `logcat` に `FATAL EXCEPTION`、`ANR in`、アプリ由来の未処理Exceptionがないこと
+
+2026-08-30 の現行UI確認:
+
+- Pixel 10 Pro（Android 17 / serial `56101FDCH006CX`）へ `app-debug.apk` を再installし、緑黒のGhost Terminal配色、`RAZIO`／`GHOST TERMINAL`、ON表示、プリセット横スクロール、常時表示の周波数カーブをスクリーンショットで確認した
+- `DETAILS / 開く` → `DETAILS / 閉じる` を実機で操作し、UI treeから `FREQ // 6 BOUNDARIES` と6つの周波数ラベルを取得した。低域カット開始を `180 Hz → 190 Hz` へ変更後、`プリセット初期値に戻す` で `180 Hz` へ復帰した
+- 操作後の `dumpsys media.audio_flinger` はsession `0` のDynamicsProcessing 1 effect、`dumpsys activity services` はeffect用FGS `isForeground=true` を維持した。filtered `logcat`にRAZIO由来のcrash / ANRはなかった
 
 ### 同調ダイヤル表示
 

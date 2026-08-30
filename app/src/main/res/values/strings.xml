@@ -17,6 +17,10 @@
     <string name="preset_tuning_heading">プリセット値（試聴用）</string>
     <string name="preset_tuning_toggle_open">調整を開く</string>
     <string name="preset_tuning_toggle_close">閉じる</string>
+    <string name="preset_tuning_details">詳細設定</string>
+    <string name="preset_tuning_details_open">DETAILS / 開く</string>
+    <string name="preset_tuning_details_close">DETAILS / 閉じる</string>
+    <string name="preset_tuning_reset_default">プリセット初期値に戻す</string>
     <string name="preset_tuning_hint">スライダーで選択中プリセットの周波数6点・ゲイン・圧縮を調整できます。変更はこの起動中だけ有効です。</string>
     <string name="preset_tuning_dial_heading">同調ダイヤル（帯域の位置）</string>
     <string name="preset_tuning_dial_hint">帯域の広さをラジオの目盛り風に表示します。縦の目盛りが6つの周波数境界です。</string>

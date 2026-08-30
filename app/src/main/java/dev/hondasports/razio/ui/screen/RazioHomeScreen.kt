@@ -42,7 +42,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,6 +63,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import dev.hondasports.razio.R
@@ -83,6 +86,39 @@ import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
+
+private val TerminalBackground = Color(0xFF020B09)
+private val TerminalSurface = Color(0xFF071410)
+private val TerminalSurfaceRaised = Color(0xFF0C1D17)
+private val TerminalLine = Color(0xFF315249)
+private val TerminalPrimary = Color(0xFFB7FF56)
+private val TerminalCyan = Color(0xFF8BE8D0)
+private val TerminalAmber = Color(0xFFFFB86B)
+private val TerminalMuted = Color(0xFF79A397)
+
+private val TerminalColorScheme = darkColorScheme(
+    primary = TerminalPrimary,
+    onPrimary = Color(0xFF07110A),
+    primaryContainer = Color(0xFF263D19),
+    onPrimaryContainer = Color(0xFFE5FFC1),
+    secondary = TerminalCyan,
+    onSecondary = Color(0xFF062019),
+    secondaryContainer = Color(0xFF17372D),
+    onSecondaryContainer = Color(0xFFC4FBE8),
+    tertiary = TerminalAmber,
+    onTertiary = Color(0xFF2A1807),
+    tertiaryContainer = Color(0xFF4D2A0A),
+    onTertiaryContainer = Color(0xFFFFDCB1),
+    background = TerminalBackground,
+    onBackground = Color(0xFFD9F6E9),
+    surface = TerminalSurface,
+    onSurface = Color(0xFFD9F6E9),
+    surfaceVariant = TerminalSurfaceRaised,
+    onSurfaceVariant = TerminalMuted,
+    outline = TerminalLine,
+    error = Color(0xFFFF7B72),
+    onError = Color(0xFF2B0502),
+)
 
 @Composable
 fun RazioHomeRoute(
@@ -187,51 +223,32 @@ fun RazioHomeScreen(
     onSpectrumStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-            .verticalScroll(rememberScrollState())
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        RetroHeader(status = state.status, powerOn = state.powerOn)
-        Spacer(modifier = Modifier.height(12.dp))
+    MaterialTheme(colorScheme = TerminalColorScheme) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .verticalScroll(rememberScrollState())
+                .background(TerminalBackground)
+                .padding(horizontal = 14.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+        var tuningExpanded by rememberSaveable(state.preset.id) { mutableStateOf(false) }
 
-        RetroPanel {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.power_label),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = stringResource(R.string.status_label, statusText(state.status)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                }
-                Switch(
-                    checked = state.powerOn,
-                    onCheckedChange = onPowerChange,
-                    enabled = !state.initializing,
-                )
-            }
-        }
+        RetroHeader(
+            status = state.status,
+            powerOn = state.powerOn,
+            enabled = !state.initializing,
+            onPowerChange = onPowerChange,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
 
         RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
             Text(
-                text = stringResource(R.string.processing_mode_dynamics_only),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp),
+                text = "PRESET ARRAY // ${presetLabel(state.preset).uppercase(Locale.US)}",
+                style = MaterialTheme.typography.titleMedium,
+                color = TerminalPrimary,
             )
             SectionHeading(
                 text = stringResource(R.string.preset_label),
@@ -270,45 +287,52 @@ fun RazioHomeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
+            Text(
+                text = stringResource(R.string.processing_mode_dynamics_only),
+                style = MaterialTheme.typography.labelSmall,
+                color = TerminalCyan,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
 
-        var tuningExpanded by rememberSaveable(state.preset.id) { mutableStateOf(false) }
         RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                SectionHeading(text = stringResource(R.string.preset_tuning_heading))
-                OutlinedButton(
-                    onClick = { tuningExpanded = !tuningExpanded },
-                    enabled = !state.initializing,
-                    modifier = Modifier.heightIn(min = 44.dp),
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (tuningExpanded) {
-                                R.string.preset_tuning_toggle_close
-                            } else {
-                                R.string.preset_tuning_toggle_open
-                            },
-                        ),
-                        maxLines = 1,
-                    )
-                }
-            }
+            Text(
+                text = "RESPONSE CURVE // ${presetLabel(state.preset).uppercase(Locale.US)}",
+                style = MaterialTheme.typography.titleMedium,
+                color = TerminalPrimary,
+            )
+            Text(
+                text = "LIVE READBACK // 20 Hz — 20 kHz // 6 BOUNDARIES",
+                style = MaterialTheme.typography.labelSmall,
+                color = TerminalCyan,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            PresetFrequencyCurve(
+                tuning = state.tuning,
+                modifier = Modifier.padding(top = 10.dp),
+            )
+        }
+
+        RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
+            TerminalDetailsBar(
+                expanded = tuningExpanded,
+                enabled = !state.initializing,
+                onToggle = { tuningExpanded = !tuningExpanded },
+                onReset = { onPresetTuningChange(state.preset.defaultTuning()) },
+            )
             if (tuningExpanded) {
                 Text(
                     text = stringResource(R.string.preset_tuning_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier.padding(top = 8.dp),
                 )
                 PresetTuningEditor(
                     tuning = state.tuning,
                     enabled = !state.initializing,
                     onTuningChange = onPresetTuningChange,
-                    onReset = { onPresetTuningChange(state.preset.defaultTuning()) },
+                    showVisuals = false,
+                    showDial = true,
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
@@ -440,6 +464,7 @@ fun RazioHomeScreen(
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )
     }
+    }
 }
 
 private fun needsRecordPermission(context: Context): Boolean {
@@ -462,11 +487,73 @@ private fun createProjectionIntent(manager: MediaProjectionManager): Intent {
 }
 
 @Composable
+private fun TerminalDetailsBar(
+    expanded: Boolean,
+    enabled: Boolean,
+    onToggle: () -> Unit,
+    onReset: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.preset_tuning_details),
+            style = MaterialTheme.typography.titleMedium,
+            color = TerminalPrimary,
+        )
+        Text(
+            text = "DEVELOPMENT VALUES // LIVE UPDATE",
+            style = MaterialTheme.typography.labelSmall,
+            color = TerminalCyan,
+            modifier = Modifier.padding(top = 3.dp),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedButton(
+                onClick = onToggle,
+                enabled = enabled,
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp),
+            ) {
+                Text(
+                    text = stringResource(
+                        if (expanded) {
+                            R.string.preset_tuning_details_close
+                        } else {
+                            R.string.preset_tuning_details_open
+                        },
+                    ),
+                    maxLines = 1,
+                )
+            }
+            OutlinedButton(
+                onClick = onReset,
+                enabled = enabled,
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.preset_tuning_reset_default),
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PresetTuningEditor(
     tuning: AudioPresetTuning,
     enabled: Boolean,
     onTuningChange: (AudioPresetTuning) -> Unit,
-    onReset: () -> Unit,
+    showVisuals: Boolean = true,
+    showDial: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val safeTuning = tuning.sanitized()
@@ -505,14 +592,27 @@ private fun PresetTuningEditor(
         AudioPresetTuning.MAX_HIGH_CUT_HZ,
     )
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        PresetTuningDial(
-            tuning = safeTuning,
-            modifier = Modifier.padding(bottom = 10.dp),
-        )
-        PresetFrequencyCurve(
-            tuning = safeTuning,
-            modifier = Modifier.padding(bottom = 8.dp),
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (showDial) {
+            PresetTuningDial(
+                tuning = safeTuning,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+        if (showVisuals) {
+            PresetFrequencyCurve(
+                tuning = safeTuning,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+        Text(
+            text = "FREQ // 6 BOUNDARIES",
+            style = MaterialTheme.typography.labelLarge,
+            color = TerminalPrimary,
+            modifier = Modifier.padding(top = 4.dp),
         )
         FrequencyTuningSlider(
             label = stringResource(R.string.preset_tuning_low_cut),
@@ -605,6 +705,12 @@ private fun PresetTuningEditor(
             },
         )
 
+        Text(
+            text = "GAIN // BAND SHAPE",
+            style = MaterialTheme.typography.labelLarge,
+            color = TerminalPrimary,
+            modifier = Modifier.padding(top = 6.dp),
+        )
         TuningSlider(
             label = stringResource(R.string.preset_tuning_low_gain),
             value = safeTuning.lowGainDb,
@@ -649,6 +755,12 @@ private fun PresetTuningEditor(
             valueFormatter = ::formatTuningDb,
             enabled = enabled,
             onValueChange = { value -> onTuningChange(safeTuning.copy(highGainDb = value)) },
+        )
+        Text(
+            text = "DYNAMICS // PROCESSING",
+            style = MaterialTheme.typography.labelLarge,
+            color = TerminalPrimary,
+            modifier = Modifier.padding(top = 6.dp),
         )
         TuningSlider(
             label = stringResource(R.string.preset_tuning_mbc_ratio),
@@ -695,6 +807,12 @@ private fun PresetTuningEditor(
             enabled = enabled,
             onValueChange = { value -> onTuningChange(safeTuning.copy(inputGainDb = value)) },
         )
+        Text(
+            text = "CHARACTER // MODULATION",
+            style = MaterialTheme.typography.labelLarge,
+            color = TerminalPrimary,
+            modifier = Modifier.padding(top = 6.dp),
+        )
         TuningSlider(
             label = stringResource(R.string.preset_tuning_distortion_relief),
             value = safeTuning.distortionRelief,
@@ -724,17 +842,6 @@ private fun PresetTuningEditor(
                 onTuningChange(safeTuning.copy(fadePeriodMs = value.roundToInt().toLong()))
             },
         )
-
-        OutlinedButton(
-            onClick = onReset,
-            enabled = enabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 44.dp)
-                .padding(top = 8.dp),
-        ) {
-            Text(text = stringResource(R.string.preset_tuning_reset))
-        }
     }
 }
 
@@ -1496,6 +1603,8 @@ private fun spectrumStatusText(status: SpectrumAnalyzerStatus): String {
 private fun RetroHeader(
     status: RazioStatus,
     powerOn: Boolean,
+    enabled: Boolean,
+    onPowerChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -1506,35 +1615,52 @@ private fun RetroHeader(
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = TerminalPrimary,
+                fontFamily = FontFamily.Monospace,
             )
             Text(
-                text = stringResource(R.string.poc_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "GHOST TERMINAL // ${stringResource(R.string.poc_subtitle)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = TerminalCyan,
                 modifier = Modifier.padding(top = 2.dp),
             )
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .background(
-                        color = if (powerOn) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outline
-                        },
-                        shape = CircleShape,
-                    )
-                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
-            )
             Text(
-                text = statusText(status),
+                text = "SESSION 0 // DYNAMICS ONLY",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
+                color = TerminalMuted,
+                modifier = Modifier.padding(top = 3.dp),
             )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = if (powerOn) "ON" else "OFF",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (powerOn) TerminalPrimary else TerminalMuted,
+            )
+            Switch(
+                checked = powerOn,
+                onCheckedChange = onPowerChange,
+                enabled = enabled,
+                colors = terminalSwitchColors(),
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .background(
+                            color = if (powerOn) TerminalPrimary else TerminalLine,
+                            shape = CircleShape,
+                        ),
+                )
+                Text(
+                    text = statusText(status),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TerminalMuted,
+                )
+            }
         }
     }
 }
@@ -1546,14 +1672,14 @@ private fun RetroPanel(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(4.dp),
+        color = TerminalSurface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+        tonalElevation = 0.dp,
+        border = BorderStroke(1.dp, TerminalLine.copy(alpha = 0.85f)),
         content = {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(14.dp),
                 content = content,
             )
         },
@@ -1568,7 +1694,8 @@ private fun SectionHeading(
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = TerminalPrimary,
+        fontFamily = FontFamily.Monospace,
         modifier = modifier,
     )
 }
@@ -1592,9 +1719,25 @@ private fun NoiseToggleRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
+            colors = terminalSwitchColors(),
         )
     }
 }
+
+@Composable
+private fun terminalSwitchColors() = SwitchDefaults.colors(
+    checkedThumbColor = TerminalBackground,
+    checkedTrackColor = TerminalPrimary,
+    checkedBorderColor = TerminalPrimary,
+    uncheckedThumbColor = TerminalMuted,
+    uncheckedTrackColor = TerminalSurfaceRaised,
+    uncheckedBorderColor = TerminalLine,
+    disabledCheckedThumbColor = TerminalMuted,
+    disabledCheckedTrackColor = TerminalLine,
+    disabledUncheckedThumbColor = TerminalLine,
+    disabledUncheckedTrackColor = TerminalSurface,
+    disabledUncheckedBorderColor = TerminalLine,
+)
 
 @Composable
 private fun presetLabel(preset: AudioPreset): String {
