@@ -100,7 +100,7 @@ RAZIO で最も重要なテストです。
 - 低域が十分に落ちているか
 - 声が前に出るか
 - Narrow AM が300 Hz以下／3.0 kHz以上を抑えた狭いAM放送風、Vintage speaker が450 Hz〜2.6 kHzのかまぼこ型として聞こえるか
-- 全プリセットで低域・高域のカットが十分に深く、Saturationでも端の音が残りすぎないか
+- 全プリセットで低域・高域のカットが十分に深く（第2段調整では端部目標をさらに約6dB）、Saturationでも端の音が残りすぎないか
 - OFF と比べて音量が過度に小さくならず、かつ不自然に大きくならないか
 - 長時間聞いて不快な歪みになっていないか
 - Saturation が他プリセットより明確に押し出され、過度なクリップや耳障りな歪みになっていないか
@@ -144,17 +144,20 @@ Phase 2 の実機 regression（変更したとき）:
 4. `dumpsys media_session` / `dumpsys audio` / `dumpsys activity services dev.hondasports.razio` / `dumpsys media.audio_flinger` と `AudioHardening`・crash・ANRのfiltered logcatを保存
 5. 元音声を捕捉して再再生しないため、sourceの二重再生や捕捉許可によるアプリ差をPoCの合否から分離して記録
 
-### DynamicsProcessing 単体 A/B PoC（未実装）
+### DynamicsProcessing 単体 A/B PoC
 
-実施時期は、現行の全プリセット調整を実機聴感で受入れた直後、Hiss / Crackle の AudioTrack オーバーレイ実装へ進む前とする。既定経路を切り替えず、同じAPK内でA/Bを切り替えられる検証用設定として実施する。
+実施時期は、現行の全プリセット調整を実機聴感で受入れた直後、Hiss / Crackle の AudioTrack オーバーレイ実装へ進む前とする。実装済みの「処理方式」から、既定経路を切り替えず同じAPK内でA/Bを切り替える。切替時はeffectを再生成するため短い再初期化が入り、ON中なら新しいchainを再enableする。選択は永続化しない。
 
-1. A（現行）の Equalizer + DynamicsProcessing（Pre-EQ flat）で、Spotifyを再生し本体スピーカー / SoundCore 2を確認
-2. B（候補）の DynamicsProcessing単体（Pre-EQ + MBC + Limiter、必要時のみPost-EQ）で同じ素材・同じ音量を確認
+1. A（現行）の `Split`（Equalizer + DynamicsProcessing / Pre-EQ flat）で、Spotifyを再生し本体スピーカー / SoundCore 2を確認
+2. B（候補）の `Dynamics only`（Equalizer は `Not used`、DynamicsProcessing単体の MBC + Post-EQ + Limiter）で同じ素材・同じ音量を確認。UI detailの `postEq=curve` と `postEqBands` で最終EQのcutoff/gainを記録する
 3. Narrow AM / Vintage speaker / Weak signal / Saturation / Fadingを順に比較し、低域・高域のカット、声域の明瞭度、音量差、Compression / Limiterの副作用を記録
 4. ON / OFF、プリセット切替、route change、Home、画面OFF、force-stop後の復元を確認
 5. `dumpsys media.audio_flinger`、`dumpsys activity services dev.hondasports.razio`、`dumpsys audio`、filtered `logcat`でeffect数・FGS・route・crash/ANRを保存
 
 合否は、BがAより明確に有利で、Pixelの両出力先・Spotifyで安定し、音量低下・クリック・過度な歪みがないこと。差が小さい、または端末依存の失敗がある場合はAを既定として維持する。
+
+2026-08-29 の構造確認では、Pixel 10 Pro / Android 17 / SoundCore 2 / Spotify で A は session `0` の2 effects、B は DynamicsProcessing 1 effectとなり、UI detail・FGS・切替時の release / recreate / enable を確認した。旧BのPre-EQは4.5kHzより上を処理せず、MBC後段makeup gainが低域カットを戻し得たため、BをPost-EQ（20kHzまで）へ修正した。修正版は同端末の Pixel Buds Pro 2 Bluetooth A2DP / Spotify でも `postEq=curve` と各帯域のreadback、1 effect構成を再確認済み。歪み報告を受け、Dynamics only はプリセット別に Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`、Saturation `8:1`・input `+6dB`・post `0dB`、共通 attack/release `20/230ms`・knee `12dB` へ再調整した。Post-EQの正のブーストは `+2dB` を上限とし、常時Limiter動作と歪みを抑える。再調整後のworkflow `ac68d98fa5f4f1af7789745ef519b477`でunit test / debug APK buildをPASSし、同端末・Pixel Buds Pro 2・Spotifyでnative readback、1 effect構成、FGS、再生継続、crash/ANRなしを再確認済み。音質の最終受入はユーザー聴感待ち。
+続く第2段では、歪みを増やさないためMBC設定を維持したまま、全プリセットの低域・高域ゲイン目標を約6dB深くした。workflow `072fac01ea2f8d798c12426264509477` のunit test / debug APK buildをPASSし、同端末のDynamics onlyで`postEqBands`の端部readback、Spotify再生継続、session `0` の1 effect、FGS、crash/ANRなしを確認済み。その後の聴感報告（Narrow AM/Fadingの歪み、Weak signalの音量不足、Saturationの高域残り）を受け、Dynamics onlyのMBCを Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`、Saturation `8:1`・input `+6dB`・post `0dB` へ再調整し、Post-EQブーストを `+2dB` に制限した。最新workflow `ac68d98fa5f4f1af7789745ef519b477` のunit test / debug APK buildをPASSし、同端末・Pixel Buds Pro 2・Spotifyで各プリセットのnative readback、session `0` の1 effect、FGS、再生継続、crash/ANRなしを再確認済み。続く非SaturationのSplit共通穏和化もworkflow `0ff2a8730778cdae1cdb1687ee20dac3` でunit test / debug APK buildをPASSし、同端末でSplit/Dynamics only双方のプリセットratio/post、Post-EQ `+2dB`上限、再生継続、session `0`、FGS、crash/ANRなしを確認した。今回の中域・高域再調整はworkflow `c37ca4a87ccc623ea4aca984cd933b83` の `:app:testDebugUnitTest` / `:app:assembleDebug` をPASSし、SplitではVintage/Weakの中域 `+5dB`、Dynamics onlyでは全プリセットの高域 `-40dB` と中域最大 `+3dB` をnative/UI readbackで確認済み。APK SHA-256は `E9A13DAEAFEE3651D57A36C3391469E8BAFAE26F637CE3B45CD43D103434954D`。実機はPixel 10 Pro / Android 17 / Pixel Buds Pro 2 Bluetooth A2DPで、FGS、メディア再生継続、session `0` のeffect数、crash/ANRなしを確認し、低高域バランスと歪み・音量の最終受入はユーザー聴感待ち。
 
 ## テスト不能時
 

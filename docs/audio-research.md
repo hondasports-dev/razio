@@ -413,18 +413,57 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - 画面OFF: `mWakefulness=Dozing` の約3秒後も FGS `isForeground=true types=0x40000000` と session `0` の2 effectsを維持
 - Audible effect: **ユーザー確認済み（「OK」）**（低域の量、高域の残り方、声の明瞭度、音量差、クリックの有無を受入）
 
+### 2026-08-29 / second edge-cut pass
+
+- User feedback: 歪みは収まったが、全プリセットで低音と高音をさらにカットしたい
+- Adjustment: 中域のゲインとDynamics onlyのMBC設定は維持し、各プリセットの端部目標だけを約 `-6dB` 深くした。Narrow AM / Fading は低域 `-30dB`・高域 `-36dB`、Vintage speaker は `-30dB`・`-32dB`、Weak signal は `-30dB`・`-36dB`、Saturation は `-24dB`・`-24dB`
+- Split の専用 Equalizer は端末側の下限へ clamp されるため既存の受入済み音量・圧縮を変えず、DynamicsProcessing fallback / Dynamics only では深い目標値を利用する
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `072fac01ea2f8d798c12426264509477`）。APK SHA-256 `A2FAC47D51DB8AE6716A49F54AE1022995122D2A769725940513926D6AEE95BB`
+- 実機構造確認: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING` で、`状態: Active` / `Equalizer: Not used` / session `0` の `DynamicsProcessing` 1 effect / FGS `isForeground=true` を確認。`postEqBands` は Narrow AM/Fading `90Hz:-30dB`・`250Hz:-30dB`・`4500Hz:-36dB`・`20000Hz:-36dB`、Vintage speaker `90Hz:-30dB`・`250Hz:-30dB`・`9000Hz:-32dB`・`20000Hz:-32dB`、Weak signal `90Hz:-30dB`・`250Hz:-30dB`・`2500Hz:-36dB`・`20000Hz:-36dB`、Saturation `90Hz:-24dB`・`250Hz:-24dB`・`9000Hz:-24dB`・`20000Hz:-24dB` をnative readbackした。crash / ANR / `AudioHardening` はなし
+- 聴感: 歪み収束後の低域・高域の追加カットはユーザー確認待ち
+
+### 2026-08-29 / Dynamics only distortion and level retune
+
+- User feedback: `Narrow AM` と `Fading` が歪む。`Saturation` は高域をさらにカットしたい。`Weak signal` はAMらしいが音量が小さい
+- Adjustment: Dynamics only のMBCをさらに穏和化し、Narrow AM / Fading は ratio `1.2:1`・post `0dB`、Vintage speaker は ratio `1.5:1`・post `+2dB`、Weak signal は ratio `4:1`・post `+9dB`、Saturation は ratio `8:1`・input `+6dB`・post `0dB` とした。共通 attack/release `20/230ms`・knee `12dB`。MBC後段Post-EQの正のブーストは `+2dB` で上限を設け、Saturationの高域目標は `-36dB` へ深くした
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `ac68d98fa5f4f1af7789745ef519b477`）。APK SHA-256 `3D9BB57C4393295F6A3ECB1EE4B62612B44EF4218E8716C2F0A01E46D0B4CA1C`
+- 実機構造確認: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING`。全プリセットで `状態: Active` / `Equalizer: Not used` / session `0` の `DynamicsProcessing` 1 effect / FGS `isForeground=true`、crash / ANR / `AudioHardening`なしを確認した。native readbackは Narrow AM/Fading `ratio=1.2`・`post=0dB`・端部 `-30/-36dB`、Vintage `ratio=1.5`・`post=+2dB`・端部 `-30/-32dB`、Weak `ratio=4`・`post=+9dB`・端部 `-30/-36dB`、Saturation `ratio=8`・`input=+6dB`・`post=0dB`・高域 `-36dB`。Fadingは `fade=3dB/3200ms` を維持した
+- Status: **実装・unit test・build・実機構造確認済み。最終音質はユーザー聴感受入待ち**。実機は `Dynamics only / Narrow AM / Active`、Spotify再生中の状態で保持している
+
 ### 2026-08-29 / DynamicsProcessing-only EQ A/B PoC plan
 
 - Timing: 今回の全プリセット両端カット再調整をユーザー聴感で受入れた直後、Hiss / Crackle の AudioTrack オーバーレイ実装へ着手する前に実施する。既定経路の置換ではなく、検証用のA/B切替として1回の実機サイクルに限定する
-- Goal: EQも含めてDynamicsProcessing単体（Pre-EQ + MBC + Limiter、必要時のみPost-EQ）へまとめた場合に、現行のEqualizer + DynamicsProcessingより音質・安定性が改善するかを確認する
+- Goal: EQも含めてDynamicsProcessing単体（MBC + Post-EQ + Limiter）へまとめた場合に、現行のEqualizer + DynamicsProcessingより音質・安定性が改善するかを確認する
 - A（現行）: Equalizerが音域カーブ、DynamicsProcessingはPre-EQ flat + MBC + Limiter
-- B（候補）: Equalizerを生成せず、DynamicsProcessingのPre-EQ（必要ならPost-EQ）+ MBC + Limiterで全プリセットを処理
+- B（候補）: Equalizerを生成せず、DynamicsProcessingのMBC + Post-EQ + Limiterで全プリセットを処理。Pre-EQはflatのままにしてEQカーブを二重適用せず、MBC後のPost-EQで最終的な低域・高域カットを保証する
 - Device / output: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、本体スピーカー / SoundCore 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING`
 - Cases: Narrow AM / Vintage speaker / Weak signal / Saturation / Fading、ON/OFF、約80 msのプリセット遷移、route change、Home、画面OFF、force-stop後の復元
 - Acceptance: BがAより低域・高域のカットと声域の明瞭度で明確に有利、音量差が許容範囲、クリック・過度な歪み・無音化がなく、両出力先とライフサイクルで安定すること。差が小さいか端末依存の失敗がある場合はAを維持
 - Evidence: `dumpsys media.audio_flinger`（effect数と構成）、`dumpsys activity services dev.hondasports.razio`（FGS）、`dumpsys audio`（route）、filtered `logcat`（effect生成/enable、`AudioHardening`、crash/ANR）、A/B各プリセットのUI detailと聴感メモ
-- Out of scope: Hiss / Crackle生成、AudioPlaybackCapture、元音声のミュート/差し替え、二段EQの同時適用、既定経路の変更
-- Status: **PoC実装・実機測定待ち**。現行のEqualizer + DynamicsProcessingを既定経路として保持する
+- Out of scope: Hiss / Crackle生成、AudioPlaybackCapture、元音声のミュート/差し替え、Pre-EQとPost-EQへの同一カーブの二重適用、既定経路の変更
+- Implementation: 画面の「処理方式」から `Split` / `Dynamics only` を切り替えられるようにした。`Split` は Equalizer + DynamicsProcessing（Pre-EQ flat）、`Dynamics only` は Equalizer を生成せず DynamicsProcessing の MBC + Post-EQ + Limiter を使う。Post-EQの帯域は20kHzまで拡張し、4.5kHzより上の音域が素通りしないようにした（44.1/48kHz出力で有効な上限）。切替時は古い effect chain を release して再生成し、ON 中なら再 enable する。選択は PoC 用で永続化せず、次回起動は `Split` に戻す
+- Distortion mitigation (initial plan): 当初は `Split` の受入済みMBC値を変更せず、`Dynamics only` だけプリセット形状に応じて圧縮を段階化する方針とした。実機聴感でNarrow AM/Fadingの歪みとWeak signalの音量不足が残ったため、Dynamics onlyを先に再調整し、その後 `Split` でも同じ非Saturation穏和化を適用した。現在値は後段の `non-saturation distortion retune` セクションへ更新した。共通で threshold は `-18dB`、attack/release は `20/230ms`、knee は `12dB` とし、Dynamics onlyのMBC後段Post-EQブーストは `+2dB` までに制限する。UI detailはnative readbackのratio / threshold / attack / release / postを表示する
+- Objective device evidence (2026-08-29): Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、SoundCore 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING` で確認。A (`Split`) は UI `状態: Active`、EQ + DP detail（`backend=split preEq=flat`）、session `0` の2 effects。B (`Dynamics only`) への切替後は UI `Equalizer: Not used (backend=dynamics_only)` / `DynamicsProcessing: enabled ... preEq=flat postEq=curve`、session `0` の1 effect（DynamicsProcessingのみ）、FGS `isForeground=true` を確認。UI detailの `postEqBands` readbackで、Narrow AM は `90Hz:-24dB` / `250Hz:-24dB` / `1500Hz:+6dB` / `4500Hz:-30dB` / `20000Hz:-30dB` を確認した。切替ログに旧EQ/DPのreleaseと新DPの生成・enableを確認し、アプリのcrash/ANR・`AudioHardening` はなし（system `EffectProxy` のrelease時警告は記録対象として残る）。旧B実装ではPre-EQの最終cutoffが4.5kHzで高域が帯域外を通過し、MBC後段makeup gainも低域を戻し得たため、Post-EQへ修正して再聴感確認する
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `e9f43090d5c99cc531f6d81c5f761468`）。APK SHA-256 `B7DBB40BCDD74BC55150B1F310BD15AE65950CB7EEA299960D123B4633E5E311`
+- 再調整後構造再確認 (2026-08-29): Pixel 10 Pro / Android 17 / Pixel Buds Pro 2 Bluetooth A2DP / Spotify `PlaybackState=PLAYING` で、`状態: Active`、`Equalizer: Not used`、`preEq=flat postEq=curve`、`postEqBands` の `90Hz:-24dB` / `250Hz:-24dB` / `4500Hz:-30dB` / `20000Hz:-30dB` を確認。native MBC readbackはNarrow AM/Fadingがratio `2:1`・threshold `-18dB`・attack/release `20/230ms`・post `+3dB`、Vintage speakerがratio `3:1`・post `+4dB`、Weak signalがratio `6.4:1`・post `+6dB`、Saturationがinput `+6dB`・ratio `8:1`・post `0dB`。全プリセットで session `0` の1 effect（DynamicsProcessingのみ）、FGS `isForeground=true`、Spotify再生継続、アプリのcrash/ANRなしを確認した。歪み低減の聴感はユーザー確認待ち
+- ユーザー聴感メモ（再調整前）: `Narrow AM` は「結構歪んでる」、`Vintage speaker` は「少し歪んでる」、`Weak signal` は「歪んでない」、`Fading` は「AMと同じぐらい歪んでる」と報告。これを受けてNarrow/Fadingの圧縮・post gainを最小側へ、Vintageを中間へ下げ、Weakは変更せずに聴感差を保つ方針とした。Saturationは従来どおり意図的な強い質感として別評価にする
+- Status: **プリセット別MBC再調整・構造実機確認済み・聴感受入待ち**。現行のEqualizer + DynamicsProcessingを既定経路として保持する
+
+### 2026-08-29 / non-saturation distortion retune
+
+- User feedback: `Saturation` 以外のプリセットにまだ軽い歪みが残る
+- Adjustment: 起動時の `Split` を含め、非Saturation（Narrow AM / Vintage speaker / Weak signal / Fading）のMBCをDynamics onlyと同じ穏和プロファイルへ統一した。native readbackの目安は Narrow/Fading `ratio=1.2`・`post=0dB`、Vintage `ratio=1.5`・`post=+2dB`、Weak `ratio=4`・`post=+9dB`、共通 threshold `-18dB`・attack/release `20/230ms`・knee `12dB`。Dynamics onlyのPost-EQ正ブースト上限は `+2dB`。SaturationはSplit `ratio=20`・input `+10dB`・post `+8dB`、Dynamics only `ratio=8`・input `+6dB`・post `0dB` のまま保持した
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `0ff2a8730778cdae1cdb1687ee20dac3`）。APK SHA-256 `49EF28AC62970E16282240EE7E76A86A6CE86995D11B8BF01CD6CFD1F17531B5`
+- 実機確認: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING`。`Split` で5プリセットを切替え、Equalizer + DynamicsProcessingの2 effectsを維持し、非Saturationは上記ratio/post、Saturationは従来の強い値をnative/UI readbackした。`Dynamics only` でも5プリセットを切替え、`Equalizer: Not used`、Post-EQ中域 `+2dB` 以下、session `0` のDynamicsProcessing 1 effect、FGS `isForeground=true` を確認。直近logcatにアプリのcrash/ANR/`AudioHardening`なし、Spotify再生継続を確認した
+- Status: **非Saturationの両backend穏和化・Post-EQヘッドルーム調整・自動検証・実機構造確認済み。最終聴感受入待ち**。実機は `Dynamics only / Fading / Active` で確認後、聴感用に `Dynamics only / Narrow AM / Active` へ戻す
+
+### 2026-08-29 / mid emphasis and deeper high cut
+
+- User feedback: 中音をもう少し強調し、高音をさらにカットしたい
+- Adjustment: Dynamics onlyのPost-EQ正ブースト上限を `+2dB` から `+3dB` へ変更し、非Saturationの声域を少し前へ出した。Split側はVintage speaker / Weak signalの中域目標を `+4dB` から `+5dB` へ変更（Narrow AM / Fadingは端末EQの上限 `+6dB` を維持）。全プリセットの高域目標を `-40dB` に統一し、Saturationの高域カットも維持・強化した
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `c37ca4a87ccc623ea4aca984cd933b83`）。APK SHA-256 `E9A13DAEAFEE3651D57A36C3391469E8BAFAE26F637CE3B45CD43D103434954D`
+- 実機readback: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP。SplitでNarrow/Fading `ratio=1.2`・post `0dB`、Vintage `ratio=1.5`・post `+2dB`、Weak `ratio=4`・post `+9dB`、Saturation `ratio=20`・input `+10dB`・post `+8dB` を確認し、SplitのVintage/Weak中域は端末EQ readbackで `910Hz:+5dB` になった。Dynamics onlyではNarrow/Fadingの中域 `+3dB`・高域 `-40dB`、Vintage/Weakの中域 `+3dB`・高域 `-40dB`、Saturationの中域 `+2dB`・高域 `-40dB` を確認した。Dynamics onlyのMBCは非SaturationがSplitと同じ穏和値、Saturationは `ratio=8`・input `+6dB`・post `0dB` のままや
+- 構造・安定性: Splitはsession `0` の2 effects、Dynamics onlyは1 effect。FGS `isForeground=true`、メディアセッション `PLAYING`、crash / ANR / `AudioHardening`なし。聴感の最終受入はユーザー確認待ち
 
 ## 判断基準
 

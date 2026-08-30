@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import dev.hondasports.razio.R
 import dev.hondasports.razio.audio.AudioEngineReport
+import dev.hondasports.razio.audio.AudioEffectBackend
 import dev.hondasports.razio.audio.AudioEffectUiState
 import dev.hondasports.razio.audio.GlobalAudioEffectController
 import dev.hondasports.razio.audio.RazioStatus
@@ -45,6 +46,7 @@ fun RazioHomeRoute(
     controller: GlobalAudioEffectController,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
+    onBackendChange: (AudioEffectBackend) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
@@ -64,6 +66,7 @@ fun RazioHomeRoute(
             }
         },
         onPresetChange = onPresetChange,
+        onBackendChange = onBackendChange,
         modifier = modifier,
     )
 }
@@ -81,6 +84,7 @@ fun RazioHomeScreen(
     state: AudioEffectUiState,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
+    onBackendChange: (AudioEffectBackend) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -120,6 +124,44 @@ fun RazioHomeScreen(
             text = stringResource(R.string.status_label, statusText(state.status)),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 16.dp),
+        )
+        Text(
+            text = stringResource(R.string.backend_label),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 20.dp),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AudioEffectBackend.entries.forEach { backend ->
+                val buttonModifier = Modifier.weight(1f)
+                if (state.backend == backend) {
+                    Button(
+                        onClick = { onBackendChange(backend) },
+                        enabled = !state.initializing,
+                        modifier = buttonModifier,
+                    ) {
+                        Text(text = backendLabel(backend))
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onBackendChange(backend) },
+                        enabled = !state.initializing,
+                        modifier = buttonModifier,
+                    ) {
+                        Text(text = backendLabel(backend))
+                    }
+                }
+            }
+        }
+        Text(
+            text = backendDescription(state.backend),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
         )
         Text(
             text = stringResource(R.string.preset_label),
@@ -193,6 +235,24 @@ private fun presetLabel(preset: AudioPreset): String {
 }
 
 @Composable
+private fun backendLabel(backend: AudioEffectBackend): String {
+    val resId = when (backend) {
+        AudioEffectBackend.SPLIT -> R.string.backend_split
+        AudioEffectBackend.DYNAMICS_ONLY -> R.string.backend_dynamics_only
+    }
+    return stringResource(resId)
+}
+
+@Composable
+private fun backendDescription(backend: AudioEffectBackend): String {
+    val resId = when (backend) {
+        AudioEffectBackend.SPLIT -> R.string.backend_split_description
+        AudioEffectBackend.DYNAMICS_ONLY -> R.string.backend_dynamics_only_description
+    }
+    return stringResource(resId)
+}
+
+@Composable
 private fun presetDescription(preset: AudioPreset): String {
     val resId = when (preset) {
         AudioPreset.NARROW_AM -> R.string.preset_narrow_am_description
@@ -221,6 +281,7 @@ private fun statusText(status: RazioStatus): String {
 private fun reportText(report: AudioEngineReport): String {
     return when (report) {
         AudioEngineReport.Idle -> stringResource(R.string.engine_idle)
+        is AudioEngineReport.NotUsed -> stringResource(R.string.engine_not_used, report.reason)
         is AudioEngineReport.Ready -> {
             val enabled = if (report.enabled) {
                 stringResource(R.string.engine_enabled)
@@ -247,6 +308,7 @@ private fun RazioHomeScreenPreview() {
             ),
             onPowerChange = {},
             onPresetChange = {},
+            onBackendChange = {},
         )
     }
 }

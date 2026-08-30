@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
                         controller = app.audioEffects,
                         onPowerChange = app::setPowerOn,
                         onPresetChange = app::setPreset,
+                        onBackendChange = app::setBackend,
                     )
                 }
             }

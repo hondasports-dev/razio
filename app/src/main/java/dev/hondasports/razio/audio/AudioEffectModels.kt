@@ -5,6 +5,10 @@ import dev.hondasports.razio.audio.preset.AudioPreset
 sealed class AudioEngineReport {
     data object Idle : AudioEngineReport()
 
+    data class NotUsed(
+        val reason: String,
+    ) : AudioEngineReport()
+
     data class Ready(
         val enabled: Boolean,
         val detail: String,
@@ -17,6 +21,17 @@ sealed class AudioEngineReport {
     data class Failed(
         val message: String,
     ) : AudioEngineReport()
+}
+
+enum class AudioEffectBackend(val id: String) {
+    SPLIT("split"),
+    DYNAMICS_ONLY("dynamics_only"),
+    ;
+
+    companion object {
+        fun fromId(id: String?): AudioEffectBackend =
+            entries.firstOrNull { it.id == id } ?: SPLIT
+    }
 }
 
 enum class RazioStatus {
@@ -33,6 +48,7 @@ data class AudioEffectUiState(
     val initializing: Boolean = false,
     val status: RazioStatus = RazioStatus.Idle,
     val preset: AudioPreset = AudioPreset.NARROW_AM,
+    val backend: AudioEffectBackend = AudioEffectBackend.SPLIT,
     val equalizer: AudioEngineReport = AudioEngineReport.Idle,
     val dynamics: AudioEngineReport = AudioEngineReport.Idle,
 )
@@ -48,12 +64,14 @@ fun razioStatus(
     if (!attempted) return RazioStatus.Idle
     val reports = listOf(equalizer, dynamics)
     val anyReady = reports.any { it is AudioEngineReport.Ready }
-    val allUnsupported = reports.all { it is AudioEngineReport.Unsupported }
+    val allUnavailable = reports.all {
+        it is AudioEngineReport.Unsupported || it is AudioEngineReport.NotUsed
+    }
     val anyFailed = reports.any { it is AudioEngineReport.Failed }
     return when {
         anyReady && powerOn -> RazioStatus.Active
         anyReady && !powerOn -> RazioStatus.Disabled
-        allUnsupported -> RazioStatus.Unsupported
+        allUnavailable -> RazioStatus.Unsupported
         anyFailed -> RazioStatus.Error
         else -> RazioStatus.Unsupported
     }

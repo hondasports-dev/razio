@@ -73,4 +73,24 @@ class RazioStatusTest {
             ),
         )
     }
+
+    @Test
+    fun dynamicsOnlyReady_isActiveEvenWhenEqualizerIsNotUsed() {
+        assertEquals(
+            RazioStatus.Active,
+            razioStatus(
+                initializing = false,
+                attempted = true,
+                powerOn = true,
+                equalizer = AudioEngineReport.NotUsed("backend=dynamics_only"),
+                dynamics = AudioEngineReport.Ready(enabled = true, detail = "dp"),
+            ),
+        )
+    }
+
+    @Test
+    fun unknownBackendId_fallsBackToSplit() {
+        assertEquals(AudioEffectBackend.SPLIT, AudioEffectBackend.fromId("unknown"))
+        assertEquals(AudioEffectBackend.DYNAMICS_ONLY, AudioEffectBackend.fromId("dynamics_only"))
+    }
 }

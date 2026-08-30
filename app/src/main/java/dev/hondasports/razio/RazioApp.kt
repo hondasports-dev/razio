@@ -2,6 +2,7 @@ package dev.hondasports.razio
 
 import android.app.Application
 import dev.hondasports.razio.audio.AudioRouteMonitor
+import dev.hondasports.razio.audio.AudioEffectBackend
 import dev.hondasports.razio.audio.GlobalAudioEffectController
 import dev.hondasports.razio.audio.RazioAudioService
 import dev.hondasports.razio.audio.RazioPreferences
@@ -46,6 +47,10 @@ class RazioApp : Application() {
         presetPersistenceJob = applicationScope.launch {
             preferences.setPreset(preset)
         }
+    }
+
+    fun setBackend(backend: AudioEffectBackend) {
+        audioEffects.setBackend(backend)
     }
 
     private fun applyPower(

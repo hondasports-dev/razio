@@ -98,7 +98,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] エラーハンドリング（Unsupported / Error を画面表示）
 - [x] 最小 Compose UI
 - [x] 実機 regression 手順（起動時 ON 復元・FGS 通知・Home 放置・画面 OFF 後の effect 維持・Bluetooth route 再接続は Pixel 10 Pro で確認。詳細は `docs/audio-research.md` / `docs/testing.md`）
-- [ ] DynamicsProcessing 単体 A/B PoC（現行プリセット聴感受入後、Hiss / Crackle の AudioTrack 実装前に実施）
+- [ ] DynamicsProcessing 単体 A/B PoC（UI切替・Post-EQ/MBC穏和化済み。AM/Fading/Vintage/Weak の両backend歪み低減、Weak の音量補正、全プリセットの中域・高域再調整を反映し、Post-EQ上限を+3dBへ調整。修正版の構造実機確認済み、最終聴感受入後に既定経路を判断）
 
 ## Phase 3: Sound design
 
@@ -111,6 +111,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Weak signal（高域カットと音量補正を追加。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] Saturation（入力ゲイン＋強いMBCによる飽和近似。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] 全プリセット両端カット再調整（低域・高域のロールオフを強化。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
+- [ ] 両端カット第2段（全プリセットの低域・高域目標をさらに約6dB深く調整。Pixel 10 Pro / Pixel Buds Pro 2で構造確認済み、最終聴感受入待ち）
 - [ ] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoC待ち）
 - [ ] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoC待ち）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）

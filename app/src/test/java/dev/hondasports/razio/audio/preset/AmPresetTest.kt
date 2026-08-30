@@ -7,8 +7,8 @@ import org.junit.Test
 class AmPresetTest {
     @Test
     fun lowShelf_isStrongCut() {
-        assertEquals(-24f, AmPreset.gainDbForCenterHz(60f), 0.01f)
-        assertEquals(-24f, AmPreset.gainDbForCenterHz(300f), 0.01f)
+        assertEquals(-30f, AmPreset.gainDbForCenterHz(60f), 0.01f)
+        assertEquals(-30f, AmPreset.gainDbForCenterHz(300f), 0.01f)
     }
 
     @Test
@@ -26,8 +26,8 @@ class AmPresetTest {
 
     @Test
     fun highShelf_isStrongCut() {
-        assertEquals(-30f, AmPreset.gainDbForCenterHz(3000f), 0.01f)
-        assertEquals(-30f, AmPreset.gainDbForCenterHz(8000f), 0.01f)
+        assertEquals(-40f, AmPreset.gainDbForCenterHz(3000f), 0.01f)
+        assertEquals(-40f, AmPreset.gainDbForCenterHz(8000f), 0.01f)
     }
 
     @Test
