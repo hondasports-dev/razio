@@ -144,7 +144,7 @@ Phase 2 の実機 regression（変更したとき）:
 6. `android layout` のUI treeで `RAZIO`、4つのパネル見出し、全プリセット名、Hiss / Crackleが取得できることを確認する
 7. filtered `logcat` で `FATAL EXCEPTION`、`ANR in`、アプリ由来の未処理Exceptionがないことを確認する
 
-2026-08-30 の初回実装では、Pixel 10 Pro / Android 17でdark / lightの両scheme、`Vintage speaker` 選択、プリセット横スクロール、UI tree、filtered logcatを確認した。tuning dial、製品向けsignal meter、iconはまだ追加していない。検証用スペクトラムは下記の別PoCとして追加した。詳細は `docs/audio-research.md`。
+2026-08-30 の初回実装時点では、Pixel 10 Pro / Android 17でdark / lightの両scheme、`Vintage speaker` 選択、プリセット横スクロール、UI tree、filtered logcatを確認した。tuning dial、製品向けsignal meter、iconは後続変更として別記録へ分離している。検証用スペクトラムは下記の別PoCとして追加した。詳細は `docs/audio-research.md`。
 
 ### プリセット値の試聴調整UI
 
@@ -181,6 +181,24 @@ Phase 2 の実機 regression（変更したとき）:
 - Pixel 10 Pro（Android 17 / serial `56101FDCH006CX` / Pixel Buds Pro 2 Bluetooth A2DP）へAPKをinstallし、出力レベルメーターの待機状態（`解析待ち`、RMS／Peak `−∞ dB`）を確認した
 - Spotify再生中に既存のスペクトラム解析を開始し、UIが`Active（入力・出力）`となることを確認。出力mix tapのメーターが`観測中`になり、LEDセグメント、RMS、Peak（例: `RMS -11.4 dB` / `Peak -0.7 dB`）が更新された。停止後はProjectionが解放され、メーターは待機表示へ戻った
 - filtered `logcat`にRAZIO由来のcrash / ANRはなく、effect用specialUse FGSとsession `0`のDynamicsProcessing 1 effectを維持した。メーターは出力tapの傾向表示であり、native effectの厳密なpost-DSP測定値ではない。検証後の画面オフ設定は60秒へ戻した
+
+### テーマ方針とランチャーブランディング
+
+テーマはsystem dark modeに追従する暖色light / dark schemeを採用し、端末壁紙へ色が引っ張られるdynamic colorは既定で無効にします。ランチャーはベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO用adaptive iconを使い、API 21〜25では同じベクターをlayer-listで表示します。
+
+必須確認:
+
+1. `:app:testDebugUnitTest` / `:app:assembleDebug` を `gradle-run` で通し、生成APKをPixelへinstallする
+2. `adb shell cmd uimode night yes` でdark mode、`adb shell cmd uimode night no` でlight modeへ切り替え、背景・パネル・文字・選択色が読めることを確認する
+3. launcherのアプリ一覧を開き、緑色の標準テンプレートではなくRAZIOのラジオ筐体アイコンが表示されることを確認する
+4. icon確認後にsystem dark modeと画面オフ設定を検証前の値へ戻す
+5. filtered `logcat`で `FATAL EXCEPTION`、`ANR in`、RAZIO由来の未処理Exceptionがないことを確認する
+
+2026-08-30 の実機結果:
+
+- workflow `cb43afc893e3b21550a161adc848e1bc` で `:app:testDebugUnitTest` / `:app:assembleDebug` をPASS。APK SHA-256は `27C0EC772277001895D8DD780F2A1FDB08571A80CA37376B9039BA3049DA25A6`
+- Pixel 10 Pro（Android 17 / serial `56101FDCH006CX`）へinstallし、dark mode（`ui_night_mode=2`）で濃い茶色の背景・パネル、light modeで紙面色・錆色の選択状態をcaptureした。launcherアプリ一覧の`RAZIO`にレトロラジオ筐体アイコンが表示され、標準テンプレート画像が残っていないことを確認した
+- filtered `logcat`は`FATAL EXCEPTION` / `ANR in` / `AudioHardening` / RAZIO由来の未処理Exceptionなし。検証後のsystem dark modeと画面オフ設定は元の値（dark / 60秒）へ戻した
 
 ### 入出力スペクトラムアナライザー検証PoC
 

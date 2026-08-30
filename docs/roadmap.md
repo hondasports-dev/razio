@@ -130,8 +130,8 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 - [x] tuning dial の表現（調整パネルに6境界の帯域位置をラジオ目盛り風に表示。操作は下のスライダーで行う）
 - [x] signal meter（出力mix tapのRMS／Peakを20段LED風に表示。検証用スペクトラムとは役割を分離し、tap位置の端末依存を明示）
 - [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）
-- [ ] dark / light 方針
-- [ ] icon / branding
+- [x] dark / light 方針（system dark modeに追従する暖色light / dark scheme。dynamic colorは既定OFF）
+- [x] icon / branding（ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO adaptive icon。API 21〜25はvector layer-listへフォールバック）
 
 UI が audio backend の仕様を隠さないようにします。
 

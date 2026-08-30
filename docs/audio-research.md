@@ -491,7 +491,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)。debug APKをinstall後、dark / lightを切り替えて画面をcaptureし、darkへ戻した。画面は `Disabled` 状態で表示し、音声のON/OFFやbackend採用判断は今回の範囲外
 - Interaction: `Vintage speaker` をタップして選択状態と説明文が更新されることを確認。プリセット列を横スワイプし、`Weak signal` / `Saturation` / `Fading` が潰れずに表示されることを確認。`android layout` のUI treeにも各ラベルと4つのパネル見出しが存在した
 - Stability: UI確認後のfiltered logcatでアプリの `FATAL EXCEPTION` / `ANR in` / RAZIO由来Exceptionはなし。起動時の既存AudioEffect生成ログ（session `0` のEqualizer / DynamicsProcessing）は従来どおり出力された
-- Status: **UI初回実装・unit test・build・Pixel表示確認済み。最終デザインの聴感ではなく見た目の受入はユーザー確認待ち**。tuning dial / 製品向けsignal meter / iconは未着手。検証用スペクトラムは別PoCとして下記で追加した
+- Status: **UI初回実装・unit test・build・Pixel表示確認済み。最終デザインの聴感ではなく見た目の受入はユーザー確認待ち**。この記録は初回実装時点のもので、後続のtuning dial / 製品向けsignal meter / icon変更は下記の各記録へ分離した。検証用スペクトラムは別PoCとして追加した
 
 ### 2026-08-30 / Mono 感の強化 feasibility check
 
@@ -557,6 +557,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Spotify再生、Pixel Buds Pro 2 Bluetooth A2DP。待機時に`解析待ち`とRMS／Peak `−∞ dB`、解析開始後に`Active（入力・出力）`、メーター`観測中`、LED更新、RMS／Peak（例: `-11.4 / -0.7 dB`）を確認した。停止後はProjectionが`null`へ戻った
 - Stability: `dumpsys activity services dev.hondasports.razio`でeffect用FGS `isForeground=true`、`dumpsys media.audio_flinger`でsession `0`のDynamicsProcessing 1 effectを確認。操作後のfiltered logcatにRAZIO由来のcrash / ANRはなかった。画面オフ設定は60秒へ戻した
 - Status: **製品向けsignal meterのunit test / build / Pixel実機表示・Active更新・停止復帰確認PASS。Visualizer tapの性質上、厳密なpost-DSP測定機能ではない**
+
+### 2026-08-30 / テーマ方針とランチャーブランディング
+
+- Scope: 既存の暖色light / dark schemeをsystem dark modeへ追従させる方針を正本化し、dynamic colorは既定OFFのまま固定した。標準テンプレートの緑色・Androidロボット画像を、ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO用adaptive iconへ置き換えた。API 21〜25では同じベクターをlayer-listでフォールバックする
+- Unit / build: workflow `cb43afc893e3b21550a161adc848e1bc` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `27C0EC772277001895D8DD780F2A1FDB08571A80CA37376B9039BA3049DA25A6`
+- Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）。system dark mode（`ui_night_mode=2`）で濃い茶色の背景・パネルと琥珀色の選択状態、light modeで紙面色・錆色の選択状態をcaptureし、検証後にdark modeへ戻した。launcherアプリ一覧の`RAZIO`にレトロラジオ筐体アイコンが表示され、旧テンプレート画像が残っていないことを目視確認した
+- Stability: dark / light切替・launcher表示・アプリ再起動後のfiltered logcatに`FATAL EXCEPTION`、`ANR in`、`AudioHardening`、RAZIO由来の未処理Exceptionはなかった。画面オフ設定は60秒へ戻した
+- Status: **テーマ方針とランチャーブランディングのunit test / build / Pixel実機表示確認PASS**。この変更は音声backendやeffectの挙動を変更しない
 
 ## 判断基準
 
