@@ -25,10 +25,15 @@ class MainActivity : ComponentActivity() {
                     RazioHomeRoute(
                         controller = app.audioEffects,
                         noiseOverlay = app.noiseOverlay,
+                        spectrumAnalyzer = app.spectrumAnalyzer,
                         onPowerChange = app::setPowerOn,
                         onPresetChange = app::setPreset,
                         onHissChange = app::setHissEnabled,
                         onCrackleChange = app::setCrackleEnabled,
+                        onSpectrumStartWithoutProjection = app::startSpectrumWithoutProjection,
+                        onSpectrumProjectionResult = app::startSpectrumProjection,
+                        onSpectrumConsentDenied = app::spectrumConsentDenied,
+                        onSpectrumStop = app::stopSpectrum,
                     )
                 }
             }

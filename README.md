@@ -17,6 +17,7 @@ RAZIO は、YouTube、音楽アプリ、ゲーム、ブラウザなどの再生�
 - Gradle
 - Android AudioEffect API
 - DynamicsProcessing（Post-EQ / MBC / Limiter）
+- 検証用スペクトラム（AudioPlaybackCapture入力 / Visualizer出力 / FFT）
 - ADB による実機検証
 - Codex / AI エージェントによる実装・テストループ
 
@@ -41,9 +42,11 @@ RAZIO は、YouTube、音楽アプリ、ゲーム、ブラウザなどの再生�
 
 この方式は Android では deprecated な領域を含み、端末・OS・Audio HAL の実装によって動作が異なる可能性があります。そのため、実装より先に小さな PoC で成立性を検証します。
 
+プリセットの効き具合を確認するため、画面には検証用の入力／出力スペクトラムも用意しています。入力は `AudioPlaybackCapture` で再生ミックスをコピーしてFFTへ渡し、出力は `Visualizer(session 0)` のmix waveformをFFTへ渡します。入力PCMを `AudioTrack` へ戻さないため、解析開始で二重再生は起こしません。これは観測tapであり、音声を加工して差し替えるAudioPlaybackCapture backendではありません。Android 10以上では録音権限とMediaProjection同意が必要です。
+
 ## 代替案
 
-Global AudioEffect が成立しない場合は `AudioPlaybackCapture` を調査します。ただし、以下の制約があります。
+Global AudioEffect が成立しない場合に、音声を加工して差し替える方式として `AudioPlaybackCapture` を調査します。上記のスペクトラムは観測専用です。差し替え方式には以下の制約があります。
 
 - MediaProjection のユーザー許可が必要
 - 再生側アプリの capture policy に依存

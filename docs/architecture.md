@@ -38,6 +38,8 @@ app/
 ├─ audio/
 │  ├─ GlobalAudioEffectController
 │  ├─ NoiseOverlayController
+│  ├─ SpectrumAnalyzerController
+│  ├─ SpectrumMath
 │  ├─ RazioAudioService
 │  ├─ AudioEffectUiState
 │  ├─ preset/
@@ -61,6 +63,25 @@ RAZIO generated noise → AudioTrack ┘
 ```
 
 この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
+
+### 入出力スペクトラムアナライザー（検証用）
+
+音質プリセットが本当に効いているかを見える化するため、処理経路を置き換えない観測用の2本のtapを用意します。
+
+```text
+Other app playback ──┬── original Android output ── Speaker / BT / USB
+                     │
+                     └── AudioPlaybackCapture → AudioRecord → FFT → 入力グラフ
+
+Android output mix ── Visualizer(session 0) → waveform → FFT → 出力グラフ
+```
+
+- 入力は `AudioPlaybackCapture` で対象アプリの再生音をPCMコピーし、1024点のHann窓付きFFTで10帯域へ集約します。解析PCMを `AudioTrack` へ戻さないため、解析開始による二重再生は発生しません
+- 出力は `Visualizer(0)` のglobal mix waveformを同じFFTへ通します。再生音量との相対比較を保つため`SCALING_MODE_AS_PLAYED`を優先し、waveformのunsigned 8-bit中心値128をPCMへ戻します（端末が非対応ならVisualizer既定値へフォールバック）。Visualizerは低品質の出力mix tapであり、raw PCMやDynamicsProcessingの厳密なpost-effect readbackを保証しません。AudioPlaybackCapture側もVisualizer側も、DynamicsProcessingの前後位置は端末の音声経路依存で公開APIから断定できないため、グラフは「効き具合の傾向」を見る検証値です
+- Android 10以上では `RECORD_AUDIO` とMediaProjection同意が必要です。Android 17（API 37）では音声取得を要求した同意UIを出し、MediaProjection用FGSの `startForeground` 完了後に `getMediaProjection` を呼びます。入力キャプチャ中は `mediaProjection` 型FGSを保持します
+- 解析停止、同意拒否、Projectionの `onStop`、route changeではAudioRecord / Visualizer / Projectionを解放し、既存のDynamicsProcessing用FGS所有権と独立して扱います
+
+これは音声を加工して差し替えるPhase 2代替経路ではありません。capture policy、DRM、usage制限で入力が取れないアプリは `Partial` / `Error` として表示し、元音声の抑制や自前DSP再生には進みません。実機の同意手順と観測結果は `docs/audio-research.md` に記録します。
 
 ### Mono感の強化の成立性
 
@@ -113,7 +134,7 @@ Error
 
 `RazioHomeScreen` は電源・処理方式／プリセット・ノイズ・エンジン状態を独立した `RetroPanel` に分けます。`RetroPanel` は caller が配置できる `modifier` と `ColumnScope` の content slot を持ち、パネル固有の枠・角丸・内側余白だけを所有します。プリセットは `LazyRow` で横スクロールさせ、端末幅が狭くても `Narrow AM` / `Vintage speaker` などのラベルを縦方向へ潰しません。
 
-この段階では tuning dial、signal meter、icon / branding は追加しません。実際の信号強度やモノラル状態を持たないままメーターを描くと、AudioEffectの成立状態を誤認させるためです。
+この段階では tuning dial、製品向けsignal meter、icon / branding は追加しません。検証用スペクトラムは実際に取得した入力・出力の状態を表示しますが、AudioEffectの成立や聴感を単独で保証するメーターではありません。
 
 ## AM プリセット
 
@@ -170,7 +191,7 @@ DynamicsProcessingの生成・enableに失敗した場合は状態を `Unsupport
 
 ## Phase 2 の代替アーキテクチャ
 
-Global AudioEffect が成立しない場合だけ AudioPlaybackCapture を検討します。
+Global AudioEffect が成立しない場合に、音声を加工して差し替える方式として AudioPlaybackCapture を検討します。上記のスペクトラムアナライザーは成立性・聴感を確認するための観測専用で、元音声を抑制したり加工音を再生したりしません。
 
 ```text
 Other app playback

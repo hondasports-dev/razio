@@ -144,7 +144,27 @@ Phase 2 の実機 regression（変更したとき）:
 6. `android layout` のUI treeで `RAZIO`、4つのパネル見出し、全プリセット名、Hiss / Crackleが取得できることを確認する
 7. filtered `logcat` で `FATAL EXCEPTION`、`ANR in`、アプリ由来の未処理Exceptionがないことを確認する
 
-2026-08-30 の初回実装では、Pixel 10 Pro / Android 17でdark / lightの両scheme、`Vintage speaker` 選択、プリセット横スクロール、UI tree、filtered logcatを確認した。tuning dial、signal meter、iconはまだ追加していない。詳細は `docs/audio-research.md`。
+2026-08-30 の初回実装では、Pixel 10 Pro / Android 17でdark / lightの両scheme、`Vintage speaker` 選択、プリセット横スクロール、UI tree、filtered logcatを確認した。tuning dial、製品向けsignal meter、iconはまだ追加していない。検証用スペクトラムは下記の別PoCとして追加した。詳細は `docs/audio-research.md`。
+
+### 入出力スペクトラムアナライザー検証PoC
+
+この機能は、音声を再生し直さずに入力・出力の傾向を比較するための観測tapです。入力は `AudioPlaybackCapture` → `AudioRecord`、出力は `Visualizer(session 0)`。どちらも同じ1024点FFTで10帯域へ変換し、`Active` / `Partial` / `Error` として取得可否を表示します。Visualizerは厳密なpost-DSP PCMではないため、プリセットの最終判定はDynamicsProcessingのreadbackと聴感で行います。
+
+必須確認:
+
+1. `:app:testDebugUnitTest` と `:app:assembleDebug` を `gradle-run` で通し、debug APKをPixelへinstallする
+2. Spotifyなど対象アプリを再生し、RAZIOの「解析を開始」を押す。`RECORD_AUDIO`許可後、MediaProjectionの画面共有同意を通す（Android 17では音声取得を要求するUIになる）
+3. UIが `Active（入力・出力）` になり、入力／出力の棒グラフ、RMS、Peakが更新されることを確認する。detailが `入力tap=AudioPlaybackCapture` / `出力mix tap=Visualizer(session 0)` / `前後位置は端末依存` であることを記録する
+4. `dumpsys media_session`で対象アプリが`PLAYING`、`dumpsys activity services dev.hondasports.razio`でProjection型FGSがforegroundであることを確認する
+5. 入力PCMをAudioTrackへ再生していないため、解析開始前後で二重再生・意図しない音量二重化がないことを聴感確認する
+6. 「解析を停止」を押し、UIが`Stopped`、`dumpsys media_projection`が`null`になることを確認する。RAZIOの電源がONならeffect用specialUse FGSだけが残ることを確認する
+7. 対象アプリのcapture policyやProjection拒否を再現できる場合、`Partial` / `Error`と理由が表示され、元音声を抑制しないことを確認する
+
+2026-08-30 の実機結果:
+
+- Pixel 10 Pro（Android 17 / Pixel Buds Pro 2 Bluetooth A2DP）でSpotify `PlaybackState=PLAYING`を再生し、画面共有のアプリ選択でSpotifyを指定した。UIが`Active（入力・出力）`となり、両グラフのフレームが更新された（最終再確認時の一時値: 入力RMS約`-9.9 dB`、出力RMS`0.0 dB`。曲・音量・フレームに依存）
+- `dumpsys activity services`でProjection型FGS `isForeground=true`、停止後に`dumpsys media_projection`が`null`、Spotify再生継続を確認した。アプリのcrash / ANRはなし
+- `:app:testDebugUnitTest` / `:app:assembleDebug` はworkflow `5a5253f24ae29370dc7f3a53472a2221`でPASS。入力の音声を再生し直さないため、二重再生を作らない構造をコードとUI detailで確認した
 
 ### Hiss / Crackle AudioTrack overlay PoC
 

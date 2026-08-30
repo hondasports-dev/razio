@@ -1,0 +1,49 @@
+package dev.hondasports.razio.audio
+
+import kotlin.math.PI
+import kotlin.math.sin
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SpectrumMathTest {
+    @Test
+    fun silenceStaysAtTheDisplayFloor() {
+        val frame = SpectrumMath.fromPcm16(
+            samples = ShortArray(SpectrumMath.FFT_SIZE),
+            sampleRateHz = 48_000,
+        )
+
+        assertTrue(frame.levelsDb.all { it <= SpectrumMath.FLOOR_DB })
+        assertTrue(frame.rmsDb <= SpectrumMath.FLOOR_DB)
+        assertTrue(frame.peakDb <= SpectrumMath.FLOOR_DB)
+    }
+
+    @Test
+    fun oneKilohertzToneDominatesItsBand() {
+        val samples = ShortArray(SpectrumMath.FFT_SIZE) { index ->
+            (sin(2.0 * PI * 1_000.0 * index / 48_000.0) * Short.MAX_VALUE * 0.7)
+                .toInt()
+                .toShort()
+        }
+        val frame = SpectrumMath.fromPcm16(samples, sampleRateHz = 48_000)
+        val oneKilohertzBand = frame.levelsDb[4]
+        val eightKilohertzBand = frame.levelsDb[7]
+
+        assertTrue("1 kHz should be above 6.3 kHz", oneKilohertzBand > eightKilohertzBand + 12f)
+        assertTrue(frame.rmsDb < 0f)
+        assertTrue(frame.peakDb < 0f)
+    }
+
+    @Test
+    fun visualizerUnsignedBytesAreCentered() {
+        val waveform = ByteArray(SpectrumMath.FFT_SIZE) { index ->
+            // Visualizer delivers unsigned PCM in a signed ByteArray: 192 == +64,
+            // 64 == -64 around the unsigned center value 128.
+            if (index % 2 == 0) 192.toByte() else 64.toByte()
+        }
+        val frame = SpectrumMath.fromVisualizerWaveform(waveform, samplingRate = 48_000)
+
+        assertTrue(frame.peakDb < 0f)
+        assertTrue(frame.rmsDb > SpectrumMath.FLOOR_DB)
+    }
+}

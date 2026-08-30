@@ -99,6 +99,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] 最小 Compose UI
 - [x] 実機 regression 手順（起動時 ON 復元・FGS 通知・Home 放置・画面 OFF 後の effect 維持・Bluetooth route 再接続は Pixel 10 Pro で確認。詳細は `docs/audio-research.md` / `docs/testing.md`）
 - [x] DynamicsProcessing 単体 A/B PoC（B案を採用。Equalizerを生成せず、Post-EQ/MBC/Limiterを1 effectへ集約。Pixel 10 Proでsession `0` の1 effect構成を確認）
+- [x] 入出力スペクトラム検証（AudioPlaybackCapture / AudioRecord入力tap + session `0` Visualizer出力tap + FFTグラフ。元音声を再生し直さない。Pixel 10 Pro / Android 17で`Active`・停止・Projection解放を確認）
 
 ## Phase 3: Sound design
 
@@ -124,7 +125,7 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 
 - [ ] レトロラジオ風デザイン（暖色light/darkテーマ、パネル分割、プリセット横スクロールの初回実装・Pixel 10 Pro表示確認済み。最終デザイン受入待ち）
 - [ ] tuning dial の表現
-- [ ] signal meter
+- [ ] signal meter（製品向け。検証用スペクトラムはPhase 2に実装済みだが、聴感を保証するメーターではない）
 - [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）
 - [ ] dark / light 方針
 - [ ] icon / branding

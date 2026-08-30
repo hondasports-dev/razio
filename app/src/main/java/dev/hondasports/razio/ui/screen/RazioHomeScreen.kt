@@ -1,14 +1,19 @@
 package dev.hondasports.razio.ui.screen
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionConfig
+import android.media.projection.MediaProjectionManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +46,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,26 +62,63 @@ import dev.hondasports.razio.audio.NoiseOverlayController
 import dev.hondasports.razio.audio.NoiseOverlayStatus
 import dev.hondasports.razio.audio.NoiseOverlayUiState
 import dev.hondasports.razio.audio.RazioStatus
+import dev.hondasports.razio.audio.SpectrumAnalyzerController
+import dev.hondasports.razio.audio.SpectrumAnalyzerStatus
+import dev.hondasports.razio.audio.SpectrumAnalyzerUiState
+import dev.hondasports.razio.audio.SpectrumMath
+import dev.hondasports.razio.audio.SpectrumSnapshot
 import dev.hondasports.razio.audio.preset.AudioPreset
 import dev.hondasports.razio.theme.RazioTheme
+import java.util.Locale
 
 @Composable
 fun RazioHomeRoute(
     controller: GlobalAudioEffectController,
     noiseOverlay: NoiseOverlayController,
+    spectrumAnalyzer: SpectrumAnalyzerController,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
+    onSpectrumStartWithoutProjection: () -> Unit = {},
+    onSpectrumProjectionResult: (Int, Intent?) -> Unit = { _, _ -> },
+    onSpectrumConsentDenied: (String) -> Unit = {},
+    onSpectrumStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
     val noiseState by noiseOverlay.state.collectAsState()
+    val spectrumState by spectrumAnalyzer.state.collectAsState()
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
         onPowerChange(true)
+    }
+    val projectionManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        context.getSystemService(MediaProjectionManager::class.java)
+    } else {
+        null
+    }
+    val projectionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            onSpectrumProjectionResult(result.resultCode, result.data)
+        } else {
+            onSpectrumConsentDenied("MediaProjectionの同意がキャンセルされました")
+        }
+    }
+    val recordPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (!granted) {
+            onSpectrumConsentDenied("マイク権限がないため入力解析を開始できません")
+        } else if (projectionManager != null) {
+            projectionLauncher.launch(createProjectionIntent(projectionManager))
+        } else {
+            onSpectrumStartWithoutProjection()
+        }
     }
     RazioHomeScreen(
         state = state,
@@ -88,6 +133,19 @@ fun RazioHomeRoute(
         noiseState = noiseState,
         onHissChange = onHissChange,
         onCrackleChange = onCrackleChange,
+        spectrumState = spectrumState,
+        onSpectrumStart = {
+            when {
+                needsRecordPermission(context) -> recordPermissionLauncher.launch(
+                    Manifest.permission.RECORD_AUDIO,
+                )
+                projectionManager != null -> projectionLauncher.launch(
+                    createProjectionIntent(projectionManager),
+                )
+                else -> onSpectrumStartWithoutProjection()
+            }
+        },
+        onSpectrumStop = onSpectrumStop,
         modifier = modifier,
     )
 }
@@ -108,6 +166,9 @@ fun RazioHomeScreen(
     noiseState: NoiseOverlayUiState = NoiseOverlayUiState(),
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
+    spectrumState: SpectrumAnalyzerUiState = SpectrumAnalyzerUiState(),
+    onSpectrumStart: () -> Unit = {},
+    onSpectrumStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -229,6 +290,63 @@ fun RazioHomeScreen(
         }
 
         RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
+            SectionHeading(text = stringResource(R.string.spectrum_heading))
+            Text(
+                text = stringResource(R.string.spectrum_explanation),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (spectrumState.running) {
+                    OutlinedButton(
+                        onClick = onSpectrumStop,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Text(text = stringResource(R.string.spectrum_stop))
+                    }
+                } else {
+                    Button(
+                        onClick = onSpectrumStart,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Text(text = stringResource(R.string.spectrum_start))
+                    }
+                }
+                Text(
+                    text = spectrumStatusText(spectrumState.status),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (spectrumState.detail.isNotEmpty()) {
+                Text(
+                    text = spectrumState.detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            SpectrumMeter(
+                label = stringResource(R.string.spectrum_input_label),
+                snapshot = spectrumState.input,
+                accent = MaterialTheme.colorScheme.primary,
+            )
+            SpectrumMeter(
+                label = stringResource(R.string.spectrum_output_label),
+                snapshot = spectrumState.output,
+                accent = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+
+        RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
             SectionHeading(text = stringResource(R.string.engine_status_heading))
             Text(
                 text = stringResource(R.string.equalizer_label, reportText(state.equalizer)),
@@ -250,6 +368,157 @@ fun RazioHomeScreen(
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )
     }
+}
+
+private fun needsRecordPermission(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.RECORD_AUDIO,
+    ) != PackageManager.PERMISSION_GRANTED
+}
+
+private fun createProjectionIntent(manager: MediaProjectionManager): Intent {
+    return if (Build.VERSION.SDK_INT >= 37) {
+        manager.createScreenCaptureIntent(
+            MediaProjectionConfig.Builder()
+                .setAudioRequested(true)
+                .build(),
+        )
+    } else {
+        manager.createScreenCaptureIntent()
+    }
+}
+
+@Composable
+private fun SpectrumMeter(
+    label: String,
+    snapshot: SpectrumSnapshot,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        SpectrumChart(
+            levelsDb = snapshot.levelsDb,
+            accent = accent,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.spectrum_rms, formatDb(snapshot.rmsDb)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.spectrum_peak, formatDb(snapshot.peakDb)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (!snapshot.available) {
+            Text(
+                text = stringResource(R.string.spectrum_waiting),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpectrumChart(
+    levelsDb: List<Float>,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+    Column(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(132.dp),
+        ) {
+            val chartBottom = size.height - 2.dp.toPx()
+            val chartTop = 4.dp.toPx()
+            val chartHeight = chartBottom - chartTop
+            listOf(-60f, -30f, 0f).forEach { db ->
+                val fraction = (db - SpectrumMath.FLOOR_DB) / -SpectrumMath.FLOOR_DB
+                val y = chartBottom - chartHeight * fraction
+                drawLine(
+                    color = grid,
+                    start = Offset(0f, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            }
+            val safeLevels = levelsDb.ifEmpty {
+                SpectrumMath.bandCentersHz.map { SpectrumMath.FLOOR_DB }
+            }
+            val barWidth = size.width / safeLevels.size
+            safeLevels.forEachIndexed { index, db ->
+                val fraction = ((db - SpectrumMath.FLOOR_DB) / -SpectrumMath.FLOOR_DB)
+                    .coerceIn(0f, 1f)
+                val height = chartHeight * fraction
+                drawRect(
+                    color = accent,
+                    topLeft = Offset(
+                        x = index * barWidth + barWidth * 0.16f,
+                        y = chartBottom - height,
+                    ),
+                    size = Size(width = barWidth * 0.68f, height = height),
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            SpectrumMath.bandCentersHz.forEach { centerHz ->
+                Text(
+                    text = frequencyLabel(centerHz),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+private fun frequencyLabel(centerHz: Int): String {
+    return if (centerHz >= 1_000) {
+        "${centerHz / 1_000}k"
+    } else {
+        centerHz.toString()
+    }
+}
+
+private fun formatDb(value: Float): String {
+    if (value <= SpectrumMath.FLOOR_DB + 0.5f) return "−∞ dB"
+    return String.format(Locale.US, "%.1f dB", value)
+}
+
+@Composable
+private fun spectrumStatusText(status: SpectrumAnalyzerStatus): String {
+    val resId = when (status) {
+        SpectrumAnalyzerStatus.Idle -> R.string.spectrum_status_idle
+        SpectrumAnalyzerStatus.Starting -> R.string.spectrum_status_starting
+        SpectrumAnalyzerStatus.Active -> R.string.spectrum_status_active
+        SpectrumAnalyzerStatus.Partial -> R.string.spectrum_status_partial
+        SpectrumAnalyzerStatus.Stopped -> R.string.spectrum_status_stopped
+        SpectrumAnalyzerStatus.Error -> R.string.spectrum_status_error
+    }
+    return stringResource(resId)
 }
 
 @Composable

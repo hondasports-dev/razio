@@ -83,6 +83,8 @@ Global AudioEffect が成立しない場合の代替候補です。
 
 このため RAZIO の第一候補にはしません。
 
+ただし、入出力の差を確認する検証用途では、AudioPlaybackCaptureで得たPCMを再生し直さずFFTへ渡すだけの観測tapとして利用できます。この用途は下記の「入出力スペクトラムアナライザー」に限定し、global AudioEffectを置き換えるcustom DSP経路とは分けて扱います。
+
 ## AM ラジオらしさの考え方
 
 AM ラジオらしさは AM 変調方式そのものだけで決まりません。
@@ -489,7 +491,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)。debug APKをinstall後、dark / lightを切り替えて画面をcaptureし、darkへ戻した。画面は `Disabled` 状態で表示し、音声のON/OFFやbackend採用判断は今回の範囲外
 - Interaction: `Vintage speaker` をタップして選択状態と説明文が更新されることを確認。プリセット列を横スワイプし、`Weak signal` / `Saturation` / `Fading` が潰れずに表示されることを確認。`android layout` のUI treeにも各ラベルと4つのパネル見出しが存在した
 - Stability: UI確認後のfiltered logcatでアプリの `FATAL EXCEPTION` / `ANR in` / RAZIO由来Exceptionはなし。起動時の既存AudioEffect生成ログ（session `0` のEqualizer / DynamicsProcessing）は従来どおり出力された
-- Status: **UI初回実装・unit test・build・Pixel表示確認済み。最終デザインの聴感ではなく見た目の受入はユーザー確認待ち**。tuning dial / signal meter / iconは未着手
+- Status: **UI初回実装・unit test・build・Pixel表示確認済み。最終デザインの聴感ではなく見た目の受入はユーザー確認待ち**。tuning dial / 製品向けsignal meter / iconは未着手。検証用スペクトラムは別PoCとして下記で追加した
 
 ### 2026-08-30 / Mono 感の強化 feasibility check
 
@@ -512,6 +514,19 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: 検証範囲のfiltered logcatにRAZIO由来のcrash / ANR / `AudioHardening`はなし。`AudioEffect.queryEffects()`の能力一覧にEqualizerBundleが出ても、実際のsession `0` chainへは生成していない
 - Post-EQ guard: 生成・再利用時にPost-EQのstage / band数 / 有効状態 / 9・18・20 kHzの高域ゲインをnative readbackし、20 kHz帯が維持できない構成を`Ready`扱いにしない。最終APKでもguard通過後に`Active`を確認した
 - Status: **DynamicsProcessing単独化・高域`-48dB`のunit test / build / Pixel構造確認PASS。10 kHz付近の聴感（高域残り・音量・クリック・歪み）はユーザー確認待ち**
+
+### 2026-08-30 / 入出力スペクトラムアナライザー検証PoC
+
+- Goal: プリセットの効果を数値とグラフで比較できるようにし、入力・出力のどちらが取得できているかを隠さず表示する。音声の加工・差し替えは今回のスコープ外
+- Implementation: 追加ライブラリは使わず、Android標準の `AudioPlaybackCapture` + `AudioRecord` を入力tap、`Visualizer(0)` を出力mix tapとして利用する。各フレームを1024点のHann窓付きradix-2 FFTへ通し、80 / 160 / 315 / 630 / 1k / 2k / 4k / 6.3k / 10k / 16k Hzの10帯域を`-80..0 dBFS`で描画する。RMSとPeakも同じフレームから計算する。Visualizerは`SCALING_MODE_AS_PLAYED`を優先し、unsigned 8-bit waveformを中心値128からPCMへ戻す
+- Input limitation: AudioPlaybackCaptureはAndroid 10以上、`RECORD_AUDIO`、MediaProjection同意、対象アプリのusage / capture policy / profile条件に依存する。取れない場合は `Partial` または `Error` として表示する。入力ラベルは「再生ミックスのコピー」であり、DynamicsProcessing前のraw PCMとは断定しない
+- Output limitation: `Visualizer(0)` はglobal output mixの低品質waveform callbackで、厳密なpost-DynamicsProcessing PCM readbackではない。AudioPlaybackCapture側とVisualizer側のどちらがeffect前／後かを、公開APIだけで逆転して断定することもできない。したがってグラフは傾向確認用で、Post-EQの正確な値は従来どおりDynamicsProcessingのnative readbackで判定する
+- Double playback: AudioRecordで読んだ入力PCMをAudioTrackへ書き戻していない。解析開始・停止は元音声の再生経路を所有せず、二重再生を作らない
+- Permission / FGS flow: UIで録音権限を確認してからMediaProjection同意を起動する。Android 17（API 37）では `MediaProjectionConfig.Builder.setAudioRequested(true)` で音声取得を要求する。同意後に `RazioAudioService` を`mediaProjection`型FGSとして先にforeground化し、準備完了callbackの後で`getMediaProjection`を呼ぶ。解析停止時はProjection型だけを解放し、DynamicsProcessing用`specialUse` FGS所有権は残す
+- Device: Pixel 10 Pro（`blazer`、serial `56101FDCH006CX`）、Android 17（`CP2A.260805.005`）、Spotify、Pixel Buds Pro 2 Bluetooth A2DP。`RECORD_AUDIO` / `POST_NOTIFICATIONS`は許可済み
+- Reproduction: Spotifyを`PlaybackState=PLAYING`にする → RAZIOの「解析を開始」 → 「RAZIOと画面を共有しますか？」で次へ → アプリ一覧からSpotifyを選択 → RAZIOを前面へ戻す。画面共有中に両グラフが更新され、停止ボタンで`Stopped`へ戻る
+- Evidence: 最新debug APK（SHA-256 `B1D5F296860613B2793F7AAFA944BCCEE3FD45012456D0946446DDFFA061A4F5`）でUIが`Active（入力・出力）`、detailが`入力tap=AudioPlaybackCapture / 出力mix tap=Visualizer(session 0) / 前後位置は端末依存 / 元音声は再生しない`となった。最終再確認時の一時値は入力RMS約`-9.9 dB`、Peak約`-0.5 dB`、出力RMS`0.0 dB`、Peak`0.0 dB`（曲・音量・フレームに依存）。`dumpsys media_session`でSpotify `PLAYING`、`dumpsys activity services dev.hondasports.razio`で`isForeground=true`かつProjection型（`0x20`）を確認。停止後`dumpsys media_projection`は`null`、effectのみのspecialUse FGS（`0x40000000`）が残った
+- Status: **Pixel 10 Proで入力・出力tap、FFT表示、同意後のFGS順序、停止・Projection解放までPASS**。Visualizer / AudioPlaybackCaptureの仕様上、アプリや出力先によって`Partial`になり得る。これは可視化による検証機能であり、custom DSP / 元音声ミュート / 加工音再生を追加したことを意味しない
 
 ## 判断基準
 
