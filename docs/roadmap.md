@@ -126,13 +126,13 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 
 ## Phase 4: Product UI
 
-- [x] Ghost Terminal UI（緑黒の端末パレット、状態LED付きヘッダー、常時表示の周波数カーブ、プリセット横スクロール。Pixel 10 Proで表示確認済み）
+- [x] Ghost Terminal UI（参考画像に合わせた緑黒の単一コンソール、状態LED付きヘッダー、6項目プリセットレール、常時表示の周波数カーブと6境界。CRTテクスチャ、細線スライダー、矩形操作部を含む。Pixel 10 Proで表示確認済み）
 - [x] tuning dial の表現（調整パネルに6境界の帯域位置をラジオ目盛り風に表示。操作は下のスライダーで行う）
 - [x] signal meter（出力mix tapのRMS／Peakを20段LED風に表示。検証用スペクトラムとは役割を分離し、tap位置の端末依存を明示）
 - [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）
 - [x] dark / light 方針（system dark modeに追従する暖色light / dark scheme。dynamic colorは既定OFF）
 - [x] icon / branding（ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO adaptive icon。API 21〜25はvector layer-listへフォールバック）
-- [x] 詳細調整UI（`DETAILS / 開く` で6周波数境界・ゲイン・Dynamics・Character値を展開し、`プリセット初期値に戻す` で選択中プリセットへ復帰）
+- [x] 詳細調整UI（主画面へ6周波数境界を常時表示し、`DETAILS / 開く` で同調ダイヤル・ゲイン・Dynamics・Character値とNoise / Spectrum / Engine検証パネルを展開。出力直下のリセットで選択中プリセットへ復帰）
 
 UI が audio backend の仕様を隠さないようにします。
 

@@ -3,6 +3,7 @@
     <string name="poc_subtitle">Global AudioEffect PoC (session 0)</string>
     <string name="power_label">RAZIO</string>
     <string name="status_label">状態: %1$s</string>
+    <string name="terminal_subtitle">Global AudioEffect</string>
     <string name="preset_label">プリセット</string>
     <string name="preset_narrow_am">Narrow AM</string>
     <string name="preset_vintage_speaker">Vintage speaker</string>

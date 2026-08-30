@@ -171,7 +171,9 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### Ghost Terminal UI（現行）
 
-画像リファレンスの端末コンソール調を、音声経路を変えずに `RazioHomeScreen` へ適用します。画面全体は緑黒の局所カラースキーム、モノスペース見出し、角丸を抑えた枠線パネルで構成し、ヘッダーのON/OFFスイッチと状態LEDは既存の `onPowerChange` へ接続します。`DETAILS / 開く` は折りたたみ状態を `rememberSaveable(state.preset.id)` で保持し、開くと開発用パラメータ（6周波数境界、ゲイン、MBC、入力、歪み緩和、Fading）をその下へ展開します。`プリセット初期値に戻す` は閉じた状態でも押せ、選択中プリセットのdefault tuningだけを再適用します。
+画像リファレンスの端末コンソール調を、音声経路を変えずに `RazioHomeScreen` へ適用します。画面全体は緑黒の局所カラースキーム、モノスペース見出し、角丸を抑えた枠線パネルで構成し、ヘッダーのON/OFFスイッチと状態LEDは既存の `onPowerChange` へ接続します。背景にはUI文字を含まない生成済みCRTテクスチャを重ね、バイナリ雨・走査線・ビネットの質感を確認します。`DETAILS / 開く` は折りたたみ状態を `rememberSaveable(state.preset.id)` で保持し、開くと同調ダイヤル、周波数以外の開発用パラメータ、Noise / Spectrum / Engine の検証パネルをその下へ展開します。`プリセット初期値に戻す` は閉じた状態でも押せ、選択中プリセットのdefault tuningだけを再適用します。
+
+参考画像との対応として、プリセットレールは `Narrow AM` / `Vintage speaker` / `Weak signal` / `Saturation` / `Fading` / `同調` の6項目を1行へ均等配置します。周波数カーブ直下には6つの周波数境界を常時表示し、細線・目盛り付きのスライダーと矩形ボタンで調整します。`DETAILS` では周波数以外の開発値、同調ダイヤル、検証パネルを展開します。出力メーターの直下に矩形のリセットを置き、主画面の順序を画像の `curve → adjustments → output → footer` に合わせます。
 
 必須確認:
 
@@ -185,7 +187,15 @@ Phase 2 の実機 regression（変更したとき）:
 
 - Pixel 10 Pro（Android 17 / serial `56101FDCH006CX`）へ `app-debug.apk` を再installし、緑黒のGhost Terminal配色、`RAZIO`／`GHOST TERMINAL`、ON表示、プリセット横スクロール、常時表示の周波数カーブをスクリーンショットで確認した
 - `DETAILS / 開く` → `DETAILS / 閉じる` を実機で操作し、UI treeから `FREQ // 6 BOUNDARIES` と6つの周波数ラベルを取得した。低域カット開始を `180 Hz → 190 Hz` へ変更後、`プリセット初期値に戻す` で `180 Hz` へ復帰した
-- 操作後の `dumpsys media.audio_flinger` はsession `0` のDynamicsProcessing 1 effect、`dumpsys activity services` はeffect用FGS `isForeground=true` を維持した。filtered `logcat`にRAZIO由来のcrash / ANRはなかった
+- 操作後の `dumpsys media.audio_flinger` はsession `0` のDynamicsProcessing 1 effect、`dumpsys activity services` はeffect用FGS `isForeground=true` を維持した。filtered `logcat`にRAZIO由来のcrash / ANRはなかった。なお、これは背景テクスチャ・細線スライダー・矩形ボタン・詳細内への検証パネル移動前の確認結果であり、最新差分は下記の再検証で更新する
+
+2026-08-30 のGhost Terminal最終差分再検証:
+
+- workflow `c6f13df1980811bbbe8484b64f4358b9` で `:app:testDebugUnitTest` / `:app:assembleDebug` をPASS。APK SHA-256は `1BA62F7DDED2D7DB0A3198A322F7958914D81F164CF81E7D6FB66200436A7D4D`
+- Pixel 10 Pro（Android 17 / serial `56101FDCH006CX`）へ再installし、`16-final-top.png` / `17-final-lower.png` / `19-final-details-devpanels.png` を取得。生成CRTテクスチャ、6項目レール、シアンの細分化カーブ、6本の細線スライダー、矩形RESET/DETAILS、詳細内の開発パネルを確認した
+- UI treeで `Vintage speaker` を含む6タブ、6周波数ラベル、`PEAK`、`DETAILS / 開く`・`閉じる`を確認。最初の周波数の`＋`で `180 Hz → 190 Hz`、出力直下のリセットで `180 Hz`へ復帰した
+- 詳細を開いた後、`GAIN // BAND SHAPE`、`DYNAMICS // PROCESSING`、`CHARACTER // MODULATION`、Noise / Spectrum / EngineをUI treeで取得した。`dumpsys media.audio_flinger`はsession `0`のDynamicsProcessing 1 effect、FGSは`isForeground=true`を維持。filtered `logcat`にRAZIO由来のcrash / ANR / `AudioHardening`はなかった
+- 参考画像との比較レビューはプロジェクトルートの`design-qa.md`に、ソース画像と実機キャプチャを同一入力で比較した結果として記録した
 
 ### 同調ダイヤル表示
 
