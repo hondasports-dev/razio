@@ -492,6 +492,10 @@ private fun PresetTuningEditor(
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
+        PresetTuningDial(
+            tuning = safeTuning,
+            modifier = Modifier.padding(bottom = 10.dp),
+        )
         PresetFrequencyCurve(
             tuning = safeTuning,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -716,6 +720,155 @@ private fun PresetTuningEditor(
                 .padding(top = 8.dp),
         ) {
             Text(text = stringResource(R.string.preset_tuning_reset))
+        }
+    }
+}
+
+/** Shows the selected preset's band shape as a compact, non-interactive radio dial. */
+@Composable
+private fun PresetTuningDial(
+    tuning: AudioPresetTuning,
+    modifier: Modifier = Modifier,
+) {
+    val safeTuning = tuning.sanitized()
+    val trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val cutColor = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+    val slopeColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
+    val midColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+    val boundaryColor = MaterialTheme.colorScheme.primary
+    val tickColor = MaterialTheme.colorScheme.onSurface
+    val minHz = 20f
+    val maxHz = 20_000f
+    val tickFrequenciesHz = listOf(
+        20f,
+        30f,
+        50f,
+        70f,
+        100f,
+        150f,
+        200f,
+        300f,
+        500f,
+        700f,
+        1_000f,
+        1_500f,
+        2_000f,
+        3_000f,
+        5_000f,
+        7_000f,
+        10_000f,
+        15_000f,
+        20_000f,
+    )
+    val labeledFrequenciesHz = listOf(20f, 100f, 300f, 1_000f, 3_000f, 10_000f, 20_000f)
+    val majorFrequenciesHz = setOf(20f, 100f, 300f, 1_000f, 3_000f, 10_000f, 20_000f)
+    val boundaryFrequenciesHz = listOf(
+        safeTuning.lowCutHz,
+        safeTuning.lowTransitionHz,
+        safeTuning.midLowHz,
+        safeTuning.midHighHz,
+        safeTuning.highTransitionHz,
+        safeTuning.highCutHz,
+    )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.preset_tuning_dial_heading),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = stringResource(R.string.preset_tuning_dial_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .height(112.dp)
+                .border(
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+                    RoundedCornerShape(8.dp),
+                )
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 12.dp, top = 10.dp, end = 12.dp, bottom = 30.dp),
+            ) {
+                val left = 2.dp.toPx()
+                val right = size.width - 2.dp.toPx()
+                val trackY = size.height * 0.52f
+                val trackHeight = 10.dp.toPx()
+                val minLogHz = ln(minHz.toDouble())
+                val maxLogHz = ln(maxHz.toDouble())
+
+                fun xForHz(hz: Float): Float {
+                    val fraction = ((ln(hz.coerceIn(minHz, maxHz).toDouble()) - minLogHz) /
+                        (maxLogHz - minLogHz)).toFloat()
+                    return left + (right - left) * fraction
+                }
+
+                fun drawBand(startHz: Float, endHz: Float, color: Color) {
+                    val startX = xForHz(startHz)
+                    val endX = xForHz(endHz)
+                    drawRect(
+                        color = color,
+                        topLeft = Offset(startX, trackY - trackHeight / 2f),
+                        size = Size((endX - startX).coerceAtLeast(0f), trackHeight),
+                    )
+                }
+
+                drawRect(
+                    color = trackColor,
+                    topLeft = Offset(left, trackY - trackHeight / 2f),
+                    size = Size(right - left, trackHeight),
+                )
+                drawBand(minHz, safeTuning.lowCutHz, cutColor)
+                drawBand(safeTuning.lowCutHz, safeTuning.midLowHz, slopeColor)
+                drawBand(safeTuning.midLowHz, safeTuning.midHighHz, midColor)
+                drawBand(safeTuning.midHighHz, safeTuning.highCutHz, slopeColor)
+                drawBand(safeTuning.highCutHz, maxHz, cutColor)
+
+                tickFrequenciesHz.forEach { frequencyHz ->
+                    val x = xForHz(frequencyHz)
+                    val isMajor = frequencyHz in majorFrequenciesHz
+                    val tickHeight = if (isMajor) 18.dp.toPx() else 10.dp.toPx()
+                    drawLine(
+                        color = tickColor.copy(
+                            alpha = if (isMajor) 0.75f else 0.35f,
+                        ),
+                        start = Offset(x, trackY - trackHeight / 2f - tickHeight),
+                        end = Offset(x, trackY - trackHeight / 2f - 2.dp.toPx()),
+                        strokeWidth = if (isMajor) 1.3.dp.toPx() else 0.8.dp.toPx(),
+                    )
+                }
+
+                boundaryFrequenciesHz.forEach { frequencyHz ->
+                    val x = xForHz(frequencyHz)
+                    drawLine(
+                        color = boundaryColor.copy(alpha = 0.85f),
+                        start = Offset(x, 4.dp.toPx()),
+                        end = Offset(x, trackY + trackHeight / 2f + 8.dp.toPx()),
+                        strokeWidth = 1.6.dp.toPx(),
+                    )
+                    drawCircle(
+                        color = boundaryColor,
+                        radius = 3.dp.toPx(),
+                        center = Offset(x, trackY),
+                    )
+                }
+            }
+            FrequencyAxisLabels(
+                frequenciesHz = labeledFrequenciesHz,
+                minHz = minHz,
+                maxHz = maxHz,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
+            )
         }
     }
 }

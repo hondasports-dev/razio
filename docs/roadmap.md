@@ -127,7 +127,7 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 ## Phase 4: Product UI
 
 - [ ] レトロラジオ風デザイン（暖色light/darkテーマ、パネル分割、プリセット横スクロールの初回実装・Pixel 10 Pro表示確認済み。最終デザイン受入待ち）
-- [ ] tuning dial の表現
+- [x] tuning dial の表現（調整パネルに6境界の帯域位置をラジオ目盛り風に表示。操作は下のスライダーで行う）
 - [ ] signal meter（製品向け。検証用スペクトラムはPhase 2に実装済みだが、聴感を保証するメーターではない）
 - [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）
 - [ ] dark / light 方針

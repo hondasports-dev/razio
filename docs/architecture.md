@@ -134,7 +134,7 @@ Error
 
 `RazioHomeScreen` は電源・処理方式／プリセット・ノイズ・エンジン状態を独立した `RetroPanel` に分けます。`RetroPanel` は caller が配置できる `modifier` と `ColumnScope` の content slot を持ち、パネル固有の枠・角丸・内側余白だけを所有します。プリセットは `LazyRow` で横スクロールさせ、端末幅が狭くても `Narrow AM` / `Vintage speaker` などのラベルを縦方向へ潰しません。
 
-この段階では tuning dial、製品向けsignal meter、icon / branding は追加しません。検証用スペクトラムは実際に取得した入力・出力の状態を表示しますが、AudioEffectの成立や聴感を単独で保証するメーターではありません。
+この段階では製品向けsignal meter、icon / brandingは追加しません。調整パネルには、選択中プリセットの帯域位置をラジオの目盛り風に示す非インタラクティブな`tuning dial`を置きます。検証用スペクトラムは実際に取得した入力・出力の状態を表示しますが、AudioEffectの成立や聴感を単独で保証するメーターではありません。
 
 ### プリセット値の試聴調整
 
@@ -154,7 +154,7 @@ DynamicsProcessing: Pre-EQ(flat) → MBC → Post-EQ → Limiter
 
 `AudioPresetTuning.sanitized()` は周波数を `lowCut < lowTransition < midLow < midHigh < highTransition < highCut` の順に保ち、各値を端末で安全に扱える範囲へ収めます。調整は現在の `DynamicsProcessing` をreleaseせず、既存の約80 ms遷移へ合流させるため、スライダー操作で一瞬effectが外れる経路を作りません。DynamicsProcessing単独経路の歪み緩和マッピングは調整値にも適用され、UIのMBC目標値とnative readback値が異なる場合があります。
 
-値はプリセットごとにプロセス内だけで保持し、DataStoreへは保存しません。アプリ再起動では初期値へ戻ります。`初期値へ戻す` は選択中プリセットの定義値を再適用します。これは音作りを決めるための試聴用UIであり、製品向けのtuning dialや永続設定とは別扱いです。
+値はプリセットごとにプロセス内だけで保持し、DataStoreへは保存しません。アプリ再起動では初期値へ戻ります。`初期値へ戻す` は選択中プリセットの定義値を再適用します。これは音作りを決めるための試聴用UIであり、非インタラクティブな`tuning dial`も帯域位置の確認専用です。製品向けの操作ダイヤルや永続設定とは別扱いです。
 
 ## AM プリセット
 

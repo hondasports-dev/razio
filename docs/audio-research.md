@@ -540,6 +540,15 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Interaction evidence: 周波数カーブ見出し、`+6`〜`-48` dB軸、20 Hz〜20 kHzの細分化対数軸、カット／中域帯の網掛け、6境界線をUI treeとスクリーンショットで確認した。低域カット中間を`420 Hz → 430 Hz → 420 Hz`、高域カット中間を`2600 Hz → 2650 Hz → 2600 Hz`（`＋` / `−`）へ変更すると表示値とカーブ境界が追従した。スライダーでは低域カット開始を`330 Hz`へ移動でき、入力ゲインを`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizer `Not used (backend=dynamics_only)`、session `0`のDynamicsProcessing effectを維持した
 - Stability: `dumpsys activity services dev.hondasports.razio` のeffect用FGSは`isForeground=true`。操作後のfiltered logcatにRAZIO由来のcrash / ANRはなし。各スライダー値がどの音色を最終採用するかは聴感評価で決める
 
+### 2026-08-30 / 同調ダイヤル表示
+
+- Scope: 音声backendを変更せず、プリセット調整パネルへ非インタラクティブな`PresetTuningDial`を追加した。20 Hz〜20 kHzを対数配置したラジオ目盛り上に、低域カット・低域傾斜・中域・高域傾斜・高域カットの色帯と6つの周波数境界を表示する。実際の調整操作は既存の6周波数スライダー／`−` / `＋`ボタンで行う
+- Design: ダイヤルは`AudioPresetTuning.sanitized()`後の値から算出する表示専用コンポーネントで、Composeの`modifier`をrootへ受け取る。値やイベントを内部で保持せず、選択中プリセットの状態を親から描画する。周波数カーブと同じ対数軸・境界値を使うため、数値を読まなくても帯域の位置を把握できる
+- Unit / build: workflow `35ebdbb46517ab32a3707685900daa2a` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `6BB387B70AC9B71245DBAE7AD6F358D3C42DD35E35BE7D31F87A3CCA8C3DBEF5`
+- Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Pixel Buds Pro 2 Bluetooth A2DPで表示・スクロール・6境界操作を確認した。`Vintage speaker`で低域カット中間を`320 Hz → 330 Hz → 320 Hz`へ操作し、ダイヤル目盛り・周波数カーブ・値表示が追従。`Narrow AM`へ切り替えた後も`300 / 420 / 550 / 2,200 / 2,600 / 3,000 Hz`の6境界を表示した
+- Stability: `dumpsys activity services dev.hondasports.razio`でeffect用FGS `isForeground=true`、`dumpsys media.audio_flinger`でsession `0`のDynamicsProcessing 1 effectを確認。操作後のfiltered logcatにRAZIO由来のcrash / ANRはなかった。画面オフ設定は検証後に60秒へ戻した
+- Status: **同調ダイヤルのunit test / build / Pixel実機表示・操作確認PASS。ダイヤルは表示専用で、製品向けの操作ダイヤルは未着手**
+
 ## 判断基準
 
 ### Green
