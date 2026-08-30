@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +39,9 @@ import dev.hondasports.razio.audio.AudioEngineReport
 import dev.hondasports.razio.audio.AudioEffectBackend
 import dev.hondasports.razio.audio.AudioEffectUiState
 import dev.hondasports.razio.audio.GlobalAudioEffectController
+import dev.hondasports.razio.audio.NoiseOverlayController
+import dev.hondasports.razio.audio.NoiseOverlayStatus
+import dev.hondasports.razio.audio.NoiseOverlayUiState
 import dev.hondasports.razio.audio.RazioStatus
 import dev.hondasports.razio.audio.preset.AudioPreset
 import dev.hondasports.razio.theme.RazioTheme
@@ -44,12 +49,16 @@ import dev.hondasports.razio.theme.RazioTheme
 @Composable
 fun RazioHomeRoute(
     controller: GlobalAudioEffectController,
+    noiseOverlay: NoiseOverlayController,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
     onBackendChange: (AudioEffectBackend) -> Unit = {},
+    onHissChange: (Boolean) -> Unit = {},
+    onCrackleChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
+    val noiseState by noiseOverlay.state.collectAsState()
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -67,6 +76,9 @@ fun RazioHomeRoute(
         },
         onPresetChange = onPresetChange,
         onBackendChange = onBackendChange,
+        noiseState = noiseState,
+        onHissChange = onHissChange,
+        onCrackleChange = onCrackleChange,
         modifier = modifier,
     )
 }
@@ -85,12 +97,16 @@ fun RazioHomeScreen(
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
     onBackendChange: (AudioEffectBackend) -> Unit = {},
+    noiseState: NoiseOverlayUiState = NoiseOverlayUiState(),
+    onHissChange: (Boolean) -> Unit = {},
+    onCrackleChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start,
@@ -202,6 +218,40 @@ fun RazioHomeScreen(
             modifier = Modifier.padding(top = 8.dp),
         )
         Text(
+            text = stringResource(R.string.noise_overlay_label),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 20.dp),
+        )
+        NoiseToggleRow(
+            label = stringResource(R.string.noise_hiss_label),
+            checked = noiseState.hissEnabled,
+            enabled = state.powerOn && !state.initializing,
+            onCheckedChange = onHissChange,
+        )
+        NoiseToggleRow(
+            label = stringResource(R.string.noise_crackle_label),
+            checked = noiseState.crackleEnabled,
+            enabled = state.powerOn && !state.initializing,
+            onCheckedChange = onCrackleChange,
+        )
+        Text(
+            text = stringResource(
+                R.string.noise_overlay_status,
+                noiseStatusText(noiseState.status),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        if (noiseState.detail.isNotEmpty()) {
+            Text(
+                text = noiseState.detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+        Text(
             text = stringResource(R.string.equalizer_label, reportText(state.equalizer)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -218,6 +268,29 @@ fun RazioHomeScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 24.dp),
+        )
+    }
+}
+
+@Composable
+private fun NoiseToggleRow(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
         )
     }
 }
@@ -278,6 +351,18 @@ private fun statusText(status: RazioStatus): String {
 }
 
 @Composable
+private fun noiseStatusText(status: NoiseOverlayStatus): String {
+    val resId = when (status) {
+        NoiseOverlayStatus.Idle -> R.string.noise_status_idle
+        NoiseOverlayStatus.Starting -> R.string.noise_status_starting
+        NoiseOverlayStatus.Active -> R.string.noise_status_active
+        NoiseOverlayStatus.Disabled -> R.string.noise_status_disabled
+        NoiseOverlayStatus.Error -> R.string.noise_status_error
+    }
+    return stringResource(resId)
+}
+
+@Composable
 private fun reportText(report: AudioEngineReport): String {
     return when (report) {
         AudioEngineReport.Idle -> stringResource(R.string.engine_idle)
@@ -309,6 +394,14 @@ private fun RazioHomeScreenPreview() {
             onPowerChange = {},
             onPresetChange = {},
             onBackendChange = {},
+            noiseState = NoiseOverlayUiState(
+                powerOn = true,
+                hissEnabled = true,
+                status = NoiseOverlayStatus.Active,
+                detail = "sampleRate=48000Hz buffer=19200B usage=media focus=none",
+            ),
+            onHissChange = {},
+            onCrackleChange = {},
         )
     }
 }

@@ -380,7 +380,19 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Acceptance: (1) 対象アプリがpause/意図しないduckを起こさない、(2) ノイズが聞こえる、(3) start/stopにクリック・残留音がない、(4) 元音声を捕捉して再生しないためsourceの二重再生がない、(5) `AudioHardening` / crash / ANRログがない
 - Evidence: `dumpsys media_session`（対象アプリがPLAYING）、`dumpsys audio`（出力route）、`dumpsys activity services dev.hondasports.razio`（FGS）、`dumpsys media.audio_flinger`（AudioTrackの出力）、filtered `logcat`（`AudioHardening|FATAL EXCEPTION|ANR|RAZIO/AudioEffect`）を同じ試行で保存する
 - Out of scope: AudioPlaybackCapture、元音声のミュート／差し替え、アプリごとの音量追従、DRM/capture policy回避、Hiss/Crackleの物理モデル再現
-- Status: **PoC実装・実機測定待ち**。global AudioEffect のHiss/Crackle非対応という判断は維持し、PoCが通った場合だけ「独立ノイズオーバーレイ」として別backend候補に昇格する
+- Status: **計画時点の記録**。global AudioEffect のHiss/Crackle非対応という判断は維持し、独立ノイズオーバーレイの実装・実機結果は次の記録へ追記する
+
+### 2026-08-30 / Hiss and Crackle AudioTrack overlay PoC implementation
+
+- Implementation: `NoiseOverlayController` が決定論的なPCMを生成し、RAZIOの画面で明示的にONにしたHiss / Crackleだけを通常の `AudioTrack` へ書き込む。`AudioPlaybackCapture` は使わず、元音声をミュート・捕捉・再再生しない。属性は `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN`、AudioFocusは要求しない
+- Lifecycle: ノイズはRAZIO power ON中だけ有効。power OFFで両スイッチとAudioTrackを停止し、route changeでは既存writerを停止して新しいtrackを作る。PCM生成は専用 `RazioNoiseOverlay` threadで行い、track release後にwriterが残らないようにする
+- Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `2874600e19b809682ef98d192f8cbe31`）。最新版APK SHA-256 `678780EA7C35DF1ED3F99ED3A4A30B56B7696669B340FD54BAAE95C10DCDC9AC`
+- Device: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Spotify `PlaybackState=PLAYING`、Pixel Buds Pro 2 Bluetooth A2DP。UI detailは `sampleRate=48000Hz buffer=19200B session=... usage=media content=unknown focus=none`
+- Structural evidence: `dumpsys audio`でSpotify（music / stereo）とRAZIO（unknown / mono / 48 kHz）の独立AudioTrackが同時に `started`。RAZIOのpower OFF後はUI `Disabled` / noise `Idle`、FGSとRAZIO trackが消えた。Homeと画面OFF（`Dozing`）ではFGS `types=0x40000000` とtrack `started`を維持した
+- Route evidence: Bluetooth切断でRAZIO trackがspeaker `deviceIds:[3]`へ移り、再接続でPixel Buds Pro 2 `deviceIds:[7241]`へ戻った。`noise overlay stopped reason=route_change` と再開ログを確認した。Bluetooth再接続時に既存DynamicsProcessingの `UnsupportedOperationException: AudioEffect: invalid parameter` が1件出たが、既存fallbackによるeffect再初期化後もoverlayはactiveだった
+- Stability: Home・画面OFF・route切替の各試行前にlogcatをクリアし、新規の `AudioHardening`、`FATAL EXCEPTION`、`ANR in` は確認されなかった。なお、過去のプロセス更新時にはAndroid 17の `AudioHardening background playback would be muted` 履歴があり、長時間バックグラウンドの無音化リスクはゼロとは断定しない
+- Audible acceptance: **ユーザー確認済み（「OK」）**。ホストで生成した10秒の無音WAV（48 kHz / mono）を `/sdcard/Download/razio-silence-10s.wav` へ転送し、VLCで再生した。ループ設定なしの短時間試行でもHiss / Crackleが無音ベースへ重なって聞こえることを確認した。独立AudioTrackが出力へ乗ることは受入済み。VLC側のループ再生と長時間バックグラウンド聴感は今回の範囲外として未検証
+- Status: **PoC実装・unit test・build・実機構造確認・聴感受入済み。製品採用としてcommit / pushする**
 
 ### 2026-08-29 / Fading first pass
 

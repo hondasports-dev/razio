@@ -35,6 +35,7 @@ app/
 │  └─ component/
 ├─ audio/
 │  ├─ GlobalAudioEffectController
+│  ├─ NoiseOverlayController
 │  ├─ RazioAudioService
 │  ├─ AudioEffectUiState
 │  ├─ preset/
@@ -140,7 +141,7 @@ DynamicsProcessing は null config の既定値をプリセット適用済みと
 
 実際の Equalizer band は端末の実装から取得して、固定 band 数を仮定しない設計にします。
 
-Hiss / Crackle のような独立ノイズは、現在の global AudioEffect（Equalizer / DynamicsProcessing）だけでは生成・混合できません。AudioPlaybackCapture を使う代替案は MediaProjection の許可、capture policy、元音声との二重再生が発生し得るため、別途成立性を確認するまで保留します。
+Hiss / Crackle のような独立ノイズは、現在の global AudioEffect（Equalizer / DynamicsProcessing）だけでは生成・混合できません。AudioPlaybackCapture を使う代替案は MediaProjection の許可、capture policy、元音声との二重再生が発生し得るため、別途成立性を確認するまで保留します。現在は `NoiseOverlayController` が生成したPCMを通常の `AudioTrack` で別経路再生するPoCを実装し、元音声を捕捉・再再生しない構成で実機構造確認とユーザー聴感受入まで完了しています。製品採用はこの独立オーバーレイ方式を基礎にし、VLC側のループ再生や長時間バックグラウンド無音化は別検証として扱います。
 
 ### DynamicsProcessing 単体化の A/B PoC
 

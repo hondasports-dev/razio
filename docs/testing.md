@@ -132,7 +132,7 @@ Phase 2 の実機 regression（変更したとき）:
 
 2026-08-29 の初回プリセット調整では、Pixel 10 Pro（Android 17）/ SoundCore 2 / Spotify で上記 8・9 を実施し、ユーザー聴感も受入済み。Saturationの入力ゲイン・強い圧縮の聴感もユーザー確認済み。続く全プリセット両端カット再調整（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）も同じ実機でユーザー受入済み。詳細な EQ 値・`dumpsys`・logcat は `docs/audio-research.md` に記録しています。
 
-### Hiss / Crackle AudioTrack overlay PoC（未実装）
+### Hiss / Crackle AudioTrack overlay PoC
 
 元音声を `AudioPlaybackCapture` でコピーして再生するのではなく、RAZIO生成ノイズだけを `AudioTrack` で同時再生する検証。PoCの実装・測定条件は `docs/audio-research.md` の計画に合わせる。
 
@@ -143,6 +143,16 @@ Phase 2 の実機 regression（変更したとき）:
 3. RAZIO OFF、route切替、Home、画面OFF、対象アプリpauseでノイズが止まり、残留Runnable / AudioTrackがないこと
 4. `dumpsys media_session` / `dumpsys audio` / `dumpsys activity services dev.hondasports.razio` / `dumpsys media.audio_flinger` と `AudioHardening`・crash・ANRのfiltered logcatを保存
 5. 元音声を捕捉して再再生しないため、sourceの二重再生や捕捉許可によるアプリ差をPoCの合否から分離して記録
+
+2026-08-30 の実装・構造確認結果:
+
+- `NoiseOverlayController` が決定論的なPCMを生成し、`USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN`・AudioFocusなしの独立 `AudioTrack` で再生する。AudioPlaybackCaptureは使わず、元音声のミュート／差し替えもしない。RAZIO OFFではノイズスイッチをクリアしてAudioTrackとFGSを停止し、route changeでは停止・再生成する
+- `:app:testDebugUnitTest` と `:app:assembleDebug` は workflow `2874600e19b809682ef98d192f8cbe31` でPASS。最新版検証APKのSHA-256は `678780EA7C35DF1ED3F99ED3A4A30B56B7696669B340FD54BAAE95C10DCDC9AC`
+- Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）でSpotify再生中にHiss / Crackleを有効化し、`dumpsys audio`でSpotifyとRAZIOの独立AudioTrackが同時に `started` になることを確認した。RAZIOはmono / 48 kHz、detailは `usage=media content=unknown focus=none`
+- Home・画面OFF（`Dozing`）でも既存のspecialUse FGSとRAZIO AudioTrackが維持された。RAZIO OFFではUIが `Disabled` / `Idle`、FGSとRAZIO AudioTrackが消えることを確認した
+- Bluetooth切断で出力先がspeaker（device id `3`）へ移り、再接続でPixel Buds Pro 2（device id `7241`）へ戻った。route logには `noise overlay stopped reason=route_change` と再開を確認した。再接続時に既存DynamicsProcessingのroute readbackが `UnsupportedOperationException: AudioEffect: invalid parameter` になる警告が1件出たが、既存fallbackでeffectを再初期化し、ノイズAudioTrackは維持された
+- Home・画面OFF・route切替のlogcatをクリアして確認した範囲では、新規の `AudioHardening`、アプリcrash、ANRはなかった。ただし過去のプロセス更新時にAndroid 17の `AudioHardening` ログが出た履歴はあり、長時間のバックグラウンド聴感は別途確認する
+- **聴感受入済み（ユーザー「OK」）**。`/sdcard/Download/razio-silence-10s.wav`（48 kHz / mono）をVLCで再生し、ループ設定なしの短時間試行でHiss / Crackleが無音ベースへ重なって聞こえることを確認した。VLC側のループ再生と長時間バックグラウンド聴感は未検証だが、独立ノイズAudioTrackの出力確認というPoC目的は達成したため、製品採用・commitへ進む
 
 ### DynamicsProcessing 単体 A/B PoC
 

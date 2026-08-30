@@ -4,6 +4,7 @@ import android.app.Application
 import dev.hondasports.razio.audio.AudioRouteMonitor
 import dev.hondasports.razio.audio.AudioEffectBackend
 import dev.hondasports.razio.audio.GlobalAudioEffectController
+import dev.hondasports.razio.audio.NoiseOverlayController
 import dev.hondasports.razio.audio.RazioAudioService
 import dev.hondasports.razio.audio.RazioPreferences
 import dev.hondasports.razio.audio.preset.AudioPreset
@@ -19,6 +20,9 @@ class RazioApp : Application() {
     lateinit var audioEffects: GlobalAudioEffectController
         private set
 
+    lateinit var noiseOverlay: NoiseOverlayController
+        private set
+
     private lateinit var preferences: RazioPreferences
     private var powerPersistenceJob: Job? = null
     private var presetPersistenceJob: Job? = null
@@ -27,8 +31,9 @@ class RazioApp : Application() {
         super.onCreate()
         preferences = RazioPreferences(this)
         audioEffects = GlobalAudioEffectController()
+        noiseOverlay = NoiseOverlayController()
         audioEffects.initialize()
-        AudioRouteMonitor(this, audioEffects::handleRouteChange).start()
+        AudioRouteMonitor(this, ::handleRouteChange).start()
         applicationScope.launch {
             audioEffects.setPreset(preferences.savedPreset())
             if (preferences.savedPowerOn()) {
@@ -53,13 +58,25 @@ class RazioApp : Application() {
         audioEffects.setBackend(backend)
     }
 
+    fun setHissEnabled(enabled: Boolean) {
+        noiseOverlay.setHissEnabled(enabled)
+    }
+
+    fun setCrackleEnabled(enabled: Boolean) {
+        noiseOverlay.setCrackleEnabled(enabled)
+    }
+
     private fun applyPower(
         enabled: Boolean,
         persist: Boolean,
     ) {
+        if (!enabled) {
+            noiseOverlay.setPowerOn(false)
+        }
         audioEffects.setEnabled(enabled)
         if (enabled) {
             RazioAudioService.start(this)
+            noiseOverlay.setPowerOn(true)
         } else {
             RazioAudioService.stop(this)
         }
@@ -69,5 +86,10 @@ class RazioApp : Application() {
                 preferences.setPowerOn(enabled)
             }
         }
+    }
+
+    private fun handleRouteChange() {
+        audioEffects.handleRouteChange()
+        noiseOverlay.handleRouteChange()
     }
 }

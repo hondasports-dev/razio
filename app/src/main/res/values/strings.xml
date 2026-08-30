@@ -14,6 +14,15 @@
     <string name="preset_weak_signal_description">弱い受信風。380Hz以下と1.35kHz以上をさらに抑え、中域と音量を補いながら強く圧縮します。</string>
     <string name="preset_saturation_description">低域・高域を絞ってから入力を押し込み、強い圧縮とリミッターで熱いラジオ音を近似します。波形歪みは端末依存です。</string>
     <string name="preset_fading_description">狭いAM帯域（300Hz以下 / 3.0kHz以上を強くカット）で受信がゆっくり揺れるラジオ風。入力ゲインを±3dBで変化させます。</string>
+    <string name="noise_overlay_label">ノイズオーバーレイ（PoC）</string>
+    <string name="noise_hiss_label">Hiss</string>
+    <string name="noise_crackle_label">Crackle</string>
+    <string name="noise_overlay_status">ノイズ: %1$s</string>
+    <string name="noise_status_idle">Idle</string>
+    <string name="noise_status_starting">Starting</string>
+    <string name="noise_status_active">Active</string>
+    <string name="noise_status_disabled">Disabled</string>
+    <string name="noise_status_error">Error</string>
     <string name="equalizer_label">Equalizer: %1$s</string>
     <string name="dynamics_label">DynamicsProcessing: %1$s</string>
     <string name="poc_keep_alive_hint">ON のあいだ通知が出ます。これでバックグラウンドでも effect を維持します。ON は次回起動時にも復元します。</string>

@@ -24,9 +24,12 @@ class MainActivity : ComponentActivity() {
                 ) {
                     RazioHomeRoute(
                         controller = app.audioEffects,
+                        noiseOverlay = app.noiseOverlay,
                         onPowerChange = app::setPowerOn,
                         onPresetChange = app::setPreset,
                         onBackendChange = app::setBackend,
+                        onHissChange = app::setHissEnabled,
+                        onCrackleChange = app::setCrackleEnabled,
                     )
                 }
             }

@@ -112,8 +112,8 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Saturation（入力ゲイン＋強いMBCによる飽和近似。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] 全プリセット両端カット再調整（低域・高域のロールオフを強化。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
 - [ ] 両端カット第2段（全プリセットの低域・高域目標をさらに約6dB深く調整。Pixel 10 Pro / Pixel Buds Pro 2で構造確認済み、最終聴感受入待ち）
-- [ ] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoC待ち）
-- [ ] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoC待ち）
+- [x] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
+- [x] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
 - [ ] Mono 感の強化
 
