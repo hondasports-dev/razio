@@ -26,7 +26,7 @@ RAZIO は、YouTube、音楽アプリ、ゲーム、ブラウザなどの再生�
 
 想定する AM ラジオ風処理:
 
-- Mono 化（可能な範囲）
+- Mono 化（global AudioEffectでは未成立。AudioPlaybackCapture / 自前再生の別PoC候補）
 - 低域を強く抑え、3.0 kHz 以上を減衰
 - 550 Hz〜2.2 kHz の声域を強調
 - Compression

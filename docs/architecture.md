@@ -60,6 +60,14 @@ RAZIO generated noise → AudioTrack ┘
 
 この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
 
+### Mono感の強化の成立性
+
+`DynamicsProcessing` は `channelCount` 個のチャンネルを持つ同じ構造の処理段（Pre-EQ / MBC / Post-EQ / Limiter）として動き、各チャンネルのパラメータは独立しています。`setAllChannelsTo` も同じ設定を各チャンネルへコピーするだけで、左右を加算して `mono = (L + R) / 2` にするミックス、チャンネルの入れ替え、出力チャンネル数の変換は行いません。公式リファレンスの構成図もチャンネルごとに Input → stages → Output が分離した構造です（[DynamicsProcessing](https://developer.android.com/reference/android/media/audiofx/DynamicsProcessing)）。
+
+そのため、現行の session `0` global AudioEffect（Equalizer / DynamicsProcessing）へ `channelCount=1` を渡しても、他アプリのステレオ音声を確実にモノラル化できる根拠にはなりません。端末のeffect実装で生成に失敗するか、片チャンネルだけを処理するだけになる可能性があり、見かけだけの Mono トグルは追加しません。
+
+真のモノラル化には、RAZIOが所有するPCMをDSPで左右混合してから再生する経路が必要です。自前プレイヤーなら `AudioTrack` の前段で実装できますが、他アプリ音声を対象にする場合は `AudioPlaybackCapture` → `AudioRecord` → `AudioTrack` の差し替え経路になります。この経路は MediaProjection と再生側の capture policy / manifest 設定に依存し、加工前の元音声を抑制できない場合は二重再生になります（[AudioPlaybackCaptureConfiguration](https://developer.android.com/reference/android/media/AudioPlaybackCaptureConfiguration.html)）。Mono はこの代替経路のPoCを開始するまでロードマップ上で保留します。
+
 FGS の `startForeground` 失敗は logcat に出して隠さない。通知許可がなくても effect の enable は進める。
 
 ## AudioEffectController

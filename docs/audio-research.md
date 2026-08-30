@@ -477,6 +477,15 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - 実機readback: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP。SplitでNarrow/Fading `ratio=1.2`・post `0dB`、Vintage `ratio=1.5`・post `+2dB`、Weak `ratio=4`・post `+9dB`、Saturation `ratio=20`・input `+10dB`・post `+8dB` を確認し、SplitのVintage/Weak中域は端末EQ readbackで `910Hz:+5dB` になった。Dynamics onlyではNarrow/Fadingの中域 `+3dB`・高域 `-40dB`、Vintage/Weakの中域 `+3dB`・高域 `-40dB`、Saturationの中域 `+2dB`・高域 `-40dB` を確認した。Dynamics onlyのMBCは非SaturationがSplitと同じ穏和値、Saturationは `ratio=8`・input `+6dB`・post `0dB` のままや
 - 構造・安定性: Splitはsession `0` の2 effects、Dynamics onlyは1 effect。FGS `isForeground=true`、メディアセッション `PLAYING`、crash / ANR / `AudioHardening`なし。聴感の最終受入はユーザー確認待ち
 
+### 2026-08-30 / Mono 感の強化 feasibility check
+
+- Goal: 他アプリのステレオ再生を、現行の session `0` global AudioEffect の範囲で左右混合してモノラル化できるかを確認する
+- API確認: 公式 `DynamicsProcessing` は `channelCount` 個の独立した Channel（Input gain → Pre-EQ → MBC → Post-EQ → Limiter）を持つ構成で、`setAllChannelsTo` は各チャンネルへ同じ設定をコピーするAPI。左右のサンプルを加算するmatrix、channel mixdown、出力チャンネル数変換のAPIは公開されていない（[DynamicsProcessing API](https://developer.android.com/reference/android/media/audiofx/DynamicsProcessing)）
+- 現行コード確認: `GlobalAudioEffectController` は端末の実チャンネル数をprobeして同じチャンネル数の `DynamicsProcessing.Config` を生成する。`AmDynamicsConfig` も各チャンネルへ同一のEQ/MBC/Limiter設定を適用するだけで、L/RのPCMを参照する段は存在しない
+- 判断: `channelCount=1` を指定しても、global mixのステレオ入力を確実に `(L + R) / 2` へ変換できるとは言えない。effect生成失敗、片チャンネル処理、端末依存のchannel mappingを成功扱いにする危険があるため、Monoトグルや「Mono化できた」という実機未確認の表示は追加しない
+- 代替案: 他アプリ音声を真にモノラル化するには `AudioPlaybackCapture` でPCMを取得し、DSPで左右を混合して `AudioTrack` へ再生する必要がある。公式仕様上、MediaProjectionに加え、対象プレイヤーのusage・capture policy・manifest許可に依存する（[AudioPlaybackCaptureConfiguration](https://developer.android.com/reference/android/media/AudioPlaybackCaptureConfiguration.html)）。元音声を抑制できない場合は加工音との二重再生になるため、現行のglobal backendから直接置き換えない
+- Verification scope: これは公開APIと現行コードの静的な成立性確認であり、APK変更・実機音質受入は行っていない。Mono は AudioPlaybackCapture/自前再生の別PoCを開始するまでロードマップ上で保留する
+
 ## 判断基準
 
 ### Green

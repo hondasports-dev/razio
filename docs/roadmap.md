@@ -115,7 +115,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
-- [ ] Mono 感の強化
+- [ ] Mono 感の強化（DynamicsProcessing / Equalizerに左右混合APIがなく、session `0` での確実なモノラル化は不可。AudioPlaybackCaptureまたは自前再生の別PoCまで保留。詳細は `docs/audio-research.md`）
 
 AudioEffect API だけで困難な項目は backend の制約を確認してから実装します。
 
