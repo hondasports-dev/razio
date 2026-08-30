@@ -9,11 +9,15 @@ package dev.hondasports.razio.audio.preset
 enum class AudioPreset(
     val id: String,
     val lowCutHz: Float,
+    val lowTransitionHz: Float,
     val midLowHz: Float,
     val midHighHz: Float,
+    val highTransitionHz: Float,
     val highCutHz: Float,
     val lowGainDb: Float,
+    val lowTransitionGainDb: Float,
     val midGainDb: Float,
+    val highTransitionGainDb: Float,
     val highGainDb: Float,
     val mbcRatio: Float,
     val mbcThresholdDb: Float,
@@ -33,11 +37,15 @@ enum class AudioPreset(
         // DynamicsProcessing-only path can retain this deeper target instead
         // of being limited by a device Equalizer's shallow floor.
         lowCutHz = 300f,
+        lowTransitionHz = 420f,
         midLowHz = 550f,
         midHighHz = 2_200f,
+        highTransitionHz = 2_600f,
         highCutHz = 3_000f,
         lowGainDb = -30f,
+        lowTransitionGainDb = -13f,
         midGainDb = 6f,
+        highTransitionGainDb = -21f,
         highGainDb = -48f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
@@ -50,11 +58,15 @@ enum class AudioPreset(
         // A small paper-cone enclosure keeps the vocal band (roughly
         // 450 Hz–2.6 kHz) forward while rolling off the extremes.
         lowCutHz = 180f,
+        lowTransitionHz = 320f,
         midLowHz = 450f,
         midHighHz = 2_600f,
+        highTransitionHz = 3_300f,
         highCutHz = 4_000f,
         lowGainDb = -30f,
+        lowTransitionGainDb = -12f,
         midGainDb = 5f,
+        highTransitionGainDb = -22f,
         highGainDb = -48f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
@@ -65,11 +77,15 @@ enum class AudioPreset(
     WEAK_SIGNAL(
         id = "weak_signal",
         lowCutHz = 380f,
+        lowTransitionHz = 640f,
         midLowHz = 900f,
         midHighHz = 1_100f,
+        highTransitionHz = 1_220f,
         highCutHz = 1_350f,
         lowGainDb = -30f,
+        lowTransitionGainDb = -13f,
         midGainDb = 5f,
+        highTransitionGainDb = -20f,
         highGainDb = -48f,
         mbcRatio = 16f,
         mbcThresholdDb = -30f,
@@ -82,11 +98,15 @@ enum class AudioPreset(
         // DynamicsProcessing has no wave-shaper. A moderate input push into
         // a strong MBC/limiter gives a safe, audible saturation approximation.
         lowCutHz = 180f,
+        lowTransitionHz = 320f,
         midLowHz = 450f,
         midHighHz = 2_400f,
+        highTransitionHz = 3_700f,
         highCutHz = 5_000f,
         lowGainDb = -24f,
+        lowTransitionGainDb = -11f,
         midGainDb = 2f,
+        highTransitionGainDb = -23f,
         highGainDb = -48f,
         mbcRatio = 20f,
         mbcThresholdDb = -18f,
@@ -100,11 +120,15 @@ enum class AudioPreset(
         // Keep the Narrow AM spectrum; the audible distinction is the
         // slow input-gain movement that approximates reception fading.
         lowCutHz = 300f,
+        lowTransitionHz = 420f,
         midLowHz = 550f,
         midHighHz = 2_200f,
+        highTransitionHz = 2_600f,
         highCutHz = 3_000f,
         lowGainDb = -30f,
+        lowTransitionGainDb = -13f,
         midGainDb = 6f,
+        highTransitionGainDb = -21f,
         highGainDb = -48f,
         mbcRatio = 10f,
         mbcThresholdDb = -24f,
@@ -123,9 +147,27 @@ enum class AudioPreset(
         val hz = centerHz.coerceAtLeast(1f)
         return when {
             hz <= lowCutHz -> lowGainDb
-            hz < midLowHz -> lerp(lowGainDb, midGainDb, (hz - lowCutHz) / (midLowHz - lowCutHz))
+            hz < lowTransitionHz -> lerp(
+                lowGainDb,
+                lowTransitionGainDb,
+                (hz - lowCutHz) / (lowTransitionHz - lowCutHz),
+            )
+            hz < midLowHz -> lerp(
+                lowTransitionGainDb,
+                midGainDb,
+                (hz - lowTransitionHz) / (midLowHz - lowTransitionHz),
+            )
             hz <= midHighHz -> midGainDb
-            hz < highCutHz -> lerp(midGainDb, highGainDb, (hz - midHighHz) / (highCutHz - midHighHz))
+            hz < highTransitionHz -> lerp(
+                midGainDb,
+                highTransitionGainDb,
+                (hz - midHighHz) / (highTransitionHz - midHighHz),
+            )
+            hz < highCutHz -> lerp(
+                highTransitionGainDb,
+                highGainDb,
+                (hz - highTransitionHz) / (highCutHz - highTransitionHz),
+            )
             else -> highGainDb
         }
     }
@@ -166,11 +208,15 @@ enum class AudioPreset(
     /** Returns the editable runtime defaults shown by the tuning panel. */
     fun defaultTuning(): AudioPresetTuning = AudioPresetTuning(
         lowCutHz = lowCutHz,
+        lowTransitionHz = lowTransitionHz,
         midLowHz = midLowHz,
         midHighHz = midHighHz,
+        highTransitionHz = highTransitionHz,
         highCutHz = highCutHz,
         lowGainDb = lowGainDb,
+        lowTransitionGainDb = lowTransitionGainDb,
         midGainDb = midGainDb,
+        highTransitionGainDb = highTransitionGainDb,
         highGainDb = highGainDb,
         mbcRatio = mbcRatio,
         mbcThresholdDb = mbcThresholdDb,
@@ -190,11 +236,15 @@ enum class AudioPreset(
 /** Runtime-adjustable values for the selected preset. Changes are not persisted. */
 data class AudioPresetTuning(
     val lowCutHz: Float,
+    val lowTransitionHz: Float,
     val midLowHz: Float,
     val midHighHz: Float,
+    val highTransitionHz: Float,
     val highCutHz: Float,
     val lowGainDb: Float,
+    val lowTransitionGainDb: Float,
     val midGainDb: Float,
+    val highTransitionGainDb: Float,
     val highGainDb: Float,
     val mbcRatio: Float,
     val mbcThresholdDb: Float,
@@ -209,9 +259,27 @@ data class AudioPresetTuning(
         val hz = centerHz.coerceAtLeast(1f)
         return when {
             hz <= lowCutHz -> lowGainDb
-            hz < midLowHz -> lerp(lowGainDb, midGainDb, (hz - lowCutHz) / (midLowHz - lowCutHz))
+            hz < lowTransitionHz -> lerp(
+                lowGainDb,
+                lowTransitionGainDb,
+                (hz - lowCutHz) / (lowTransitionHz - lowCutHz),
+            )
+            hz < midLowHz -> lerp(
+                lowTransitionGainDb,
+                midGainDb,
+                (hz - lowTransitionHz) / (midLowHz - lowTransitionHz),
+            )
             hz <= midHighHz -> midGainDb
-            hz < highCutHz -> lerp(midGainDb, highGainDb, (hz - midHighHz) / (highCutHz - midHighHz))
+            hz < highTransitionHz -> lerp(
+                midGainDb,
+                highTransitionGainDb,
+                (hz - midHighHz) / (highTransitionHz - midHighHz),
+            )
+            hz < highCutHz -> lerp(
+                highTransitionGainDb,
+                highGainDb,
+                (hz - highTransitionHz) / (highCutHz - highTransitionHz),
+            )
             else -> highGainDb
         }
     }
@@ -219,25 +287,37 @@ data class AudioPresetTuning(
     /** Keeps sliders inside safe ranges and preserves the frequency ordering. */
     fun sanitized(): AudioPresetTuning {
         val safeLowCutHz = lowCutHz.coerceIn(MIN_LOW_CUT_HZ, MAX_LOW_CUT_HZ)
-        val safeMidLowHz = midLowHz.coerceIn(
+        val safeLowTransitionHz = lowTransitionHz.coerceIn(
             safeLowCutHz + FREQUENCY_GUARD_HZ,
+            MAX_LOW_TRANSITION_HZ,
+        )
+        val safeMidLowHz = midLowHz.coerceIn(
+            safeLowTransitionHz + FREQUENCY_GUARD_HZ,
             MAX_MID_LOW_HZ,
         )
         val safeMidHighHz = midHighHz.coerceIn(
             safeMidLowHz + FREQUENCY_GUARD_HZ,
             MAX_MID_HIGH_HZ,
         )
-        val safeHighCutHz = highCutHz.coerceIn(
+        val safeHighTransitionHz = highTransitionHz.coerceIn(
             safeMidHighHz + FREQUENCY_GUARD_HZ,
+            MAX_HIGH_TRANSITION_HZ,
+        )
+        val safeHighCutHz = highCutHz.coerceIn(
+            safeHighTransitionHz + FREQUENCY_GUARD_HZ,
             MAX_HIGH_CUT_HZ,
         )
         return copy(
             lowCutHz = safeLowCutHz,
+            lowTransitionHz = safeLowTransitionHz,
             midLowHz = safeMidLowHz,
             midHighHz = safeMidHighHz,
+            highTransitionHz = safeHighTransitionHz,
             highCutHz = safeHighCutHz,
             lowGainDb = lowGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
+            lowTransitionGainDb = lowTransitionGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
             midGainDb = midGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
+            highTransitionGainDb = highTransitionGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
             highGainDb = highGainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB),
             mbcRatio = mbcRatio.coerceIn(MIN_MBC_RATIO, MAX_MBC_RATIO),
             mbcThresholdDb = mbcThresholdDb.coerceIn(MIN_THRESHOLD_DB, MAX_THRESHOLD_DB),
@@ -259,8 +339,10 @@ data class AudioPresetTuning(
     companion object {
         const val MIN_LOW_CUT_HZ = 20f
         const val MAX_LOW_CUT_HZ = 2_000f
+        const val MAX_LOW_TRANSITION_HZ = 3_000f
         const val MAX_MID_LOW_HZ = 4_000f
         const val MAX_MID_HIGH_HZ = 10_000f
+        const val MAX_HIGH_TRANSITION_HZ = 15_000f
         const val MAX_HIGH_CUT_HZ = 20_000f
         const val FREQUENCY_GUARD_HZ = 10f
         const val MIN_GAIN_DB = -48f
@@ -284,11 +366,15 @@ internal fun AudioPresetTuning.toParameters(): AudioPresetParameters {
     val tuning = sanitized()
     return AudioPresetParameters(
         lowCutHz = tuning.lowCutHz,
+        lowTransitionHz = tuning.lowTransitionHz,
         midLowHz = tuning.midLowHz,
         midHighHz = tuning.midHighHz,
+        highTransitionHz = tuning.highTransitionHz,
         highCutHz = tuning.highCutHz,
         lowGainDb = tuning.lowGainDb,
+        lowTransitionGainDb = tuning.lowTransitionGainDb,
         midGainDb = tuning.midGainDb,
+        highTransitionGainDb = tuning.highTransitionGainDb,
         highGainDb = tuning.highGainDb,
         mbcRatio = tuning.mbcRatio,
         mbcThresholdDb = tuning.mbcThresholdDb,
@@ -308,11 +394,15 @@ internal fun AudioPresetTuning.toParameters(): AudioPresetParameters {
  */
 internal data class AudioPresetParameters(
     val lowCutHz: Float,
+    val lowTransitionHz: Float,
     val midLowHz: Float,
     val midHighHz: Float,
+    val highTransitionHz: Float,
     val highCutHz: Float,
     val lowGainDb: Float,
+    val lowTransitionGainDb: Float,
     val midGainDb: Float,
+    val highTransitionGainDb: Float,
     val highGainDb: Float,
     val mbcRatio: Float,
     val mbcThresholdDb: Float,
@@ -326,9 +416,27 @@ internal data class AudioPresetParameters(
         val hz = centerHz.coerceAtLeast(1f)
         return when {
             hz <= lowCutHz -> lowGainDb
-            hz < midLowHz -> lerp(lowGainDb, midGainDb, (hz - lowCutHz) / (midLowHz - lowCutHz))
+            hz < lowTransitionHz -> lerp(
+                lowGainDb,
+                lowTransitionGainDb,
+                (hz - lowCutHz) / (lowTransitionHz - lowCutHz),
+            )
+            hz < midLowHz -> lerp(
+                lowTransitionGainDb,
+                midGainDb,
+                (hz - lowTransitionHz) / (midLowHz - lowTransitionHz),
+            )
             hz <= midHighHz -> midGainDb
-            hz < highCutHz -> lerp(midGainDb, highGainDb, (hz - midHighHz) / (highCutHz - midHighHz))
+            hz < highTransitionHz -> lerp(
+                midGainDb,
+                highTransitionGainDb,
+                (hz - midHighHz) / (highTransitionHz - midHighHz),
+            )
+            hz < highCutHz -> lerp(
+                highTransitionGainDb,
+                highGainDb,
+                (hz - highTransitionHz) / (highCutHz - highTransitionHz),
+            )
             else -> highGainDb
         }
     }
@@ -342,11 +450,15 @@ internal data class AudioPresetParameters(
             val t = progress.coerceIn(0f, 1f)
             return AudioPresetParameters(
                 lowCutHz = lerp(from.lowCutHz, to.lowCutHz, t),
+                lowTransitionHz = lerp(from.lowTransitionHz, to.lowTransitionHz, t),
                 midLowHz = lerp(from.midLowHz, to.midLowHz, t),
                 midHighHz = lerp(from.midHighHz, to.midHighHz, t),
+                highTransitionHz = lerp(from.highTransitionHz, to.highTransitionHz, t),
                 highCutHz = lerp(from.highCutHz, to.highCutHz, t),
                 lowGainDb = lerp(from.lowGainDb, to.lowGainDb, t),
+                lowTransitionGainDb = lerp(from.lowTransitionGainDb, to.lowTransitionGainDb, t),
                 midGainDb = lerp(from.midGainDb, to.midGainDb, t),
+                highTransitionGainDb = lerp(from.highTransitionGainDb, to.highTransitionGainDb, t),
                 highGainDb = lerp(from.highGainDb, to.highGainDb, t),
                 mbcRatio = lerp(from.mbcRatio, to.mbcRatio, t),
                 mbcThresholdDb = lerp(from.mbcThresholdDb, to.mbcThresholdDb, t),

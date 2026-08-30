@@ -17,16 +17,20 @@
     <string name="preset_tuning_heading">プリセット値（試聴用）</string>
     <string name="preset_tuning_toggle_open">調整を開く</string>
     <string name="preset_tuning_toggle_close">閉じる</string>
-    <string name="preset_tuning_hint">スライダーで選択中プリセットの周波数・ゲイン・圧縮を調整できます。変更はこの起動中だけ有効です。</string>
+    <string name="preset_tuning_hint">スライダーで選択中プリセットの周波数6点・ゲイン・圧縮を調整できます。変更はこの起動中だけ有効です。</string>
     <string name="preset_tuning_curve_heading">周波数カーブ（調整値の目安）</string>
-    <string name="preset_tuning_curve_legend">青線=ゲインカーブ　網掛け=カット／中域帯　縦線=周波数境界</string>
+    <string name="preset_tuning_curve_legend">青線=ゲインカーブ　網掛け=カット／中域帯　縦線=6つの周波数境界</string>
     <string name="preset_tuning_reset">初期値へ戻す</string>
     <string name="preset_tuning_low_cut">低域カット開始</string>
+    <string name="preset_tuning_low_transition">低域カット中間</string>
     <string name="preset_tuning_mid_low">中域開始</string>
     <string name="preset_tuning_mid_high">中域終了</string>
+    <string name="preset_tuning_high_transition">高域カット中間</string>
     <string name="preset_tuning_high_cut">高域カット開始</string>
     <string name="preset_tuning_low_gain">低域ゲイン</string>
+    <string name="preset_tuning_low_transition_gain">低域中間ゲイン</string>
     <string name="preset_tuning_mid_gain">中域ゲイン</string>
+    <string name="preset_tuning_high_transition_gain">高域中間ゲイン</string>
     <string name="preset_tuning_high_gain">高域ゲイン</string>
     <string name="preset_tuning_mbc_ratio">MBC ratio</string>
     <string name="preset_tuning_mbc_threshold">MBC threshold</string>

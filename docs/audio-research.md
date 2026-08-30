@@ -530,14 +530,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 
 ### 2026-08-30 / プリセット値の試聴調整UI
 
-- User request: プリセットの各値をスライダーで試せるようにし、周波数4点には明示的な増減操作を追加する
-- Design: `AudioPresetTuning` を公開UIモデル、`AudioPresetParameters` をDynamicsProcessing内部モデルとして分離した。周波数（低域カット開始／中域開始／中域終了／高域カット開始）、低／中／高ゲイン、MBC ratio／threshold／後段ゲイン、makeup、入力ゲイン、歪み緩和、Fading深度／周期を調整対象とする。Compose `Slider` は一定刻みへ丸め、周波数には`−` / `＋`ボタンを置いた
-- Curve preview: 調整パネル内に `PresetFrequencyCurve` を追加した。20 Hz〜20 kHzの対数軸へ細分化グリッドと9個のラベルを配置し、`AudioPresetTuning.gainDbForCenterHz()` の補間カーブ、低域／高域カット帯と中域帯の網掛け、4つの境界線を描く。カーブは調整値から算出する視覚的な目安であり、native effectの実測値ではない
-- Safety: `sanitized()` で周波数順序 `lowCut < midLow < midHigh < highCut` と各値の範囲を保証する。`toParameters()` でMBC後段ゲインとmakeupを合成し、既存のDynamics-only歪み緩和マッピングを経由してnative effectへ渡す。調整ごとに既存の約80 ms in-place遷移へ合流し、effectをrelease／再生成しない
+- User request: プリセットの各値をスライダーで試せるようにし、周波数6点には明示的な増減操作を追加する
+- Design: `AudioPresetTuning` を公開UIモデル、`AudioPresetParameters` をDynamicsProcessing内部モデルとして分離した。周波数（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）、低域・低域中間・中域・高域中間・高域の5ゲイン、MBC ratio／threshold／後段ゲイン、makeup、入力ゲイン、歪み緩和、Fading深度／周期を調整対象とする。低域・高域のロールオフをそれぞれ2段階で追い込める。Compose `Slider` は一定刻みへ丸め、6周波数には`−` / `＋`ボタンを置いた
+- Curve preview: 調整パネル内に `PresetFrequencyCurve` を追加した。20 Hz〜20 kHzの対数軸へ細分化グリッドと9個のラベルを配置し、`AudioPresetTuning.gainDbForCenterHz()` の5ゲイン点補間カーブ、低域／高域カット帯と中域帯の網掛け、6つの境界線を描く。カーブは調整値から算出する視覚的な目安であり、native effectの実測値ではない
+- Safety: `sanitized()` で周波数順序 `lowCut < lowTransition < midLow < midHigh < highTransition < highCut` と各値の範囲を保証する。`toParameters()` で5ゲイン点とMBC後段ゲイン・makeupを合成し、既存のDynamics-only歪み緩和マッピングを経由してnative effectへ渡す。調整ごとに既存の約80 ms in-place遷移へ合流し、effectをrelease／再生成しない
 - Persistence: プリセットごとの調整値はcontroller内のメモリにだけ保持する。DataStoreへ保存せず、再起動で定義済み初期値へ戻る。パネルの`初期値へ戻す`は選択中プリセットだけを初期化する
-- Unit / build: workflow `5f109f78fea8b94f410dc0d9cdcb64a8` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `A340821F52C359D88321491083C1F7B72D73994FD30135F50EEC26547135C237`
-- Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Pixel Buds Pro 2 Bluetooth A2DP。最終APKで`Narrow AM`を選択し、調整パネルの全周波数・ゲイン・MBC・入力・歪み緩和・Fadingスライダーと周波数の`−` / `＋`、リセットを確認した
-- Interaction evidence: 周波数カーブ見出し、`+6`〜`-48` dB軸、20 Hz〜20 kHzの細分化対数軸、カット／中域帯の網掛け、4境界線をUI treeとスクリーンショットで確認した。低域カット開始を`300 Hz → 310 Hz → 300 Hz`（`＋` / `−`）へ変更すると表示値とカーブ境界が追従した。スライダーでは`330 Hz`へ移動でき、入力ゲインを`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizer `Not used (backend=dynamics_only)`、session `0`のDynamicsProcessing effectを維持した
+- Unit / build: workflow `98f47e9a58e21b6d01929165b09c499a` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `1ECF131A93B50699FC7BFB12E10009597FA5D4EBE8FCD8E54A0A6F9CA6202249`
+- Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Pixel Buds Pro 2 Bluetooth A2DP。最終APKで`Narrow AM`を選択し、6周波数スライダーと低域・高域の中間ゲインを含む全ゲイン・MBC・入力・歪み緩和・Fadingスライダー、周波数の`−` / `＋`、リセットを確認した
+- Interaction evidence: 周波数カーブ見出し、`+6`〜`-48` dB軸、20 Hz〜20 kHzの細分化対数軸、カット／中域帯の網掛け、6境界線をUI treeとスクリーンショットで確認した。低域カット中間を`420 Hz → 430 Hz → 420 Hz`、高域カット中間を`2600 Hz → 2650 Hz → 2600 Hz`（`＋` / `−`）へ変更すると表示値とカーブ境界が追従した。スライダーでは低域カット開始を`330 Hz`へ移動でき、入力ゲインを`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizer `Not used (backend=dynamics_only)`、session `0`のDynamicsProcessing effectを維持した
 - Stability: `dumpsys activity services dev.hondasports.razio` のeffect用FGSは`isForeground=true`。操作後のfiltered logcatにRAZIO由来のcrash / ANRはなし。各スライダー値がどの音色を最終採用するかは聴感評価で決める
 
 ## 判断基準

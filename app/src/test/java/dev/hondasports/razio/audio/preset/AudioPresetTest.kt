@@ -103,6 +103,10 @@ class AudioPresetTest {
         val middle = AudioPresetParameters.interpolate(from, to, 0.5f)
 
         assertEquals(240f, middle.lowCutHz, 0.01f)
+        assertEquals(370f, middle.lowTransitionHz, 0.01f)
+        assertEquals(2_950f, middle.highTransitionHz, 0.01f)
+        assertEquals(-12.5f, middle.lowTransitionGainDb, 0.01f)
+        assertEquals(-21.5f, middle.highTransitionGainDb, 0.01f)
         assertEquals(-30f, middle.lowGainDb, 0.01f)
         assertEquals(5.5f, middle.midGainDb, 0.01f)
         assertEquals(10f, middle.mbcRatio, 0.01f)
@@ -123,7 +127,11 @@ class AudioPresetTest {
         ).sanitized()
 
         assertTrue(safe.lowCutHz < safe.midLowHz)
+        assertTrue(safe.lowCutHz < safe.lowTransitionHz)
+        assertTrue(safe.lowTransitionHz < safe.midLowHz)
         assertTrue(safe.midLowHz < safe.midHighHz)
+        assertTrue(safe.midHighHz < safe.highTransitionHz)
+        assertTrue(safe.highTransitionHz < safe.highCutHz)
         assertTrue(safe.midHighHz < safe.highCutHz)
         assertEquals(AudioPresetTuning.MAX_HIGH_CUT_HZ, safe.highCutHz, 0.01f)
         assertEquals(AudioPresetTuning.MIN_GAIN_DB, safe.lowGainDb, 0.01f)
@@ -152,7 +160,9 @@ class AudioPresetTest {
         val tuning = AudioPreset.NARROW_AM.defaultTuning()
 
         assertEquals(tuning.lowGainDb, tuning.gainDbForCenterHz(100f), 0.01f)
+        assertEquals(tuning.lowTransitionGainDb, tuning.gainDbForCenterHz(tuning.lowTransitionHz), 0.01f)
         assertEquals(tuning.midGainDb, tuning.gainDbForCenterHz(1_000f), 0.01f)
+        assertEquals(tuning.highTransitionGainDb, tuning.gainDbForCenterHz(tuning.highTransitionHz), 0.01f)
         assertEquals(tuning.highGainDb, tuning.gainDbForCenterHz(10_000f), 0.01f)
     }
 }

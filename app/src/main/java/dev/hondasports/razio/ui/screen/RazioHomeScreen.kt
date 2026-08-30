@@ -458,11 +458,17 @@ private fun PresetTuningEditor(
     val safeTuning = tuning.sanitized()
     val lowCutRange = orderedRange(
         AudioPresetTuning.MIN_LOW_CUT_HZ,
-        (safeTuning.midLowHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
+        (safeTuning.lowTransitionHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
             .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_LOW_CUT_HZ),
     )
-    val midLowRange = orderedRange(
+    val lowTransitionRange = orderedRange(
         (safeTuning.lowCutHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_LOW_TRANSITION_HZ),
+        (safeTuning.midLowHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_LOW_TRANSITION_HZ),
+    )
+    val midLowRange = orderedRange(
+        (safeTuning.lowTransitionHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
             .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_LOW_HZ),
         (safeTuning.midHighHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
             .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_LOW_HZ),
@@ -470,11 +476,17 @@ private fun PresetTuningEditor(
     val midHighRange = orderedRange(
         (safeTuning.midLowHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
             .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_HIGH_HZ),
-        (safeTuning.highCutHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
+        (safeTuning.highTransitionHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
             .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_MID_HIGH_HZ),
     )
-    val highCutRange = orderedRange(
+    val highTransitionRange = orderedRange(
         (safeTuning.midHighHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_HIGH_TRANSITION_HZ),
+        (safeTuning.highCutHz - AudioPresetTuning.FREQUENCY_GUARD_HZ)
+            .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_HIGH_TRANSITION_HZ),
+    )
+    val highCutRange = orderedRange(
+        (safeTuning.highTransitionHz + AudioPresetTuning.FREQUENCY_GUARD_HZ)
             .coerceIn(AudioPresetTuning.MIN_LOW_CUT_HZ, AudioPresetTuning.MAX_HIGH_CUT_HZ),
         AudioPresetTuning.MAX_HIGH_CUT_HZ,
     )
@@ -495,6 +507,21 @@ private fun PresetTuningEditor(
                 onTuningChange(
                     safeTuning.copy(
                         lowCutHz = adjustFrequency(safeTuning.lowCutHz, delta, lowCutRange),
+                    ),
+                )
+            },
+        )
+        FrequencyTuningSlider(
+            label = stringResource(R.string.preset_tuning_low_transition),
+            value = safeTuning.lowTransitionHz,
+            valueRange = lowTransitionRange,
+            step = 10f,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(lowTransitionHz = value)) },
+            onStep = { delta ->
+                onTuningChange(
+                    safeTuning.copy(
+                        lowTransitionHz = adjustFrequency(safeTuning.lowTransitionHz, delta, lowTransitionRange),
                     ),
                 )
             },
@@ -530,6 +557,21 @@ private fun PresetTuningEditor(
             },
         )
         FrequencyTuningSlider(
+            label = stringResource(R.string.preset_tuning_high_transition),
+            value = safeTuning.highTransitionHz,
+            valueRange = highTransitionRange,
+            step = 50f,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(highTransitionHz = value)) },
+            onStep = { delta ->
+                onTuningChange(
+                    safeTuning.copy(
+                        highTransitionHz = adjustFrequency(safeTuning.highTransitionHz, delta, highTransitionRange),
+                    ),
+                )
+            },
+        )
+        FrequencyTuningSlider(
             label = stringResource(R.string.preset_tuning_high_cut),
             value = safeTuning.highCutHz,
             valueRange = highCutRange,
@@ -555,6 +597,15 @@ private fun PresetTuningEditor(
             onValueChange = { value -> onTuningChange(safeTuning.copy(lowGainDb = value)) },
         )
         TuningSlider(
+            label = stringResource(R.string.preset_tuning_low_transition_gain),
+            value = safeTuning.lowTransitionGainDb,
+            valueRange = AudioPresetTuning.MIN_GAIN_DB..AudioPresetTuning.MAX_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(lowTransitionGainDb = value)) },
+        )
+        TuningSlider(
             label = stringResource(R.string.preset_tuning_mid_gain),
             value = safeTuning.midGainDb,
             valueRange = AudioPresetTuning.MIN_GAIN_DB..AudioPresetTuning.MAX_GAIN_DB,
@@ -562,6 +613,15 @@ private fun PresetTuningEditor(
             valueFormatter = ::formatTuningDb,
             enabled = enabled,
             onValueChange = { value -> onTuningChange(safeTuning.copy(midGainDb = value)) },
+        )
+        TuningSlider(
+            label = stringResource(R.string.preset_tuning_high_transition_gain),
+            value = safeTuning.highTransitionGainDb,
+            valueRange = AudioPresetTuning.MIN_GAIN_DB..AudioPresetTuning.MAX_GAIN_DB,
+            step = 1f,
+            valueFormatter = ::formatTuningDb,
+            enabled = enabled,
+            onValueChange = { value -> onTuningChange(safeTuning.copy(highTransitionGainDb = value)) },
         )
         TuningSlider(
             label = stringResource(R.string.preset_tuning_high_gain),
@@ -806,14 +866,19 @@ private fun PresetFrequencyCurve(
                     )
                 }
 
+                val slopeFill = cutFill.copy(alpha = 0.06f)
                 drawRegion(minHz, safeTuning.lowCutHz, cutFill)
+                drawRegion(safeTuning.lowCutHz, safeTuning.midLowHz, slopeFill)
                 drawRegion(safeTuning.midLowHz, safeTuning.midHighHz, midFill)
+                drawRegion(safeTuning.midHighHz, safeTuning.highCutHz, slopeFill)
                 drawRegion(safeTuning.highCutHz, maxHz, cutFill)
 
                 listOf(
                     safeTuning.lowCutHz,
+                    safeTuning.lowTransitionHz,
                     safeTuning.midLowHz,
                     safeTuning.midHighHz,
+                    safeTuning.highTransitionHz,
                     safeTuning.highCutHz,
                 ).forEach { boundaryHz ->
                     val x = xForHz(boundaryHz)

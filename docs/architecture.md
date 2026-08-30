@@ -138,9 +138,9 @@ Error
 
 ### プリセット値の試聴調整
 
-プリセット選択パネルの下に、選択中プリセットをその場で試せる折りたたみ式の調整パネルを置きます。UIはAndroid標準のCompose `Slider`で、周波数4点（低域カット開始／中域開始／中域終了／高域カット開始）には一定刻みの`−` / `＋`ボタンも併設します。ゲイン、MBC、入力ゲイン、歪み緩和、Fading深度・周期も同じパネルから変更できます。
+プリセット選択パネルの下に、選択中プリセットをその場で試せる折りたたみ式の調整パネルを置きます。UIはAndroid標準のCompose `Slider`で、周波数6点（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）には一定刻みの`−` / `＋`ボタンも併設します。低域・高域の中間ゲインも個別に変更でき、ゲイン、MBC、入力ゲイン、歪み緩和、Fading深度・周期も同じパネルから変更できます。
 
-調整パネルの先頭には `PresetFrequencyCurve` を表示します。20 Hz〜20 kHzを対数軸にした細分化グリッド上へ、`AudioPresetTuning` の低域・中域・高域ゲインを補間したカーブを描き、低域／高域のカット帯と中域帯を網掛け、4つの周波数境界を縦線で示します。スライダーや`−` / `＋`で確定した値に追従するため、どの帯域を削っているかを数値だけでなく視覚的に確認できます。カーブは調整モデルから算出した設計目安で、端末のnative effect出力を直接測定するスペクトラムではありません。
+調整パネルの先頭には `PresetFrequencyCurve` を表示します。20 Hz〜20 kHzを対数軸にした細分化グリッド上へ、`AudioPresetTuning` の5つのゲイン点を補間したカーブを描き、低域／高域のカット帯と中域帯を網掛け、6つの周波数境界を縦線で示します。スライダーや`−` / `＋`で確定した値に追従するため、どの帯域を削っているかを数値だけでなく視覚的に確認できます。カーブは調整モデルから算出した設計目安で、端末のnative effect出力を直接測定するスペクトラムではありません。
 
 ```text
 Slider / −＋ buttons
@@ -152,7 +152,7 @@ selected preset tuning map (in memory)
 DynamicsProcessing: Pre-EQ(flat) → MBC → Post-EQ → Limiter
 ```
 
-`AudioPresetTuning.sanitized()` は周波数を `lowCut < midLow < midHigh < highCut` の順に保ち、各値を端末で安全に扱える範囲へ収めます。調整は現在の `DynamicsProcessing` をreleaseせず、既存の約80 ms遷移へ合流させるため、スライダー操作で一瞬effectが外れる経路を作りません。DynamicsProcessing単独経路の歪み緩和マッピングは調整値にも適用され、UIのMBC目標値とnative readback値が異なる場合があります。
+`AudioPresetTuning.sanitized()` は周波数を `lowCut < lowTransition < midLow < midHigh < highTransition < highCut` の順に保ち、各値を端末で安全に扱える範囲へ収めます。調整は現在の `DynamicsProcessing` をreleaseせず、既存の約80 ms遷移へ合流させるため、スライダー操作で一瞬effectが外れる経路を作りません。DynamicsProcessing単独経路の歪み緩和マッピングは調整値にも適用され、UIのMBC目標値とnative readback値が異なる場合があります。
 
 値はプリセットごとにプロセス内だけで保持し、DataStoreへは保存しません。アプリ再起動では初期値へ戻ります。`初期値へ戻す` は選択中プリセットの定義値を再適用します。これは音作りを決めるための試聴用UIであり、製品向けのtuning dialや永続設定とは別扱いです。
 
