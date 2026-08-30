@@ -154,7 +154,7 @@ Phase 2 の実機 regression（変更したとき）:
 
 1. `:app:testDebugUnitTest` / `:app:assembleDebug` を `gradle-run` で通し、debug APKをPixelへinstallする
 2. RAZIOをONにしてプリセットを選び、「調整を開く」でパネルが表示されること。表示中に画面を縦スクロールして全スライダーへ到達できること
-3. 低域カット／中域開始／中域終了／高域カット開始のスライダーを動かし、各`−` / `＋`ボタンで刻み幅どおりに値が増減すること。周波数の順序が逆転しないこと
+3. 低域カット／中域開始／中域終了／高域カット開始のスライダーを動かし、各`−` / `＋`ボタンで刻み幅どおりに値が増減すること。周波数の順序が逆転せず、周波数カーブの境界線・網掛け・カーブが変更値へ追従すること
 4. ゲイン、MBC、入力ゲイン、歪み緩和、Fading深度・周期を動かし、値表示とエンジンdetailの反映が変わること。調整中もsession `0` のDynamicsProcessingが維持されること
 5. 「初期値へ戻す」で選択中プリセットの値へ戻ること。別プリセットへ切り替えて戻ったときは、同一起動中の調整値がプリセット単位で保持されること
 6. force-stop後の再起動で調整値が初期値へ戻ること（永続化していないこと）
@@ -162,9 +162,10 @@ Phase 2 の実機 regression（変更したとき）:
 
 2026-08-30 の実機確認:
 
-- workflow `fd74255730a073f1c0512f3c3801348d` で `:app:testDebugUnitTest` / `:app:assembleDebug` をPASS。APK SHA-256は `DECA69FDC4C1ACDAD86911DF518F0BEFDFDB31B52E9F8EDDE0F437AD47EBFE24`
+- workflow `5f109f78fea8b94f410dc0d9cdcb64a8` で `:app:testDebugUnitTest` / `:app:assembleDebug` をPASS。APK SHA-256は `A340821F52C359D88321491083C1F7B72D73994FD30135F50EEC26547135C237`
 - Pixel 10 Pro（Android 17 / serial `56101FDCH006CX` / Pixel Buds Pro 2 Bluetooth A2DP）へ最終APKをinstallし、`Narrow AM` の調整パネルを開いた。全4周波数スライダーとゲイン／MBC／入力／歪み緩和／Fadingの各スライダー、`−` / `＋`ボタン、リセットボタンをUI treeで確認した
-- 低域カット開始を`300 Hz → 310 Hz → 300 Hz`（`＋` / `−`）へ戻し、スライダーでは`330 Hz`へ変更できた。入力ゲインは`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizerは`Not used (backend=dynamics_only)`を維持し、session `0` のDynamicsProcessing effectが外れなかった
+- 周波数カーブ見出し、`+6`〜`-48` dBの縦軸、20 Hz〜20 kHzの細分化した対数軸ラベル、低域／高域カット帯・中域帯の網掛け、4つの境界線を表示した。低域カット開始を`300 Hz → 310 Hz → 300 Hz`（`＋` / `−`）へ変更すると表示値とカーブ境界が追従した
+- 既存確認として、スライダーでは低域カットを`330 Hz`へ変更でき、入力ゲインは`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizerは`Not used (backend=dynamics_only)`を維持し、session `0` のDynamicsProcessing effectが外れなかった
 - `dumpsys activity services dev.hondasports.razio` でeffect用FGS `isForeground=true`を確認し、操作後のfiltered logcatにRAZIO由来のcrash / ANRはなかった。これは操作・構造確認であり、各値の最終的な聴感プリセット決定はユーザー確認待ち
 
 ### 入出力スペクトラムアナライザー検証PoC

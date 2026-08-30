@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -54,6 +55,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -76,6 +80,8 @@ import dev.hondasports.razio.audio.preset.AudioPreset
 import dev.hondasports.razio.audio.preset.AudioPresetTuning
 import dev.hondasports.razio.theme.RazioTheme
 import java.util.Locale
+import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.roundToInt
 
 @Composable
@@ -474,6 +480,10 @@ private fun PresetTuningEditor(
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
+        PresetFrequencyCurve(
+            tuning = safeTuning,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
         FrequencyTuningSlider(
             label = stringResource(R.string.preset_tuning_low_cut),
             value = safeTuning.lowCutHz,
@@ -650,6 +660,249 @@ private fun PresetTuningEditor(
     }
 }
 
+/** Visualizes the editable response curve and makes each frequency boundary explicit. */
+@Composable
+private fun PresetFrequencyCurve(
+    tuning: AudioPresetTuning,
+    modifier: Modifier = Modifier,
+) {
+    val safeTuning = tuning.sanitized()
+    val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+    val accent = MaterialTheme.colorScheme.primary
+    val cutFill = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+    val midFill = accent.copy(alpha = 0.12f)
+    val plotHeight = 176.dp
+    val chartHeight = plotHeight + 22.dp
+    val minHz = 20f
+    val maxHz = 20_000f
+    val minDb = -48f
+    val maxDb = 6f
+    val gridFrequenciesHz = listOf(
+        20f,
+        30f,
+        40f,
+        50f,
+        70f,
+        100f,
+        150f,
+        200f,
+        250f,
+        300f,
+        400f,
+        500f,
+        700f,
+        900f,
+        1_000f,
+        1_300f,
+        1_500f,
+        1_800f,
+        2_200f,
+        2_600f,
+        3_000f,
+        4_000f,
+        5_000f,
+        7_000f,
+        9_000f,
+        10_000f,
+        15_000f,
+        20_000f,
+    )
+    val labeledFrequenciesHz = listOf(
+        20f,
+        100f,
+        300f,
+        500f,
+        1_000f,
+        2_000f,
+        5_000f,
+        10_000f,
+        20_000f,
+    )
+    val majorFrequenciesHz = setOf(20f, 100f, 300f, 500f, 1_000f, 2_000f, 5_000f, 10_000f, 20_000f)
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.preset_tuning_curve_heading),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(38.dp)
+                    .height(plotHeight),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End,
+            ) {
+                listOf("+6", "0", "-12", "-24", "-36", "-48").forEach { label ->
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Canvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(chartHeight),
+            ) {
+                val left = 4.dp.toPx()
+                val right = size.width - 4.dp.toPx()
+                val top = 4.dp.toPx()
+                val bottom = plotHeight.toPx() - 4.dp.toPx()
+                val chartWidth = right - left
+                val chartRange = bottom - top
+                val minLogHz = ln(minHz.toDouble())
+                val maxLogHz = ln(maxHz.toDouble())
+
+                fun xForHz(hz: Float): Float {
+                    val fraction = ((ln(hz.coerceIn(minHz, maxHz).toDouble()) - minLogHz) /
+                        (maxLogHz - minLogHz)).toFloat()
+                    return left + chartWidth * fraction
+                }
+
+                fun yForDb(db: Float): Float {
+                    val fraction = ((db - minDb) / (maxDb - minDb)).coerceIn(0f, 1f)
+                    return bottom - chartRange * fraction
+                }
+
+                drawRect(
+                    color = grid.copy(alpha = 0.18f),
+                    topLeft = Offset(left, top),
+                    size = Size(chartWidth, chartRange),
+                )
+                listOf(-48f, -36f, -24f, -12f, 0f, 6f).forEach { db ->
+                    val y = yForDb(db)
+                    drawLine(
+                        color = grid,
+                        start = Offset(left, y),
+                        end = Offset(right, y),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+                gridFrequenciesHz.forEach { frequencyHz ->
+                    val x = xForHz(frequencyHz)
+                    val isMajor = frequencyHz in majorFrequenciesHz
+                    drawLine(
+                        color = grid.copy(alpha = if (isMajor) 0.6f else 0.22f),
+                        start = Offset(x, top),
+                        end = Offset(x, bottom),
+                        strokeWidth = if (isMajor) 1.2.dp.toPx() else 0.7.dp.toPx(),
+                    )
+                }
+
+                fun drawRegion(startHz: Float, endHz: Float, color: Color) {
+                    val startX = xForHz(startHz)
+                    val endX = xForHz(endHz)
+                    drawRect(
+                        color = color,
+                        topLeft = Offset(startX, top),
+                        size = Size((endX - startX).coerceAtLeast(0f), chartRange),
+                    )
+                }
+
+                drawRegion(minHz, safeTuning.lowCutHz, cutFill)
+                drawRegion(safeTuning.midLowHz, safeTuning.midHighHz, midFill)
+                drawRegion(safeTuning.highCutHz, maxHz, cutFill)
+
+                listOf(
+                    safeTuning.lowCutHz,
+                    safeTuning.midLowHz,
+                    safeTuning.midHighHz,
+                    safeTuning.highCutHz,
+                ).forEach { boundaryHz ->
+                    val x = xForHz(boundaryHz)
+                    drawLine(
+                        color = accent.copy(alpha = 0.7f),
+                        start = Offset(x, top),
+                        end = Offset(x, bottom),
+                        strokeWidth = 1.5.dp.toPx(),
+                    )
+                }
+
+                val curve = Path()
+                val sampleCount = 192
+                repeat(sampleCount + 1) { index ->
+                    val fraction = index.toFloat() / sampleCount
+                    val frequencyHz = exp(
+                        minLogHz + (maxLogHz - minLogHz) * fraction,
+                    ).toFloat()
+                    val gainDb = safeTuning.gainDbForCenterHz(frequencyHz)
+                        .coerceIn(minDb, maxDb)
+                    val point = Offset(xForHz(frequencyHz), yForDb(gainDb))
+                    if (index == 0) curve.moveTo(point.x, point.y) else curve.lineTo(point.x, point.y)
+                }
+                drawPath(
+                    path = curve,
+                    color = accent,
+                    style = Stroke(width = 2.5.dp.toPx()),
+                )
+            }
+        }
+        FrequencyAxisLabels(
+            frequenciesHz = labeledFrequenciesHz,
+            minHz = minHz,
+            maxHz = maxHz,
+            modifier = Modifier.padding(start = 38.dp, top = 2.dp, end = 4.dp),
+        )
+        Text(
+            text = stringResource(R.string.preset_tuning_curve_legend),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
+
+@Composable
+private fun FrequencyAxisLabels(
+    frequenciesHz: List<Float>,
+    minHz: Float,
+    maxHz: Float,
+    modifier: Modifier = Modifier,
+) {
+    Layout(
+        content = {
+            frequenciesHz.forEach { frequencyHz ->
+                Text(
+                    text = formatTuningChartHz(frequencyHz),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        modifier = modifier.fillMaxWidth().height(18.dp),
+    ) { measurables, constraints ->
+        val placeables = measurables.map { measurable ->
+            measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+        }
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val minLogHz = ln(minHz.toDouble())
+        val maxLogHz = ln(maxHz.toDouble())
+        layout(width, height) {
+            placeables.forEachIndexed { index, placeable ->
+                val frequencyHz = frequenciesHz[index].coerceIn(minHz, maxHz)
+                val fraction = ((ln(frequencyHz.toDouble()) - minLogHz) /
+                    (maxLogHz - minLogHz)).toFloat()
+                val centerX = width * fraction
+                val x = when (index) {
+                    0 -> centerX
+                    placeables.lastIndex -> centerX - placeable.width
+                    else -> centerX - placeable.width / 2f
+                }.toInt().coerceIn(0, (width - placeable.width).coerceAtLeast(0))
+                val y = ((height - placeable.height) / 2).coerceAtLeast(0)
+                placeable.place(x, y)
+            }
+        }
+    }
+}
+
 @Composable
 private fun FrequencyTuningSlider(
     label: String,
@@ -784,6 +1037,15 @@ private fun adjustFrequency(
 ): Float = (value + delta).coerceIn(valueRange.start, valueRange.endInclusive)
 
 private fun formatTuningHz(value: Float): String = "${value.roundToInt()} Hz"
+
+private fun formatTuningChartHz(value: Float): String {
+    val rounded = value.roundToInt()
+    return if (rounded >= 1_000 && rounded % 1_000 == 0) {
+        "${rounded / 1_000}k"
+    } else {
+        rounded.toString()
+    }
+}
 
 private fun formatTuningDb(value: Float): String =
     String.format(Locale.US, "%.1f dB", value)

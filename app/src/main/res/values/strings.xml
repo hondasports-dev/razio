@@ -18,6 +18,8 @@
     <string name="preset_tuning_toggle_open">調整を開く</string>
     <string name="preset_tuning_toggle_close">閉じる</string>
     <string name="preset_tuning_hint">スライダーで選択中プリセットの周波数・ゲイン・圧縮を調整できます。変更はこの起動中だけ有効です。</string>
+    <string name="preset_tuning_curve_heading">周波数カーブ（調整値の目安）</string>
+    <string name="preset_tuning_curve_legend">青線=ゲインカーブ　網掛け=カット／中域帯　縦線=周波数境界</string>
     <string name="preset_tuning_reset">初期値へ戻す</string>
     <string name="preset_tuning_low_cut">低域カット開始</string>
     <string name="preset_tuning_mid_low">中域開始</string>

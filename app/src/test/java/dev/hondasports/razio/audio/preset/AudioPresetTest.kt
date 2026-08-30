@@ -146,4 +146,13 @@ class AudioPresetTest {
         assertEquals(5f, parameters.fadeDepthDb, 0.01f)
         assertEquals(4_000L, parameters.fadePeriodMs)
     }
+
+    @Test
+    fun tuning_curveReflectsFrequencyCutBoundaries() {
+        val tuning = AudioPreset.NARROW_AM.defaultTuning()
+
+        assertEquals(tuning.lowGainDb, tuning.gainDbForCenterHz(100f), 0.01f)
+        assertEquals(tuning.midGainDb, tuning.gainDbForCenterHz(1_000f), 0.01f)
+        assertEquals(tuning.highGainDb, tuning.gainDbForCenterHz(10_000f), 0.01f)
+    }
 }

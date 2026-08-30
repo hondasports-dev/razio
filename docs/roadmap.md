@@ -115,6 +115,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [ ] 両端カット第2段（全プリセットの低域・高域目標をさらに約6dB深く調整。Pixel 10 Pro / Pixel Buds Pro 2で構造確認済み、最終聴感受入待ち）
 - [ ] 高域カット第3段（DynamicsProcessing単独化に合わせ、全プリセットの10 kHz付近を `-40dB` から `-48dB` へ変更。Pixel実機readback確認済み、聴感受入待ち）
 - [x] プリセット値の試聴調整（周波数・ゲイン・MBC・歪み緩和・FadingをComposeスライダーで変更。周波数は`−` / `＋`でも増減し、DynamicsProcessingへ約80 msで反映。値は起動中のみ保持）
+- [x] 周波数カーブ可視化（選択中プリセットのゲインカーブ、カット／中域帯の網掛け、4境界線、20 Hz〜20 kHzの細分化対数グリッド）
 - [x] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）

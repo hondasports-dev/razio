@@ -205,6 +205,17 @@ data class AudioPresetTuning(
     val fadeDepthDb: Float,
     val fadePeriodMs: Long,
 ) {
+    fun gainDbForCenterHz(centerHz: Float): Float {
+        val hz = centerHz.coerceAtLeast(1f)
+        return when {
+            hz <= lowCutHz -> lowGainDb
+            hz < midLowHz -> lerp(lowGainDb, midGainDb, (hz - lowCutHz) / (midLowHz - lowCutHz))
+            hz <= midHighHz -> midGainDb
+            hz < highCutHz -> lerp(midGainDb, highGainDb, (hz - midHighHz) / (highCutHz - midHighHz))
+            else -> highGainDb
+        }
+    }
+
     /** Keeps sliders inside safe ranges and preserves the frequency ordering. */
     fun sanitized(): AudioPresetTuning {
         val safeLowCutHz = lowCutHz.coerceIn(MIN_LOW_CUT_HZ, MAX_LOW_CUT_HZ)
@@ -238,6 +249,12 @@ data class AudioPresetTuning(
             fadePeriodMs = fadePeriodMs.coerceIn(0L, MAX_FADE_PERIOD_MS),
         )
     }
+
+    private fun lerp(
+        start: Float,
+        end: Float,
+        progress: Float,
+    ): Float = start + (end - start) * progress.coerceIn(0f, 1f)
 
     companion object {
         const val MIN_LOW_CUT_HZ = 20f
