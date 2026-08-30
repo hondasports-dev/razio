@@ -134,7 +134,7 @@ Error
 
 `RazioHomeScreen` は電源・処理方式／プリセット・ノイズ・エンジン状態を独立した `RetroPanel` に分けます。`RetroPanel` は caller が配置できる `modifier` と `ColumnScope` の content slot を持ち、パネル固有の枠・角丸・内側余白だけを所有します。プリセットは `LazyRow` で横スクロールさせ、端末幅が狭くても `Narrow AM` / `Vintage speaker` などのラベルを縦方向へ潰しません。
 
-この段階では製品向けsignal meter、icon / brandingは追加しません。調整パネルには、選択中プリセットの帯域位置をラジオの目盛り風に示す非インタラクティブな`tuning dial`を置きます。検証用スペクトラムは実際に取得した入力・出力の状態を表示しますが、AudioEffectの成立や聴感を単独で保証するメーターではありません。
+この段階ではicon / brandingは追加しません。調整パネルには、選択中プリセットの帯域位置をラジオの目盛り風に示す非インタラクティブな`tuning dial`を置きます。検証用スペクトラムとは別に、出力mix tapのRMS／PeakをLED風に示す製品向けsignal meterも表示します。どちらもAudioEffectの成立や聴感を単独で保証するものではなく、tapの前後位置は端末依存です。
 
 ### プリセット値の試聴調整
 

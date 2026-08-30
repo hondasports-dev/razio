@@ -128,7 +128,7 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 
 - [ ] レトロラジオ風デザイン（暖色light/darkテーマ、パネル分割、プリセット横スクロールの初回実装・Pixel 10 Pro表示確認済み。最終デザイン受入待ち）
 - [x] tuning dial の表現（調整パネルに6境界の帯域位置をラジオ目盛り風に表示。操作は下のスライダーで行う）
-- [ ] signal meter（製品向け。検証用スペクトラムはPhase 2に実装済みだが、聴感を保証するメーターではない）
+- [x] signal meter（出力mix tapのRMS／Peakを20段LED風に表示。検証用スペクトラムとは役割を分離し、tap位置の端末依存を明示）
 - [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading）
 - [ ] dark / light 方針
 - [ ] icon / branding

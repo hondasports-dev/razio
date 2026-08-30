@@ -175,6 +175,13 @@ Phase 2 の実機 regression（変更したとき）:
 - Pixel 10 Pro（Android 17 / serial `56101FDCH006CX` / Pixel Buds Pro 2 Bluetooth A2DP）へAPKをinstallし、調整パネルの同調ダイヤルを表示した。`Vintage speaker`で低域カット中間を`320 Hz → 330 Hz → 320 Hz`へ変更すると、ダイヤルの境界目盛り、周波数カーブ、値表示が追従した。`Narrow AM`へ切り替えた後もダイヤルの6境界が表示された
 - filtered `logcat`に`FATAL EXCEPTION`、`ANR in`、RAZIO由来の未処理Exceptionはなく、`dumpsys activity services`でeffect用FGS `isForeground=true`、`dumpsys media.audio_flinger`でsession `0`のDynamicsProcessing 1 effectを確認した。検証後の画面オフ設定は60秒へ戻した
 
+### 製品向けsignal meter
+
+- workflow `bb12f7547b375af1b7854c2da7d24ca8` で `:app:testDebugUnitTest` / `:app:assembleDebug` をPASS。APK SHA-256は `1F1C0130FBADBA341D6C88D027ECB6113754C61C7F82D4939F3CCD01620D6AFD`
+- Pixel 10 Pro（Android 17 / serial `56101FDCH006CX` / Pixel Buds Pro 2 Bluetooth A2DP）へAPKをinstallし、出力レベルメーターの待機状態（`解析待ち`、RMS／Peak `−∞ dB`）を確認した
+- Spotify再生中に既存のスペクトラム解析を開始し、UIが`Active（入力・出力）`となることを確認。出力mix tapのメーターが`観測中`になり、LEDセグメント、RMS、Peak（例: `RMS -11.4 dB` / `Peak -0.7 dB`）が更新された。停止後はProjectionが解放され、メーターは待機表示へ戻った
+- filtered `logcat`にRAZIO由来のcrash / ANRはなく、effect用specialUse FGSとsession `0`のDynamicsProcessing 1 effectを維持した。メーターは出力tapの傾向表示であり、native effectの厳密なpost-DSP測定値ではない。検証後の画面オフ設定は60秒へ戻した
+
 ### 入出力スペクトラムアナライザー検証PoC
 
 この機能は、音声を再生し直さずに入力・出力の傾向を比較するための観測tapです。入力は `AudioPlaybackCapture` → `AudioRecord`、出力は `Visualizer(session 0)`。どちらも同じ1024点FFTで10帯域へ変換し、`Active` / `Partial` / `Error` として取得可否を表示します。Visualizerは厳密なpost-DSP PCMではないため、プリセットの最終判定はDynamicsProcessingのreadbackと聴感で行います。

@@ -405,6 +405,20 @@ fun RazioHomeScreen(
         }
 
         RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
+            SectionHeading(text = stringResource(R.string.signal_meter_heading))
+            Text(
+                text = stringResource(R.string.signal_meter_explanation),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            ProductSignalMeter(
+                snapshot = spectrumState.output,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+
+        RetroPanel(modifier = Modifier.padding(top = 12.dp)) {
             SectionHeading(text = stringResource(R.string.engine_status_heading))
             Text(
                 text = stringResource(R.string.equalizer_label, reportText(state.equalizer)),
@@ -1310,6 +1324,84 @@ private fun SpectrumMeter(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
+
+/** A compact product-facing level strip backed by the existing output observation tap. */
+@Composable
+private fun ProductSignalMeter(
+    snapshot: SpectrumSnapshot,
+    modifier: Modifier = Modifier,
+) {
+    val segmentCount = 20
+    val peakFraction = ((snapshot.peakDb - SpectrumMath.FLOOR_DB) / -SpectrumMath.FLOOR_DB)
+        .coerceIn(0f, 1f)
+    val activeSegments = (peakFraction * segmentCount).roundToInt().coerceIn(0, segmentCount)
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.signal_meter_output_label),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = if (snapshot.available) {
+                    stringResource(R.string.signal_meter_active)
+                } else {
+                    stringResource(R.string.signal_meter_waiting)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            repeat(segmentCount) { index ->
+                val segmentColor = when {
+                    index >= 17 -> MaterialTheme.colorScheme.error
+                    index >= 13 -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.secondary
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(14.dp)
+                        .background(
+                            color = if (index < activeSegments) {
+                                segmentColor
+                            } else {
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+                            },
+                            shape = RoundedCornerShape(2.dp),
+                        ),
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.signal_meter_rms, formatDb(snapshot.rmsDb)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.signal_meter_peak, formatDb(snapshot.peakDb)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

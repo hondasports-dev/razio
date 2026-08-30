@@ -66,6 +66,13 @@
     <string name="spectrum_status_partial">Partial（片側のみ）</string>
     <string name="spectrum_status_stopped">Stopped</string>
     <string name="spectrum_status_error">Error</string>
+    <string name="signal_meter_heading">出力レベルメーター</string>
+    <string name="signal_meter_explanation">出力mix tap（Visualizer）のRMS／PeakをLED風に表示します。厳密なpost-DSP readbackではなく、解析を開始したときだけ更新します。</string>
+    <string name="signal_meter_output_label">出力（Visualizer mix tap）</string>
+    <string name="signal_meter_active">観測中</string>
+    <string name="signal_meter_waiting">解析待ち</string>
+    <string name="signal_meter_rms">RMS %1$s</string>
+    <string name="signal_meter_peak">Peak %1$s</string>
     <string name="equalizer_label">Equalizer: %1$s</string>
     <string name="dynamics_label">DynamicsProcessing: %1$s</string>
     <string name="poc_keep_alive_hint">ON のあいだ通知が出ます。これでバックグラウンドでも effect を維持します。ON は次回起動時にも復元します。</string>

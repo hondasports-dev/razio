@@ -549,6 +549,15 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: `dumpsys activity services dev.hondasports.razio`でeffect用FGS `isForeground=true`、`dumpsys media.audio_flinger`でsession `0`のDynamicsProcessing 1 effectを確認。操作後のfiltered logcatにRAZIO由来のcrash / ANRはなかった。画面オフ設定は検証後に60秒へ戻した
 - Status: **同調ダイヤルのunit test / build / Pixel実機表示・操作確認PASS。ダイヤルは表示専用で、製品向けの操作ダイヤルは未着手**
 
+### 2026-08-30 / 製品向けsignal meter
+
+- Scope: 既存の`Visualizer(session 0)`出力mix tapを、検証用スペクトラムとは別のコンパクトな製品向けレベル表示へまとめた。20段のLED風セグメントをPeak（`-80..0 dB`）から算出し、RMS／Peakの数値と`観測中`／`解析待ち`を表示する
+- Limitation: メーターはスペクトラム解析を開始したときだけ更新する。Visualizerは厳密なpost-DynamicsProcessing PCM readbackではなく、エフェクト前後の位置も端末依存のため、音質やカット量の保証値として扱わない。入力PCMを再生し直さないため二重再生は発生しない
+- Unit / build: workflow `bb12f7547b375af1b7854c2da7d24ca8` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `1F1C0130FBADBA341D6C88D027ECB6113754C61C7F82D4939F3CCD01620D6AFD`
+- Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Spotify再生、Pixel Buds Pro 2 Bluetooth A2DP。待機時に`解析待ち`とRMS／Peak `−∞ dB`、解析開始後に`Active（入力・出力）`、メーター`観測中`、LED更新、RMS／Peak（例: `-11.4 / -0.7 dB`）を確認した。停止後はProjectionが`null`へ戻った
+- Stability: `dumpsys activity services dev.hondasports.razio`でeffect用FGS `isForeground=true`、`dumpsys media.audio_flinger`でsession `0`のDynamicsProcessing 1 effectを確認。操作後のfiltered logcatにRAZIO由来のcrash / ANRはなかった。画面オフ設定は60秒へ戻した
+- Status: **製品向けsignal meterのunit test / build / Pixel実機表示・Active更新・停止復帰確認PASS。Visualizer tapの性質上、厳密なpost-DSP測定機能ではない**
+
 ## 判断基準
 
 ### Green
