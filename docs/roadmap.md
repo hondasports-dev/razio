@@ -112,8 +112,8 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Weak signal（高域カットと音量補正を追加。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] Saturation（入力ゲイン＋強いMBCによる飽和近似。Pixel 10 Pro / SoundCore 2で実機聴感確認済み）
 - [x] 全プリセット両端カット再調整（低域・高域のロールオフを強化。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
-- [ ] 両端カット第2段（全プリセットの低域・高域目標をさらに約6dB深く調整。Pixel 10 Pro / Pixel Buds Pro 2で構造確認済み、最終聴感受入待ち）
-- [ ] 高域カット第3段（DynamicsProcessing単独化に合わせ、全プリセットの10 kHz付近を `-40dB` から `-48dB` へ変更。Pixel実機readback確認済み、聴感受入待ち）
+- [x] 両端カット第2段（全プリセットの低域・高域目標をさらに約6dB深く調整。Pixel 10 Pro / Pixel Buds Pro 2で構造確認、ユーザー聴感受入済み）
+- [x] 高域カット第3段（DynamicsProcessing単独化に合わせ、全プリセットの10 kHz付近を `-40dB` から `-48dB` へ変更。Pixel実機readback、ユーザー聴感受入済み）
 - [x] プリセット値の試聴調整（周波数・ゲイン・MBC・歪み緩和・FadingをComposeスライダーで変更。周波数は`−` / `＋`でも増減し、DynamicsProcessingへ約80 msで反映。値は起動中のみ保持）
 - [x] 周波数カーブ可視化（選択中プリセットのゲインカーブ、カット／中域帯の網掛け、6境界線、20 Hz〜20 kHzの細分化対数グリッド）
 - [x] 周波数境界の細分化（低域・高域に中間境界／中間ゲインを追加し、カット傾斜を二段階で調整）

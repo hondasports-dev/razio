@@ -436,7 +436,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Split の専用 Equalizer は端末側の下限へ clamp されるため既存の受入済み音量・圧縮を変えず、DynamicsProcessing fallback / Dynamics only では深い目標値を利用する
 - Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `072fac01ea2f8d798c12426264509477`）。APK SHA-256 `A2FAC47D51DB8AE6716A49F54AE1022995122D2A769725940513926D6AEE95BB`
 - 実機構造確認: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING` で、`状態: Active` / `Equalizer: Not used` / session `0` の `DynamicsProcessing` 1 effect / FGS `isForeground=true` を確認。`postEqBands` は Narrow AM/Fading `90Hz:-30dB`・`250Hz:-30dB`・`4500Hz:-36dB`・`20000Hz:-36dB`、Vintage speaker `90Hz:-30dB`・`250Hz:-30dB`・`9000Hz:-32dB`・`20000Hz:-32dB`、Weak signal `90Hz:-30dB`・`250Hz:-30dB`・`2500Hz:-36dB`・`20000Hz:-36dB`、Saturation `90Hz:-24dB`・`250Hz:-24dB`・`9000Hz:-24dB`・`20000Hz:-24dB` をnative readbackした。crash / ANR / `AudioHardening` はなし
-- 聴感: 歪み収束後の低域・高域の追加カットはユーザー確認待ち
+- 聴感: 歪み収束後の低域・高域の追加カットはユーザー確認済み（2026-08-31「OK」）
 
 ### 2026-08-29 / Dynamics only distortion and level retune
 
@@ -444,7 +444,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Adjustment: Dynamics only のMBCをさらに穏和化し、Narrow AM / Fading は ratio `1.2:1`・post `0dB`、Vintage speaker は ratio `1.5:1`・post `+2dB`、Weak signal は ratio `4:1`・post `+9dB`、Saturation は ratio `8:1`・input `+6dB`・post `0dB` とした。共通 attack/release `20/230ms`・knee `12dB`。MBC後段Post-EQの正のブーストは `+2dB` で上限を設け、Saturationの高域目標は `-36dB` へ深くした
 - Unit / build: `:app:testDebugUnitTest` / `:app:assembleDebug` PASS（workflow `ac68d98fa5f4f1af7789745ef519b477`）。APK SHA-256 `3D9BB57C4393295F6A3ECB1EE4B62612B44EF4218E8716C2F0A01E46D0B4CA1C`
 - 実機構造確認: Pixel 10 Pro (`blazer`, serial `56101FDCH006CX`)、Android 17 (`CP2A.260805.005`)、Pixel Buds Pro 2 Bluetooth A2DP、Spotify `PlaybackState=PLAYING`。全プリセットで `状態: Active` / `Equalizer: Not used` / session `0` の `DynamicsProcessing` 1 effect / FGS `isForeground=true`、crash / ANR / `AudioHardening`なしを確認した。native readbackは Narrow AM/Fading `ratio=1.2`・`post=0dB`・端部 `-30/-36dB`、Vintage `ratio=1.5`・`post=+2dB`・端部 `-30/-32dB`、Weak `ratio=4`・`post=+9dB`・端部 `-30/-36dB`、Saturation `ratio=8`・`input=+6dB`・`post=0dB`・高域 `-36dB`。Fadingは `fade=3dB/3200ms` を維持した
-- Status: **実装・unit test・build・実機構造確認済み。最終音質はユーザー聴感受入待ち**。実機は `Dynamics only / Narrow AM / Active`、Spotify再生中の状態で保持している
+- Status（当時）: **実装・unit test・build・実機構造確認済み。最終音質はユーザー聴感受入待ち**。後続の2026-08-31確認で受入済み。実機は `Dynamics only / Narrow AM / Active`、Spotify再生中の状態で保持している
 
 ### 2026-08-29 / DynamicsProcessing-only EQ A/B PoC plan
 
@@ -513,7 +513,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Effect / lifecycle: `dumpsys media.audio_flinger` は session `0` の `DynamicsProcessing` 1 effect（Equalizerなし）。ON/OFFは `Active` ↔ `Disabled`、`dynamics setEnabled actual=true/false` を確認。FGSは `isForeground=true`、Spotify再生は継続した。Bluetoothのdisable / enableでroute change callbackを発生させた後も `DynamicsProcessing` 1 effectとenableを維持し、Pixel Buds Pro 2へ復帰した
 - Stability: 検証範囲のfiltered logcatにRAZIO由来のcrash / ANR / `AudioHardening`はなし。`AudioEffect.queryEffects()`の能力一覧にEqualizerBundleが出ても、実際のsession `0` chainへは生成していない
 - Post-EQ guard: 生成・再利用時にPost-EQのstage / band数 / 有効状態 / 9・18・20 kHzの高域ゲインをnative readbackし、20 kHz帯が維持できない構成を`Ready`扱いにしない。最終APKでもguard通過後に`Active`を確認した
-- Status: **DynamicsProcessing単独化・高域`-48dB`のunit test / build / Pixel構造確認PASS。10 kHz付近の聴感（高域残り・音量・クリック・歪み）はユーザー確認待ち**
+- Status: **DynamicsProcessing単独化・高域`-48dB`のunit test / build / Pixel構造確認・10 kHz付近の聴感受入PASS（2026-08-31、ユーザー「OK」）**
 
 ### 2026-08-30 / 入出力スペクトラムアナライザー検証PoC
 
