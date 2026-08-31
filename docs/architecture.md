@@ -267,6 +267,8 @@ AudioTrack (stereo, capture policy = NONE)
 
 `AudioTrack`の出力は元アプリと同じsystem mixへ参加するため、元音声が継続して聞こえる二重再生を通常アプリから防げるとは扱いません。`USAGE_MEDIA` / `GAME` / `UNKNOWN` に一致する複数アプリの音が同じcaptureへ混ざる可能性もあり、削除前のPoCにアプリUIDフィルターはありませんでした。PoCの合格は「2ch capture形式・downmix・再生・停止が観測できること」と「元音声を抑制できない条件を明示できること」に限定し、左右独立信号や音質、日常利用に耐える差し替えbackendの採用条件とは分けました。ユーザー聴感でも二重化が確認されたため、このMono差し替えbackendは製品経路へ採用せず、controller・mixer・UI・service連携・unit testを削除しました。Activity task removalでは削除前のMono/Spectrum controllerを停止してcapture資源を解放していましたが、現在はSpectrum controllerだけが残り、global effect ownerの寿命とは別扱いです。
 
+この判断により、差し替え経路向けのcustom band-pass DSPとend-to-end latency測定は現行製品の実装対象外として保留します。global `DynamicsProcessing`経路は独立した`AudioRecord`→`AudioTrack`差し替えを持たないため、Mono PoCで得た約170–506 msのbuffer依存値を製品経路の遅延として推測しません。再開条件は、元音声を抑制できる差し替え経路が実機で成立することです。
+
 ## root / privileged app
 
 現時点では対象外です。

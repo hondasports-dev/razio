@@ -619,6 +619,12 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stop / stability: 解析停止後はUIが `Stopped`、`dumpsys media_projection` が空、`dumpsys media.audio_flinger` が `No active record clients`。Spotifyの再生は継続した。検証中にRAZIO由来のcrash / ANRはなく、route-change時の既存readback警告はhandled errorとして別記録の範囲に留まった
 - Status: **radikoで有効信号なしを `Partial` と理由付きで表示し、通常再生（Spotify）では `Active` に復帰することを確認。capture不可相当の挙動確認を完了したが、アプリごとのpolicy値そのものを公開APIで断定したものではない**
 
+### 2026-08-31 / Phase 1B残項目の扱い
+
+- `custom band-pass DSP`: 製品音色は現行のglobal `DynamicsProcessing`（Pre/Post-EQ・MBC・Limiter）で実装済み。AudioPlaybackCaptureでPCMを差し替え再生する別DSPは、Mono経路が元音声との二重化でNo-goとなったため現行製品へ追加しない
+- `latency 測定`: Mono PoCではbuffer合計から約170–506 msを得たが、これは試行ごとに変動する概算であり、元音声→加工音→出力のend-to-end timestampではない。global effectの遅延を公開APIだけで同じ方法に測定することもできない
+- Decision: Phase 1をGreen、global AudioEffectをMVPとした現行方針では上記2項目を保留する。差し替え経路を再検討する場合だけ、元音声抑制の成立性を先に実機で確認し、その後にDSPと遅延測定を再開する
+
 ## 判断基準
 
 ### Green

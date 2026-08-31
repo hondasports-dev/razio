@@ -72,9 +72,9 @@ Phase 1 が Red の場合だけ実施します。
 - [x] AudioPlaybackCaptureConfiguration（MEDIA / GAME / UNKNOWN usageに一致する全体ミックス。アプリUID絞り込みは未対応）
 - [x] AudioRecord（stereo優先、mono fallbackはPartial表示）
 - [x] PCM passthrough / mixdown（2ch入力を`(L + R) / 2`でstereoへ複製。左右独立信号の相関検証は未実施）
-- [ ] custom band-pass DSP（製品音色の適用は未着手）
+- [ ] custom band-pass DSP（製品音色の適用は未着手。Mono差し替えbackendが不採用のため現行製品では対象外）
 - [x] AudioTrack playback（capture policy=NONE、AudioFocusなし）
-- [ ] latency 測定（現在はbuffer合計による概算約170–506 msのみ。end-to-end timestampは未測定）
+- [ ] latency 測定（現在はbuffer合計による概算約170–506 msのみ。end-to-end timestampは未測定。Mono差し替えbackendが不採用のため現行製品では対象外）
 - [x] 元音声との二重再生確認（対象TrackとRAZIO Trackの同時`started` / `active`という構造を確認。元音声ミュートは不可）
 - [x] capture 不可アプリの挙動確認（radikoで無音PCMを検出し、`Partial` と理由を表示）
 
@@ -86,6 +86,8 @@ Phase 1 が Red の場合だけ実施します。
 - [x] Mono製品採用判断（2026-08-31、Pixel 10 Proでユーザー聴感上の二重化を確認。元音声を抑制できない通常アプリの制約によりNo-go／不採用。PoCは検証証跡用の明示起動に限定）
 
 成立しなければ、通常 APK の制約としてプロジェクト仕様を見直します。root 化へ自動的には進みません。
+
+Phase 1Bの未完了項目は、Phase 1をGreenとしてglobal AudioEffectをMVPに採用し、Mono差し替えbackendをNo-goとした判断により、現行製品の実装対象外として保留します。再開する場合は、元音声を抑制できる差し替え経路が実機で成立することを先に確認します。
 
 ## Phase 2: MVP
 
