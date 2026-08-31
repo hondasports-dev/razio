@@ -68,7 +68,7 @@ upstream skill をそのまま全部実行しない。
 ### gradle-run
 
 - Gradle は wrapper 経由。直の `./gradlew` やシステム Gradle は使わない。
-- Windows で `python3` が無い時は `py -3`。`python3` が無いことだけを理由に Gradle 直実行へ落とさない。
+- Windows では最初に `python3 --version` を実行する。Microsoft Storeの実体なしエイリアスなどで失敗した時は `py -3` を使い、`create` / `run` / `finish` の全てで同じインタープリタを使う。`python3` が無いことだけを理由に Gradle 直実行へ落とさない。
 - Loop 内の `test` / `assembleDebug` は incidental validation。今の Agent が `create` → `run` → `finish` する。
 - Solver 用の別 Agent は、Gradle 診断そのものがタスクの時だけ。
 - `create` / `run` / `finish` はそれぞれ単独の shell コマンド。`&&` でつながない。

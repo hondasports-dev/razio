@@ -22,6 +22,10 @@ PREPARE → IMPLEMENT → UNIT TEST → VERIFY ON DEVICE → COMMIT → DONE
 → 通ったら main へ commit / push
 ```
 
+## Windows の Gradle 前提確認
+
+Windowsでは `python3` がMicrosoft Storeの実体なしエイリアスになっていることがあります。Gradle検証の最初に `python3 --version` が実行できるか確認し、失敗した場合は `py -3` で `gradle_run.py` の `create` / `run` / `finish` をそろえて実行します。Gradle wrapperを直接呼ぶフォールバックにはしません。
+
 Review / Incident / Process Learning は必要時だけ起動します。
 
 ## 最優先事項

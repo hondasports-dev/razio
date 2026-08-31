@@ -143,7 +143,7 @@ UI が audio backend の仕様を隠さないようにします。
 - [x] lint（CIで `./gradlew lint` を実行）
 - [x] assembleDebug（CIで `./gradlew assembleDebug` を実行）
 - [x] artifact APK（CIで `app-debug.apk` を `razio-debug-apk` としてupload）
-- [ ] AI エージェント用実装ループ改善
+- [x] AI エージェント用実装ループ改善（Windowsの`python3`実体確認と`py -3` fallbackをLoop正本へ明記し、Gradle検証の無駄な再試行を防止）
 
 ADB 実機試験はローカル環境を基本とし、必要になった場合に device farm を検討します。
 
