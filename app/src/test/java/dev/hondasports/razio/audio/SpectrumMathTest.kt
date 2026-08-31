@@ -2,6 +2,7 @@ package dev.hondasports.razio.audio
 
 import kotlin.math.PI
 import kotlin.math.sin
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,6 +17,7 @@ class SpectrumMathTest {
         assertTrue(frame.levelsDb.all { it <= SpectrumMath.FLOOR_DB })
         assertTrue(frame.rmsDb <= SpectrumMath.FLOOR_DB)
         assertTrue(frame.peakDb <= SpectrumMath.FLOOR_DB)
+        assertFalse(SpectrumMath.hasUsableSignal(frame))
     }
 
     @Test
@@ -32,6 +34,7 @@ class SpectrumMathTest {
         assertTrue("1 kHz should be above 6.3 kHz", oneKilohertzBand > eightKilohertzBand + 12f)
         assertTrue(frame.rmsDb < 0f)
         assertTrue(frame.peakDb < 0f)
+        assertTrue(SpectrumMath.hasUsableSignal(frame))
     }
 
     @Test
@@ -45,5 +48,15 @@ class SpectrumMathTest {
 
         assertTrue(frame.peakDb < 0f)
         assertTrue(frame.rmsDb > SpectrumMath.FLOOR_DB)
+        assertTrue(SpectrumMath.hasUsableSignal(frame))
+    }
+
+    @Test
+    fun veryQuietFrameIsReportedAsUnavailableSignal() {
+        val samples = ShortArray(SpectrumMath.FFT_SIZE) { 1 }
+        val frame = SpectrumMath.fromPcm16(samples, sampleRateHz = 48_000)
+
+        assertTrue(frame.peakDb <= SpectrumMath.FLOOR_DB + 1f)
+        assertFalse(SpectrumMath.hasUsableSignal(frame))
     }
 }

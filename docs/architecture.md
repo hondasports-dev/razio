@@ -79,7 +79,7 @@ Other app playback ──┬── original Android output ── Speaker / BT /
 
 - 入力は `AudioPlaybackCapture` で対象アプリの再生音をPCMコピーし、1024点のHann窓付きFFTで10帯域へ集約します。UIではこのフレームを `入力（エフェクト前）` として扱います。解析PCMを `AudioTrack` へ戻さないため、解析開始による二重再生は発生しません
 - Android 10以上で入力キャプチャが動いている場合、出力は入力と同じフレームへ現在の `DynamicsProcessing` のPost-EQ / MBC / Limiterパラメータを決定論的に反映し、同じFFTへ通した `出力（エフェクト後・推定）` です。native MBCのエンベロープ、出力段、HALの後処理は公開APIから読めないため、実スピーカー直後の測定値とは扱いません。推定処理に失敗した場合は入力フレームをそのまま出力へ使い、ログへ記録します。推定の有効判定はUIレポートの一時的な `Unsupported` ではなく、保持中のlive `DynamicsProcessing.enabled` を参照し、readback失敗後に同一フレームを誤表示しないようにします
-- 入力キャプチャが使えない端末・権限状態では、`Visualizer(0)` のglobal mix waveformをfallback出力として同じFFTへ通します。`SCALING_MODE_AS_PLAYED` とwaveformのunsigned 8-bit中心値128→PCM変換を従来どおり試みますが、これは `post-DSP非保証` と表示します。Visualizerは出力mix tapであり、入力が取れているときの推定出力と同時には採用しません
+- 入力キャプチャが使えない端末・権限状態では、`Visualizer(0)` のglobal mix waveformをfallback出力として同じFFTへ通します。`SCALING_MODE_AS_PLAYED` とwaveformのunsigned 8-bit中心値128→PCM変換を従来どおり試みますが、これは `post-DSP非保証` と表示します。Visualizerは出力mix tapであり、入力が取れているときの推定出力と同時には採用しません。`AudioRecord` が初期化できても表示床（約`-80 dBFS`）のフレームしか返さない場合は、2秒のヘルス判定後に入力をunavailableへ戻し、`Partial` と「無音または対象アプリのcapture policy制限の可能性」を表示します。後から有効信号を受け取った場合は `Active` へ復帰します
 - Android 10以上では `RECORD_AUDIO` とMediaProjection同意が必要です。Android 17（API 37）では音声取得を要求した同意UIを出し、MediaProjection用FGSの `startForeground` 完了後に `getMediaProjection` を呼びます。入力キャプチャ中は `mediaProjection` 型FGSを保持します
 - 解析停止、同意拒否、Projectionの `onStop`、route changeではAudioRecord / Visualizer / Projectionを解放し、既存のDynamicsProcessing用FGS所有権と独立して扱います
 

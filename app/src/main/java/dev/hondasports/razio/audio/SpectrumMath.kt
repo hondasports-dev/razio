@@ -25,6 +25,9 @@ internal object SpectrumMath {
     const val FFT_SIZE = 1_024
     const val FLOOR_DB = -80f
 
+    /** Treat frames at the display floor as an unavailable signal, not a valid sample. */
+    private const val SIGNAL_MARGIN_DB = 1f
+
     val bandCentersHz: List<Int> = listOf(
         80,
         160,
@@ -37,6 +40,9 @@ internal object SpectrumMath {
         10_000,
         16_000,
     )
+
+    fun hasUsableSignal(frame: SpectrumFrame): Boolean =
+        frame.peakDb > FLOOR_DB + SIGNAL_MARGIN_DB
 
     fun fromPcm16(
         samples: ShortArray,

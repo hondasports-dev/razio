@@ -76,7 +76,7 @@ Phase 1 が Red の場合だけ実施します。
 - [x] AudioTrack playback（capture policy=NONE、AudioFocusなし）
 - [ ] latency 測定（現在はbuffer合計による概算約170–506 msのみ。end-to-end timestampは未測定）
 - [x] 元音声との二重再生確認（対象TrackとRAZIO Trackの同時`started` / `active`という構造を確認。元音声ミュートは不可）
-- [ ] capture 不可アプリの挙動確認
+- [x] capture 不可アプリの挙動確認（radikoで無音PCMを検出し、`Partial` と理由を表示）
 
 採用条件:
 

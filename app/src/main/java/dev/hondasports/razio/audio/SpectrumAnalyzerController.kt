@@ -50,6 +50,22 @@ class SpectrumAnalyzerController(
     private var inputFrames = 0L
     private var outputFrames = 0L
     private var estimatedOutput = false
+    private var inputSignalObserved = false
+    private var inputSignalWarningShown = false
+    private var inputHealthCheck: Runnable? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private companion object {
+        const val CAPTURE_RATE_MILLI_HZ = 20_000
+        const val DEFAULT_SAMPLE_RATE = 48_000
+        const val MIN_SAMPLE_RATE = 8_000
+        const val BYTES_PER_SAMPLE = 2
+        const val STOP_JOIN_TIMEOUT_MS = 500L
+        const val INPUT_THREAD_NAME = "RazioSpectrumInput"
+        const val INPUT_SIGNAL_TIMEOUT_MS = 2_000L
+        const val INPUT_SIGNAL_WARNING =
+            "入力信号なし（無音または対象アプリのcapture policy制限の可能性）"
+    }
 
     /** Starts output-only on old Android versions, or when projection consent is absent. */
     fun startWithoutProjection() {
@@ -65,6 +81,8 @@ class SpectrumAnalyzerController(
             running = true
             inputFrames = 0L
             outputFrames = 0L
+            inputSignalObserved = false
+            inputSignalWarningShown = false
             this.projection = projection
             generation
         }
@@ -189,6 +207,8 @@ class SpectrumAnalyzerController(
 
     fun stop() {
         val resources = synchronized(lock) {
+            inputHealthCheck?.let { mainHandler.removeCallbacks(it) }
+            inputHealthCheck = null
             if (!running && visualizer == null && inputCapture == null && projection == null) {
                 return
             }
@@ -203,6 +223,8 @@ class SpectrumAnalyzerController(
             projection = null
             projectionCallback = null
             estimatedOutput = false
+            inputSignalObserved = false
+            inputSignalWarningShown = false
             oldVisualizer to Triple(oldInput, oldProjection, oldProjectionCallback)
         }
         val oldVisualizer = resources.first
@@ -347,6 +369,7 @@ class SpectrumAnalyzerController(
                 throw IllegalStateException("AudioRecord did not enter recording state")
             }
             capture.thread?.start()
+            scheduleInputHealthCheck(capture)
         } catch (throwable: Throwable) {
             AudioEffectLog.e("spectrum AudioRecord recording failed", throwable)
             capture.stopSignal.set(true)
@@ -389,15 +412,29 @@ class SpectrumAnalyzerController(
     ) {
         synchronized(lock) {
             if (!running || generation != token) return
+            val signalPresent = SpectrumMath.hasUsableSignal(frame)
+            val signalRecovered = signalPresent && !inputSignalObserved
+            val recoveringFromWarning = signalRecovered && inputSignalWarningShown
+            if (signalPresent) {
+                inputSignalObserved = true
+            }
+            if (recoveringFromWarning) {
+                inputSignalWarningShown = false
+            }
             inputFrames += 1L
             outputFrames += 1L
+            val inputUsable = !inputSignalWarningShown
             val inputSnapshot = SpectrumSnapshot(
-                available = true,
+                available = inputUsable,
                 levelsDb = frame.levelsDb,
                 rmsDb = frame.rmsDb,
                 peakDb = frame.peakDb,
                 frameCount = inputFrames,
-                detail = "AudioPlaybackCapture（エフェクト前）",
+                detail = if (inputUsable) {
+                    "AudioPlaybackCapture（エフェクト前）"
+                } else {
+                    INPUT_SIGNAL_WARNING
+                },
             )
             val outputFrame = runCatching {
                 SpectrumEffectEstimator.apply(frame, effectProfileProvider())
@@ -412,10 +449,75 @@ class SpectrumAnalyzerController(
                 frameCount = outputFrames,
                 detail = "DynamicsProcessing（エフェクト後・推定）",
             )
-            _state.value = _state.value.copy(
+            val current = _state.value
+            val recovered = if (recoveringFromWarning) {
+                current.copy(
+                    status = SpectrumAnalyzerStatus.Active,
+                    detail = current.detail.replace(" / $INPUT_SIGNAL_WARNING", ""),
+                    input = inputSnapshot,
+                )
+            } else {
+                current
+            }
+            _state.value = recovered.copy(
                 input = inputSnapshot,
                 output = outputSnapshot,
             )
+        }
+    }
+
+    private fun scheduleInputHealthCheck(capture: InputCapture) {
+        val check = object : Runnable {
+            override fun run() {
+                val shouldWarn = synchronized(lock) {
+                    running &&
+                        generation == capture.token &&
+                        inputCapture === capture &&
+                        !inputSignalObserved &&
+                        !inputSignalWarningShown
+                }
+                if (shouldWarn) reportInputSignalUnavailable(capture.token)
+                synchronized(lock) {
+                    if (inputHealthCheck === this) inputHealthCheck = null
+                }
+            }
+        }
+        synchronized(lock) {
+            if (!running || generation != capture.token || inputCapture !== capture || inputSignalObserved) {
+                return
+            }
+            inputHealthCheck?.let { mainHandler.removeCallbacks(it) }
+            inputHealthCheck = check
+        }
+        mainHandler.postDelayed(check, INPUT_SIGNAL_TIMEOUT_MS)
+    }
+
+    private fun reportInputSignalUnavailable(token: Long) {
+        synchronized(lock) {
+            if (!running || generation != token || inputCapture == null ||
+                inputSignalObserved || inputSignalWarningShown
+            ) {
+                return
+            }
+            inputSignalWarningShown = true
+            val current = _state.value
+            _state.value = current.copy(
+                status = if (current.status == SpectrumAnalyzerStatus.Error) {
+                    current.status
+                } else {
+                    SpectrumAnalyzerStatus.Partial
+                },
+                detail = if (current.detail.contains(INPUT_SIGNAL_WARNING)) {
+                    current.detail
+                } else {
+                    "${current.detail} / $INPUT_SIGNAL_WARNING"
+                },
+                input = current.input.copy(
+                    available = false,
+                    detail = INPUT_SIGNAL_WARNING,
+                ),
+            )
+            AudioEffectLog.i("spectrum input signal unavailable token=$token")
         }
     }
 
@@ -506,12 +608,4 @@ class SpectrumAnalyzerController(
         var thread: Thread? = null
     }
 
-    private companion object {
-        const val CAPTURE_RATE_MILLI_HZ = 20_000
-        const val DEFAULT_SAMPLE_RATE = 48_000
-        const val MIN_SAMPLE_RATE = 8_000
-        const val BYTES_PER_SAMPLE = 2
-        const val STOP_JOIN_TIMEOUT_MS = 500L
-        const val INPUT_THREAD_NAME = "RazioSpectrumInput"
-    }
 }

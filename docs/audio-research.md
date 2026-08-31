@@ -608,6 +608,17 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stop: 解析停止後はUIが `Stopped`、`dumpsys media_projection` の projectionが空、REMOTE_SUBMIXのAudioRecord patchがreleaseされ `No active record clients` となった。Spotify再生は継続した
 - Follow-up（2026-08-31）: 入力と出力が同じに見える再現条件を確認したところ、HALのPost-EQ readback失敗後にUI用の `AudioEngineReport.Unsupported` だけが残り、実際には有効な `DynamicsProcessing` をスペクトラム推定側が無効と判定していた。`spectrumEffectProfile()` はUIレポートではなくlive effectの `DynamicsProcessing.enabled` を読むよう修正した。修正版APK（SHA-256 `57BEBC8E9804B9869103C62903EF4FCA3B51D0359B95BBC2E48D43C50CF2B096`）をPixel 10 Proへ再installし、Spotify / Pixel Buds Pro 2 A2DPで入力 `RMS -9.7 dB / Peak -0.8 dB`、出力推定 `RMS -35.0 dB / Peak -11.7 dB`、16kHz帯を含む高域カットを確認した。出力は引き続きnative post-DSP PCMではなく、同一入力フレームへの決定論的推定値である
 
+### 2026-08-31 / capture不可アプリの挙動確認
+
+- Goal: `AudioRecord` が生成できても対象アプリのcapture policy等で有効PCMを受け取れない場合に、UIが `Active` のまま成功を偽装しないことを確認する
+- Device / source / route: Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）、radiko（`jp.radiko.Player`、`PlaybackState=PLAYING`）、Pixel Buds Pro 2 Bluetooth A2DP。MediaProjectionのアプリ選択でradikoを指定し、入力tapを開始した
+- Before: 修正版前の挙動では `AudioRecord` のremote-submix trackがactiveでも、PCMが表示床（`RMS -∞ dB / Peak -∞ dB`）のまま `Active（入力・出力）` と表示されるケースがあった。`dumpsys media.audio_flinger` ではRAZIO UIDのREMOTE_SUBMIX AudioRecordがactiveで、radikoの再生trackも継続していた。公開APIからcapture policyの拒否理由を直接取得できないため、原因は「無音またはpolicy制限の可能性」として扱う
+- Change: `SpectrumMath.hasUsableSignal()` で表示床より1 dB以内のフレームを有効信号とみなし、入力開始から2秒間有効信号が無ければ入力snapshotをunavailableへ戻し、statusを `Partial`、detailを `入力信号なし（無音または対象アプリのcapture policy制限の可能性）` とする。解析PCMは引き続きAudioTrackへ戻さず、元音声の二重再生を作らない。有効信号を後から受け取った場合は `Active` へ復帰する
+- Evidence: 最新debug APK（SHA-256 `7584A65FC15111F3A8E3EB5B32661270B78E526DBA384F28A591FB6B873E7F43`）をinstall。radiko再生中のUIは `Partial（片側のみ）` へ遷移し、detailに上記理由を表示、入力グラフは `信号待ち`、RMS／Peakは `−∞ dB` のままとなった。証跡画面は `C:\Users\tatsuya\AppData\Local\Temp\razio-spectrum-evidence\radiko-partial-detail.png`
+- Recovery: 同じ解析セッションでradikoを停止し、Spotifyを `PlaybackState=PLAYING` にすると、UIは `Active（入力・出力）` へ復帰し、入力 `RMS -17.2 dB / Peak -6.3 dB`、出力推定 `RMS -23.1 dB / Peak -3.7 dB` を確認した。証跡画面は `C:\Users\tatsuya\AppData\Local\Temp\razio-spectrum-evidence\spotify-active-postfix.png`
+- Stop / stability: 解析停止後はUIが `Stopped`、`dumpsys media_projection` が空、`dumpsys media.audio_flinger` が `No active record clients`。Spotifyの再生は継続した。検証中にRAZIO由来のcrash / ANRはなく、route-change時の既存readback警告はhandled errorとして別記録の範囲に留まった
+- Status: **radikoで有効信号なしを `Partial` と理由付きで表示し、通常再生（Spotify）では `Active` に復帰することを確認。capture不可相当の挙動確認を完了したが、アプリごとのpolicy値そのものを公開APIで断定したものではない**
+
 ## 判断基準
 
 ### Green
