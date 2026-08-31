@@ -41,7 +41,13 @@ class GlobalAudioEffectController(
     /** Snapshot consumed by the spectrum analyzer's post-effect estimate. */
     internal fun spectrumEffectProfile(): SpectrumEffectProfile {
         val current = _state.value
-        val dynamicsEnabled = (current.dynamics as? AudioEngineReport.Ready)?.enabled == true
+        // The UI report can briefly remain Unsupported after a HAL readback failure even
+        // though the same DynamicsProcessing instance was successfully enabled. Read the
+        // live effect state for the analyzer so that a stale report does not make the
+        // post-effect graph silently fall back to the unmodified input frame.
+        val dynamicsEnabled = runCatching {
+            dynamics?.enabled == true
+        }.getOrDefault(false)
         return SpectrumEffectProfile(
             enabled = current.powerOn && dynamicsEnabled,
             tuning = current.tuning,

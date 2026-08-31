@@ -606,6 +606,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Device: Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）、Spotify（`PlaybackState=PLAYING`）、Pixel Buds Pro 2 Bluetooth A2DP。MediaProjection同意後、UIの入力 `AudioPlaybackCapture（エフェクト前）` と出力 `DynamicsProcessing（エフェクト後・推定）` が `Active（入力・出力）` のまま更新された。表示例は入力 `RMS -12.9 dB / Peak -3.7 dB`、出力 `RMS -14.8 dB / Peak -1.2 dB` で、選択中のVintage speakerプロファイルの高域カットが出力推定バーへ反映された
 - Evidence: `dumpsys activity services dev.hondasports.razio` で `isForeground=true`・Projection/effect FGS `types=0x40000020`、`dumpsys media_projection` でpackage `dev.hondasports.razio` のstarted projection、`dumpsys media.audio_flinger` でsession `0`のDynamicsProcessing／VisualizerとREMOTE_SUBMIX active trackを確認した。filtered `logcat`にRAZIO由来の `FATAL EXCEPTION`、`ANR in`、`AudioHardening` はなく、入力PCMを再生しないため二重再生も発生しなかった
 - Stop: 解析停止後はUIが `Stopped`、`dumpsys media_projection` の projectionが空、REMOTE_SUBMIXのAudioRecord patchがreleaseされ `No active record clients` となった。Spotify再生は継続した
+- Follow-up（2026-08-31）: 入力と出力が同じに見える再現条件を確認したところ、HALのPost-EQ readback失敗後にUI用の `AudioEngineReport.Unsupported` だけが残り、実際には有効な `DynamicsProcessing` をスペクトラム推定側が無効と判定していた。`spectrumEffectProfile()` はUIレポートではなくlive effectの `DynamicsProcessing.enabled` を読むよう修正した。修正版APK（SHA-256 `57BEBC8E9804B9869103C62903EF4FCA3B51D0359B95BBC2E48D43C50CF2B096`）をPixel 10 Proへ再installし、Spotify / Pixel Buds Pro 2 A2DPで入力 `RMS -9.7 dB / Peak -0.8 dB`、出力推定 `RMS -35.0 dB / Peak -11.7 dB`、16kHz帯を含む高域カットを確認した。出力は引き続きnative post-DSP PCMではなく、同一入力フレームへの決定論的推定値である
 
 ## 判断基準
 

@@ -255,6 +255,7 @@ Phase 2 の実機 regression（変更したとき）:
 - `dumpsys activity services dev.hondasports.razio` はeffect／ProjectionのFGSを `isForeground=true`・`types=0x40000020` と表示し、`dumpsys media_projection` はpackage `dev.hondasports.razio` のstarted projectionを表示した。`dumpsys media.audio_flinger` はsession `0`のDynamicsProcessing／VisualizerとREMOTE_SUBMIXのactive trackを確認した。入力PCMは再生しないため二重再生は発生しない
 - native post-DSP PCMは公開APIで保証できないため、出力は推定値として扱い、入力キャプチャ不能時のsession `0` Visualizerは `post-DSP非保証` のfallbackに限定した。filtered `logcat` には今回の操作に伴うRAZIO由来の `FATAL EXCEPTION`、`ANR in`、`AudioHardening` はなかった
 - 解析停止後はUIが `Stopped` に戻り、`dumpsys media_projection` の `Media Projection` が空、`dumpsys media.audio_flinger` のREMOTE_SUBMIX patchがrelease済み（`No active record clients`）になった。Spotifyの再生は継続した
+- 追試（2026-08-31）: HAL readback失敗後にUIレポートだけが `Unsupported` となり、推定出力が入力へ戻る条件を修正。修正版APK（SHA-256 `57BEBC8E9804B9869103C62903EF4FCA3B51D0359B95BBC2E48D43C50CF2B096`）をPixel 10 Proへ再installし、Spotify再生・Pixel Buds Pro 2 A2DP・MediaProjection同意後に `Active（入力・出力）` を確認した。入力は `RMS -9.7 dB / Peak -0.8 dB`、出力推定は `RMS -35.0 dB / Peak -11.7 dB` で、Weak signalの高域カットが出力バーへ反映された。出力のdetailは引き続き `post-effect推定` とし、native post-DSP PCMの実測とは扱わない
 
 ### Mono passthrough mixdown PoC（削除済み・履歴）
 
