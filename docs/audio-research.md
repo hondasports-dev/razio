@@ -398,6 +398,19 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Audible acceptance: **ユーザー確認済み（「OK」）**。ホストで生成した10秒の無音WAV（48 kHz / mono）を `/sdcard/Download/razio-silence-10s.wav` へ転送し、VLCで再生した。ループ設定なしの短時間試行でもHiss / Crackleが無音ベースへ重なって聞こえることを確認した。独立AudioTrackが出力へ乗ることは受入済み。VLC側のループ再生と長時間バックグラウンド聴感は今回の範囲外として未検証
 - Status: **PoC実装・unit test・build・実機構造確認・聴感受入済み。製品採用としてcommit / pushする**
 
+### 2026-08-31 / Hiss and Crackle level controls
+
+- Scope: 既存の独立 `AudioTrack` オーバーレイへ、Hiss と Crackle の振幅倍率を個別に調整するUIとPCM反映を追加する。元音声のcapture・差し替え・再生経路は変更しない
+- Controls: 詳細パネルの `Hiss 強さ` / `Crackle 強さ` スライダーを `0〜200%`、5%刻みで表示・変更する。既定値は従来の生成振幅を保つ `100%` とし、0%は該当ノイズを無音に、200%は基準振幅の2倍にする
+- Runtime: 値は `NoiseOverlayController` のStateFlowへ保持し、AudioTrackを再生成せず専用writerが次のPCMバッファから反映する。電源OFF時も値はプロセス内で保持するが、DataStoreへは保存しない
+- Safety: Hiss基準ゲイン `0.02` とCrackle基準ゲイン `0.22` を倍率へ変換し、合算サンプルは既存の `[-1, 1]` clampを通す。範囲外・非有限値は安全な既定値へ丸める
+- Verification plan: generator unit testで0%無音・倍率増加のエネルギー／ピークを確認し、Pixel 10 Proで詳細パネルから個別に0%→100%→200%へ変更してUI表示、AudioTrack継続、Hiss / Crackleの聴感変化、OFF時の停止cleanupを確認する
+- Verification result (2026-08-31): Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）へdebug APK（SHA-256 `DCF8C255B3F205EC03CBEB7D454AE0F22BDBFF73C7B2F58CDAC20E9D6C76782D`）をinstallし、詳細パネルで両スライダーと5%刻みの目盛りを確認した。Hissを `100% → 0% → 200%`、Crackleを `100% → 0% → 200%` へ個別操作して表示値が追従し、両スイッチON時は `ノイズ: Active` を維持した
+- AudioTrack continuity: スライダー操作前後でUI detailの `sampleRate=48000Hz` / `buffer=40404B` / session `21969` が維持され、レベル変更だけではtrackを再生成しないことを確認した。開始ログには `hissLevel=200%` / `crackleLevel=200%` が出力された。電源OFFではUIが `session 0 :: Disabled`、ノイズが `Idle` となり、`dumpsys media.audio_flinger` の `AT::remove` とtrack idleを確認した
+- Process lifecycle: OFF後にONへ戻すと `session 0 :: Active` へ復帰し、Noiseスイッチを再度ONにした際もHiss / Crackle各 `200%` が保持された（OFF/ONで新しいAudioTrack sessionが割り当てられるのは既存lifecycleどおり）。filtered logcatでは本試行中のRAZIO由来 `FATAL EXCEPTION` / `ANR in` / `AudioHardening` は確認されなかった
+- Evidence: UIの両レベル200%表示と `ノイズ: Active` は [noise-level-200.png](C:/Users/tatsuya/AppData/Local/Temp/razio-spectrum-evidence/noise-level-200.png) に保存した。聴感の最終的な増減差は、既存PoCでユーザーがHiss / Crackle出力を受入済みであることを前提に、今後の音量チューニング課題として分離する
+- Status: **実装・unit test・lint・assemble・Pixel UI／lifecycle確認済み。Hiss / Crackle個別レベル調整を採用する**
+
 ### 2026-08-29 / Fading first pass
 
 - Scope: Hiss / Crackle のような独立ノイズを追加せず、global AudioEffect の DynamicsProcessing input gain だけを周期変動させる

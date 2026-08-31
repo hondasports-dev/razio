@@ -31,6 +31,8 @@ class MainActivity : ComponentActivity() {
                         onPresetTuningChange = app::setPresetTuning,
                         onHissChange = app::setHissEnabled,
                         onCrackleChange = app::setCrackleEnabled,
+                        onHissLevelChange = app::setHissLevel,
+                        onCrackleLevelChange = app::setCrackleLevel,
                         onSpectrumStartWithoutProjection = app::startSpectrumWithoutProjection,
                         onSpectrumProjectionResult = app::startSpectrumProjection,
                         onSpectrumConsentDenied = app::spectrumConsentDenied,

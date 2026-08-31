@@ -311,6 +311,19 @@ Phase 2 の実機 regression（変更したとき）:
 - Home・画面OFF・route切替のlogcatをクリアして確認した範囲では、新規の `AudioHardening`、アプリcrash、ANRはなかった。ただし過去のプロセス更新時にAndroid 17の `AudioHardening` ログが出た履歴はあり、長時間のバックグラウンド聴感は別途確認する
 - **聴感受入済み（ユーザー「OK」）**。`/sdcard/Download/razio-silence-10s.wav`（48 kHz / mono）をVLCで再生し、ループ設定なしの短時間試行でHiss / Crackleが無音ベースへ重なって聞こえることを確認した。VLC側のループ再生と長時間バックグラウンド聴感は未検証だが、独立ノイズAudioTrackの出力確認というPoC目的は達成したため、製品採用・commitへ進む
 
+レベル調整の追加確認:
+
+1. 詳細パネルで `Hiss 強さ` / `Crackle 強さ` が表示され、`0〜200%`を5%刻みで変更できること
+2. Hissだけ、Crackleだけをそれぞれ0%→100%→200%へ動かし、他方のスイッチ状態とAudioTrackを維持したまま聴感の強さが変わること
+3. 変更後にRAZIOをOFFへ戻すとノイズAudioTrackが停止し、再ON時は最後のレベルがプロセス内で復元されること（再起動後の永続化は対象外）
+
+2026-08-31 のPixel確認結果:
+
+- Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）へdebug APK（SHA-256 `DCF8C255B3F205EC03CBEB7D454AE0F22BDBFF73C7B2F58CDAC20E9D6C76782D`）をinstallし、詳細パネルの `Hiss 強さ` / `Crackle 強さ` と0〜200%の5%刻みスライダーをUI treeで確認した
+- Hissを `100% → 0% → 200%`、Crackleを `100% → 0% → 200%` の順で個別操作した。UI表示は各値へ追従し、両スイッチON時の `ノイズ: Active` と `sampleRate=48000Hz buffer=40404B` を維持した。スライダー操作前後でsession `21969` が変わらず、AudioTrackを再生成せず次のPCMバッファへ反映することを構造確認した
+- RAZIO電源OFFで `session 0 :: Disabled` / `ノイズ: Idle`、`dumpsys media.audio_flinger` の `AT::remove` とtrack idleを確認。再ON後にNoiseスイッチをONへ戻すと `ノイズ: Active` と各 `200%` 表示が復元された（再ON時の新sessionは既存の再生成lifecycleによる）
+- 本試行のfiltered `logcat`にRAZIO由来の `FATAL EXCEPTION` / `ANR in` / `AudioHardening` はなかった。UI証跡は [noise-level-200.png](C:/Users/tatsuya/AppData/Local/Temp/razio-spectrum-evidence/noise-level-200.png)
+
 ### DynamicsProcessing単独経路
 
 現行経路は `DynamicsProcessing` 1つだけ（Pre-EQ flat → MBC → Post-EQ → Limiter）とする。通常の `Equalizer` は生成せず、UIのEqualizer欄は `Not used (backend=dynamics_only)` になる。Post-EQの最終bandは20 kHzまで持ち、全プリセットの高域目標は `-48 dB` とする。

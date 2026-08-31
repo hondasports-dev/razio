@@ -50,6 +50,9 @@
     <string name="noise_overlay_label">ノイズオーバーレイ（PoC）</string>
     <string name="noise_hiss_label">Hiss</string>
     <string name="noise_crackle_label">Crackle</string>
+    <string name="noise_hiss_level_label">Hiss 強さ</string>
+    <string name="noise_crackle_level_label">Crackle 強さ</string>
+    <string name="noise_level_hint">強さは基準値を100％として、0〜200％で調整できます。変更はこの起動中だけ有効です。</string>
     <string name="noise_overlay_status">ノイズ: %1$s</string>
     <string name="noise_status_idle">Idle</string>
     <string name="noise_status_starting">Starting</string>

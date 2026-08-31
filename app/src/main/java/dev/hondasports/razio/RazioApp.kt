@@ -78,6 +78,14 @@ class RazioApp : Application() {
         noiseOverlay.setCrackleEnabled(enabled)
     }
 
+    fun setHissLevel(level: Float) {
+        noiseOverlay.setHissLevel(level)
+    }
+
+    fun setCrackleLevel(level: Float) {
+        noiseOverlay.setCrackleLevel(level)
+    }
+
     /** Starts the output-only analyzer on API < 29, where playback capture is unavailable. */
     fun startSpectrumWithoutProjection() {
         spectrumAnalyzer.startWithoutProjection()

@@ -79,6 +79,7 @@ import dev.hondasports.razio.audio.AudioEngineReport
 import dev.hondasports.razio.audio.AudioEffectUiState
 import dev.hondasports.razio.audio.GlobalAudioEffectController
 import dev.hondasports.razio.audio.NoiseOverlayController
+import dev.hondasports.razio.audio.NoiseLevelRange
 import dev.hondasports.razio.audio.NoiseOverlayStatus
 import dev.hondasports.razio.audio.NoiseOverlayUiState
 import dev.hondasports.razio.audio.RazioStatus
@@ -138,6 +139,8 @@ fun RazioHomeRoute(
     onPresetTuningChange: (AudioPresetTuning) -> Unit = {},
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
+    onHissLevelChange: (Float) -> Unit = {},
+    onCrackleLevelChange: (Float) -> Unit = {},
     onSpectrumStartWithoutProjection: () -> Unit = {},
     onSpectrumProjectionResult: (Int, Intent?) -> Unit = { _, _ -> },
     onSpectrumConsentDenied: (String) -> Unit = {},
@@ -205,6 +208,8 @@ fun RazioHomeRoute(
         noiseState = noiseState,
         onHissChange = onHissChange,
         onCrackleChange = onCrackleChange,
+        onHissLevelChange = onHissLevelChange,
+        onCrackleLevelChange = onCrackleLevelChange,
         spectrumState = spectrumState,
         captureRequestPending = captureRequestPending,
         onSpectrumStart = {
@@ -243,6 +248,8 @@ fun RazioHomeScreen(
     noiseState: NoiseOverlayUiState = NoiseOverlayUiState(),
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
+    onHissLevelChange: (Float) -> Unit = {},
+    onCrackleLevelChange: (Float) -> Unit = {},
     spectrumState: SpectrumAnalyzerUiState = SpectrumAnalyzerUiState(),
     captureRequestPending: Boolean = false,
     onSpectrumStart: () -> Unit = {},
@@ -380,6 +387,8 @@ fun RazioHomeScreen(
                         noiseState = noiseState,
                         onHissChange = onHissChange,
                         onCrackleChange = onCrackleChange,
+                        onHissLevelChange = onHissLevelChange,
+                        onCrackleLevelChange = onCrackleLevelChange,
                         spectrumState = spectrumState,
                         captureRequestPending = captureRequestPending,
                         onSpectrumStart = onSpectrumStart,
@@ -420,6 +429,8 @@ private fun DevelopmentPanels(
     noiseState: NoiseOverlayUiState,
     onHissChange: (Boolean) -> Unit,
     onCrackleChange: (Boolean) -> Unit,
+    onHissLevelChange: (Float) -> Unit,
+    onCrackleLevelChange: (Float) -> Unit,
     spectrumState: SpectrumAnalyzerUiState,
     captureRequestPending: Boolean,
     onSpectrumStart: () -> Unit,
@@ -438,11 +449,37 @@ private fun DevelopmentPanels(
                 enabled = state.powerOn && !state.initializing,
                 onCheckedChange = onHissChange,
             )
+            TuningSlider(
+                label = stringResource(R.string.noise_hiss_level_label),
+                value = noiseState.hissLevel,
+                valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
+                valueFormatter = ::formatNoiseLevel,
+                enabled = state.powerOn && !state.initializing,
+                step = 0.05f,
+                onValueChange = onHissLevelChange,
+                modifier = Modifier.padding(top = 4.dp),
+            )
             NoiseToggleRow(
                 label = stringResource(R.string.noise_crackle_label),
                 checked = noiseState.crackleEnabled,
                 enabled = state.powerOn && !state.initializing,
                 onCheckedChange = onCrackleChange,
+            )
+            TuningSlider(
+                label = stringResource(R.string.noise_crackle_level_label),
+                value = noiseState.crackleLevel,
+                valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
+                valueFormatter = ::formatNoiseLevel,
+                enabled = state.powerOn && !state.initializing,
+                step = 0.05f,
+                onValueChange = onCrackleLevelChange,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(
+                text = stringResource(R.string.noise_level_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
             )
             Text(
                 text = stringResource(
@@ -1997,6 +2034,10 @@ private fun frequencyLabel(centerHz: Int): String {
 private fun formatDb(value: Float): String {
     if (value <= SpectrumMath.FLOOR_DB + 0.5f) return "−∞ dB"
     return String.format(Locale.US, "%.1f dB", value)
+}
+
+private fun formatNoiseLevel(value: Float): String {
+    return String.format(Locale.US, "%.0f%%", value * 100f)
 }
 
 @Composable
