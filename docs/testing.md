@@ -270,7 +270,7 @@ Phase 2 の実機 regression（変更したとき）:
 - `dumpsys audio`でradikoとRAZIOのstereo AudioTrackが同時に`state=started`、`dumpsys media.audio_flinger`でも両trackが`active`。RAZIO側は`FLAG_NO_SYSTEM_CAPTURE`（`ALLOW_CAPTURE_BY_NONE`）で、radikoの再生状態は維持された。実行中のFGSは`isForeground=true` / `types=0x40000020`
 - 停止ボタンでUIが`Stopped`、`dumpsys media_projection`が`null`、RAZIO AudioTrackが消え、specialUse FGSだけが残った。電源OFFでもMono trackとFGSが消え、radikoだけが継続した。ONへ戻すとDynamicsProcessing用specialUse FGSを再確認した
 - MediaProjection同意ダイアログ表示中に開始ボタンを再タップしても、Projection permission activityが1つのまま増殖せず、背面UIには同意待ちメッセージを表示した
-- clean logcat（開始前に`adb logcat -c`）ではRAZIO由来の`FATAL EXCEPTION` / `ANR in` / `AudioHardening`新規出力なし。元音声のミュート・二重再生量の聴感を人手で定量化していないため、2ch capture/downmix再生ループの動作を確認した状態であり、製品採用は未判定。RecentsからActivity taskをスワイプ終了した試行でもMono停止ログ、projection消失、Mono AudioTrack消失、global effect ownerのspecialUse FGS継続を確認した
+- clean logcat（開始前に`adb logcat -c`）ではRAZIO由来の`FATAL EXCEPTION` / `ANR in` / `AudioHardening`新規出力なし。ユーザー聴感で元音声と加工音の二重化が明確に確認され、Monoは不可と判定した。これはdownmix処理の失敗ではなく、通常アプリから元音声をミュートできない経路上の制約である。したがって2ch capture/downmix再生ループは技術PoCとして成立したものの、Mono差し替えbackendの製品採用はNo-go（不採用）とする。RecentsからActivity taskをスワイプ終了した試行でもMono停止ログ、projection消失、Mono AudioTrack消失、global effect ownerのspecialUse FGS継続を確認した
 
 ### Hiss / Crackle AudioTrack overlay PoC
 

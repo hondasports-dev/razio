@@ -261,7 +261,7 @@ PCM mixer: mono = (L + R) / 2, duplicate to L/R
 AudioTrack (stereo, capture policy = NONE)
 ```
 
-`AudioTrack`の出力は元アプリと同じsystem mixへ参加するため、元音声が継続して聞こえる二重再生を通常アプリから防げるとは扱いません。`USAGE_MEDIA` / `GAME` / `UNKNOWN` に一致する複数アプリの音が同じcaptureへ混ざる可能性もあり、現行PoCにアプリUIDフィルターはありません。PoCの合格は「2ch capture形式・downmix・再生・停止が観測できること」と「元音声を抑制できない条件を明示できること」に限定し、左右独立信号や音質、日常利用に耐える差し替えbackendの採用条件とは分けます。Activity task removalではMono/Spectrum controllerを停止してcapture資源を解放しますが、global effect ownerの寿命は別扱いです。
+`AudioTrack`の出力は元アプリと同じsystem mixへ参加するため、元音声が継続して聞こえる二重再生を通常アプリから防げるとは扱いません。`USAGE_MEDIA` / `GAME` / `UNKNOWN` に一致する複数アプリの音が同じcaptureへ混ざる可能性もあり、現行PoCにアプリUIDフィルターはありません。PoCの合格は「2ch capture形式・downmix・再生・停止が観測できること」と「元音声を抑制できない条件を明示できること」に限定し、左右独立信号や音質、日常利用に耐える差し替えbackendの採用条件とは分けます。ユーザー聴感でも二重化が確認されたため、このMono差し替えbackendは製品経路へ採用せず、詳細パネルのPoC UI／コードは検証証跡用の明示的opt-inとしてのみ残します。Activity task removalではMono/Spectrum controllerを停止してcapture資源を解放しますが、global effect ownerの寿命は別扱いです。
 
 ## root / privileged app
 
