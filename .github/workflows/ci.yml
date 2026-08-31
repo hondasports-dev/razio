@@ -21,7 +21,11 @@ jobs:
       - name: Install compileSdk platform
         run: |
           sdkmanager "platforms;android-37" "build-tools;36.0.0"
+          # GitHub's bash shell enables pipefail; ignore only yes's SIGPIPE
+          # after sdkmanager has consumed all license prompts.
+          set +o pipefail
           yes | sdkmanager --licenses >/dev/null
+          set -o pipefail
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
       - name: Unit test
