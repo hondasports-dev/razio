@@ -24,13 +24,16 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Owns the explicit input/output taps used to check whether the global effect is audible.
  *
- * Input is an AudioPlaybackCapture + AudioRecord copy of the playback mix. It is never
- * sent to an AudioTrack, so starting the analyzer cannot create a second audible copy of
- * another app's audio. Output is the session-0 Visualizer mix tap. Neither API promises a
- * raw pre/post-DSP PCM stream; the labels and docs keep that limitation visible.
+ * Input is an AudioPlaybackCapture + AudioRecord copy of the playback mix and is treated as
+ * the pre-effect reference. It is never sent to an AudioTrack, so starting the analyzer cannot
+ * create a second audible copy of another app's audio. On Android 10+ the output graph is a
+ * deterministic post-effect estimate derived from the same input frame and the current
+ * DynamicsProcessing profile. A session-0 Visualizer is retained only as a fallback when an
+ * input capture is unavailable; it is not presented as guaranteed post-DSP PCM.
  */
 class SpectrumAnalyzerController(
     context: Context,
+    private val effectProfileProvider: () -> SpectrumEffectProfile = { SpectrumEffectProfile() },
 ) {
     private val appContext = context.applicationContext
     private val lock = Any()
@@ -46,6 +49,7 @@ class SpectrumAnalyzerController(
     private var projectionCallback: Callback? = null
     private var inputFrames = 0L
     private var outputFrames = 0L
+    private var estimatedOutput = false
 
     /** Starts output-only on old Android versions, or when projection consent is absent. */
     fun startWithoutProjection() {
@@ -103,6 +107,7 @@ class SpectrumAnalyzerController(
             if (!released && running && generation == token) {
                 visualizer = candidateVisualizer
                 inputCapture = candidateInput
+                estimatedOutput = candidateInput != null
                 if (projection != null) registerProjectionCallbackLocked(token, projection)
                 true
             } else {
@@ -116,7 +121,9 @@ class SpectrumAnalyzerController(
             return
         }
 
-        val outputAvailable = candidateVisualizer != null
+        val estimatedOutputAvailable = candidateInput != null
+        val nativeOutputAvailable = candidateVisualizer != null
+        val outputAvailable = estimatedOutputAvailable || nativeOutputAvailable
         val inputAvailable = candidateInput != null
         if (!outputAvailable && !inputAvailable) {
             val reason = failures.joinToString(separator = "; ").ifEmpty { "tap unavailable" }
@@ -134,10 +141,23 @@ class SpectrumAnalyzerController(
             SpectrumAnalyzerStatus.Partial
         }
         val detail = buildString {
-            append(if (inputAvailable) "入力tap=AudioPlaybackCapture" else "入力tap=unavailable")
+            append(
+                if (inputAvailable) {
+                    "入力tap=AudioPlaybackCapture（エフェクト前の解析用コピー）"
+                } else {
+                    "入力tap=unavailable"
+                },
+            )
             append(" / ")
-            append(if (outputAvailable) "出力mix tap=Visualizer(session 0)" else "出力mix tap=unavailable")
-            append(" / 前後位置は端末依存")
+            append(
+                when {
+                    estimatedOutputAvailable ->
+                        "出力=同一フレームへDynamicsProcessingを反映したpost-effect推定"
+                    nativeOutputAvailable ->
+                        "出力mix tap=Visualizer(session 0; post-DSP非保証)"
+                    else -> "出力=unavailable"
+                },
+            )
             if (failures.isNotEmpty()) append(" / ").append(failures.joinToString("; "))
             if (inputAvailable) append(" / 元音声は再生しない")
         }
@@ -159,11 +179,11 @@ class SpectrumAnalyzerController(
         )
     }
 
-    /** The session-0 output mix tap normally survives a route change; keep it observable. */
+    /** Keep the fallback Visualizer observable across a route change. */
     fun handleRouteChange() {
         val isRunning = synchronized(lock) { running && !released }
         if (isRunning) {
-            AudioEffectLog.i("spectrum route change: keep session 0 Visualizer mix tap")
+            AudioEffectLog.i("spectrum route change: keep analyzer taps")
         }
     }
 
@@ -182,6 +202,7 @@ class SpectrumAnalyzerController(
             inputCapture = null
             projection = null
             projectionCallback = null
+            estimatedOutput = false
             oldVisualizer to Triple(oldInput, oldProjection, oldProjectionCallback)
         }
         val oldVisualizer = resources.first
@@ -232,11 +253,13 @@ class SpectrumAnalyzerController(
                         samplingRate: Int,
                     ) {
                         val isCurrent = synchronized(lock) {
-                            running && generation == token && this@SpectrumAnalyzerController.visualizer === visualizer
+                            running &&
+                                generation == token &&
+                                !estimatedOutput &&
+                                this@SpectrumAnalyzerController.visualizer === visualizer
                         }
                         if (!isCurrent) return
                         publishFrame(
-                            input = false,
                             frame = SpectrumMath.fromVisualizerWaveform(waveform, samplingRate),
                             token = token,
                         )
@@ -344,8 +367,7 @@ class SpectrumAnalyzerController(
                     AudioRecord.READ_BLOCKING,
                 )
                 if (count > 0) {
-                    publishFrame(
-                        input = true,
+                    publishCapturedFrame(
                         frame = SpectrumMath.fromPcm16(buffer, count, capture.sampleRateHz),
                         token = capture.token,
                     )
@@ -361,28 +383,59 @@ class SpectrumAnalyzerController(
         }
     }
 
-    private fun publishFrame(
-        input: Boolean,
+    private fun publishCapturedFrame(
         frame: SpectrumFrame,
         token: Long,
     ) {
         synchronized(lock) {
             if (!running || generation != token) return
-            if (input) inputFrames += 1L else outputFrames += 1L
+            inputFrames += 1L
+            outputFrames += 1L
+            val inputSnapshot = SpectrumSnapshot(
+                available = true,
+                levelsDb = frame.levelsDb,
+                rmsDb = frame.rmsDb,
+                peakDb = frame.peakDb,
+                frameCount = inputFrames,
+                detail = "AudioPlaybackCapture（エフェクト前）",
+            )
+            val outputFrame = runCatching {
+                SpectrumEffectEstimator.apply(frame, effectProfileProvider())
+            }.onFailure { throwable ->
+                AudioEffectLog.e("spectrum post-effect estimate failed", throwable)
+            }.getOrDefault(frame)
+            val outputSnapshot = SpectrumSnapshot(
+                available = true,
+                levelsDb = outputFrame.levelsDb,
+                rmsDb = outputFrame.rmsDb,
+                peakDb = outputFrame.peakDb,
+                frameCount = outputFrames,
+                detail = "DynamicsProcessing（エフェクト後・推定）",
+            )
+            _state.value = _state.value.copy(
+                input = inputSnapshot,
+                output = outputSnapshot,
+            )
+        }
+    }
+
+    private fun publishFrame(
+        frame: SpectrumFrame,
+        token: Long,
+    ) {
+        synchronized(lock) {
+            if (!running || generation != token) return
+            outputFrames += 1L
             val snapshot = SpectrumSnapshot(
                 available = true,
                 levelsDb = frame.levelsDb,
                 rmsDb = frame.rmsDb,
                 peakDb = frame.peakDb,
-                frameCount = if (input) inputFrames else outputFrames,
-                detail = if (input) "AudioPlaybackCapture" else "Visualizer(session 0)",
+                frameCount = outputFrames,
+                detail = "Visualizer(session 0; post-DSP非保証)",
             )
             val current = _state.value
-            _state.value = if (input) {
-                current.copy(input = snapshot)
-            } else {
-                current.copy(output = snapshot)
-            }
+            _state.value = current.copy(output = snapshot)
         }
     }
 
@@ -390,6 +443,7 @@ class SpectrumAnalyzerController(
         synchronized(lock) {
             if (!running || generation != token) return
             AudioEffectLog.e("spectrum input capture ended", throwable)
+            estimatedOutput = false
             val current = _state.value
             _state.value = current.copy(
                 status = if (current.output.available) SpectrumAnalyzerStatus.Partial

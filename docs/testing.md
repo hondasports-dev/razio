@@ -230,23 +230,31 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 入出力スペクトラムアナライザー検証PoC
 
-この機能は、音声を再生し直さずに入力・出力の傾向を比較するための観測tapです。入力は `AudioPlaybackCapture` → `AudioRecord`、出力は `Visualizer(session 0)`。どちらも同じ1024点FFTで10帯域へ変換し、`Active` / `Partial` / `Error` として取得可否を表示します。Visualizerは厳密なpost-DSP PCMではないため、プリセットの最終判定はDynamicsProcessingのreadbackと聴感で行います。
+この機能は、音声を再生し直さずに入力・出力を比較するための観測tapです。入力は `AudioPlaybackCapture` → `AudioRecord` をエフェクト前の基準として使い、出力は同じ入力フレームへ現在の `DynamicsProcessing` を反映したエフェクト後の推定値です。どちらも同じ1024点FFTで10帯域へ変換し、`Active` / `Partial` / `Error` として取得可否を表示します。native post-DSP PCMは公開APIで保証できないため、入力キャプチャが使えない場合だけ `Visualizer(session 0)` をfallbackにし、UIでも推定値と区別します。
 
 必須確認:
 
 1. `:app:testDebugUnitTest` と `:app:assembleDebug` を `gradle-run` で通し、debug APKをPixelへinstallする
 2. Spotifyなど対象アプリを再生し、RAZIOの「解析を開始」を押す。`RECORD_AUDIO`許可後、MediaProjectionの画面共有同意を通す（Android 17では音声取得を要求するUIになる）
-3. UIが `Active（入力・出力）` になり、入力／出力の棒グラフ、RMS、Peakが更新されることを確認する。detailが `入力tap=AudioPlaybackCapture` / `出力mix tap=Visualizer(session 0)` / `前後位置は端末依存` であることを記録する
+3. UIが `Active（入力・出力）` になり、入力／出力の棒グラフ、RMS、Peakが更新されることを確認する。入力側は `入力（エフェクト前） / AudioPlaybackCapture`、出力側は `出力（エフェクト後・推定） / DynamicsProcessing` と表示され、detailが `入力tap=AudioPlaybackCapture（エフェクト前の解析用コピー）` / `出力=同一フレームへDynamicsProcessingを反映したpost-effect推定` になることを記録する。入力キャプチャ失敗時は `Visualizer(session 0; post-DSP非保証)` のfallback表示になることも確認する
 4. `dumpsys media_session`で対象アプリが`PLAYING`、`dumpsys activity services dev.hondasports.razio`でProjection型FGSがforegroundであることを確認する
 5. 入力PCMをAudioTrackへ再生していないため、解析開始前後で二重再生・意図しない音量二重化がないことを聴感確認する
 6. 「解析を停止」を押し、UIが`Stopped`、`dumpsys media_projection`が`null`になることを確認する。RAZIOの電源がONならeffect用specialUse FGSだけが残ることを確認する
 7. 対象アプリのcapture policyやProjection拒否を再現できる場合、`Partial` / `Error`と理由が表示され、元音声を抑制しないことを確認する
 
-2026-08-30 の実機結果:
+2026-08-30 の実機結果（旧Visualizer出力方式の履歴）:
 
 - Pixel 10 Pro（Android 17 / Pixel Buds Pro 2 Bluetooth A2DP）でSpotify `PlaybackState=PLAYING`を再生し、画面共有のアプリ選択でSpotifyを指定した。UIが`Active（入力・出力）`となり、両グラフのフレームが更新された（最終再確認時の一時値: 入力RMS約`-9.9 dB`、出力RMS`0.0 dB`。曲・音量・フレームに依存）
 - `dumpsys activity services`でProjection型FGS `isForeground=true`、停止後に`dumpsys media_projection`が`null`、Spotify再生継続を確認した。アプリのcrash / ANRはなし
 - `:app:testDebugUnitTest` / `:app:assembleDebug` はworkflow `5a5253f24ae29370dc7f3a53472a2221`でPASS。入力の音声を再生し直さないため、二重再生を作らない構造をコードとUI detailで確認した
+
+2026-08-31 のpre/post表示変更結果:
+
+- `SpectrumEffectEstimatorTest`を含む `:app:testDebugUnitTest` はworkflow `00db3a3dff5a7dc2aa4eae2d5768cfd5` でPASS。入力フレームを変更しない無効時、Narrow AMの高域カット・リミッター上限を確認した。`:app:assembleDebug` と `:app:lint` も同workflowでPASSし、debug APK SHA-256は `80BE61BF8082FD7473AE38908E09C50D7EFDA79FDFAAB16111D478A16D092CCD`
+- Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）へAPKを再installし、Spotify `PlaybackState=PLAYING`・Pixel Buds Pro 2 Bluetooth A2DP出力中にMediaProjection同意を完了した。UIが `Active（入力・出力）` となり、入力ラベル `入力（エフェクト前） / AudioPlaybackCapture` と出力ラベル `出力（エフェクト後・推定） / DynamicsProcessing`、detailの `post-effect推定` を確認した。画面上の一例は入力 `RMS -12.9 dB / Peak -3.7 dB`、出力 `RMS -14.8 dB / Peak -1.2 dB` で、高域カットを反映した出力バーになった
+- `dumpsys activity services dev.hondasports.razio` はeffect／ProjectionのFGSを `isForeground=true`・`types=0x40000020` と表示し、`dumpsys media_projection` はpackage `dev.hondasports.razio` のstarted projectionを表示した。`dumpsys media.audio_flinger` はsession `0`のDynamicsProcessing／VisualizerとREMOTE_SUBMIXのactive trackを確認した。入力PCMは再生しないため二重再生は発生しない
+- native post-DSP PCMは公開APIで保証できないため、出力は推定値として扱い、入力キャプチャ不能時のsession `0` Visualizerは `post-DSP非保証` のfallbackに限定した。filtered `logcat` には今回の操作に伴うRAZIO由来の `FATAL EXCEPTION`、`ANR in`、`AudioHardening` はなかった
+- 解析停止後はUIが `Stopped` に戻り、`dumpsys media_projection` の `Media Projection` が空、`dumpsys media.audio_flinger` のREMOTE_SUBMIX patchがrelease済み（`No active record clients`）になった。Spotifyの再生は継続した
 
 ### Mono passthrough mixdown PoC（削除済み・履歴）
 

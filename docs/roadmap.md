@@ -101,7 +101,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] 最小 Compose UI
 - [x] 実機 regression 手順（起動時 ON 復元・FGS 通知・Home 放置・画面 OFF 後の effect 維持・Bluetooth route 再接続は Pixel 10 Pro で確認。詳細は `docs/audio-research.md` / `docs/testing.md`）
 - [x] DynamicsProcessing 単体 A/B PoC（B案を採用。Equalizerを生成せず、Post-EQ/MBC/Limiterを1 effectへ集約。Pixel 10 Proでsession `0` の1 effect構成を確認）
-- [x] 入出力スペクトラム検証（AudioPlaybackCapture / AudioRecord入力tap + session `0` Visualizer出力tap + FFTグラフ。元音声を再生し直さない。Pixel 10 Pro / Android 17で`Active`・停止・Projection解放を確認）
+- [x] 入出力スペクトラム検証（AudioPlaybackCapture / AudioRecordをエフェクト前入力tapとして使い、DynamicsProcessingプロファイルを同一フレームへ反映したエフェクト後推定出力をFFT表示。入力不能時のみsession `0` Visualizerをfallback。元音声を再生し直さない。Pixel 10 Pro / Android 17で`Active`・停止・Projection解放を確認）
 
 ## Phase 3: Sound design
 

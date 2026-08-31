@@ -19,7 +19,7 @@ RAZIO は、YouTube、音楽アプリ、ゲーム、ブラウザなどの再生�
 - DynamicsProcessing（Post-EQ / MBC / Limiter）
 - プリセット調整用Composeスライダー（周波数の− / ＋ボタン付き。起動中のみ有効）
 - 選択中プリセットの周波数カーブプレビュー（カット帯の網掛け・境界線・細分化した対数軸）
-- 検証用スペクトラム（AudioPlaybackCapture入力 / Visualizer出力 / FFT）
+- 検証用スペクトラム（AudioPlaybackCaptureのエフェクト前入力 / DynamicsProcessing反映後の推定出力 / FFT）
 - ADB による実機検証
 - Codex / AI エージェントによる実装・テストループ
 
@@ -44,7 +44,7 @@ RAZIO は、YouTube、音楽アプリ、ゲーム、ブラウザなどの再生�
 
 この方式は Android では deprecated な領域を含み、端末・OS・Audio HAL の実装によって動作が異なる可能性があります。そのため、実装より先に小さな PoC で成立性を検証します。
 
-プリセットの効き具合を確認するため、画面には検証用の入力／出力スペクトラムも用意しています。入力は `AudioPlaybackCapture` で再生ミックスをコピーしてFFTへ渡し、出力は `Visualizer(session 0)` のmix waveformをFFTへ渡します。入力PCMを `AudioTrack` へ戻さないため、解析開始で二重再生は起こしません。これは観測tapであり、音声を加工して差し替えるAudioPlaybackCapture backendではありません。Android 10以上では録音権限とMediaProjection同意が必要です。
+プリセットの効き具合を確認するため、画面には検証用の入力／出力スペクトラムも用意しています。入力は `AudioPlaybackCapture` で再生ミックスをコピーした「エフェクト前」の基準フレームです。出力は同じフレームへ現在の `DynamicsProcessing` プロファイル（Post-EQ / MBC / Limiterの公開パラメータ）を反映した「エフェクト後・推定」フレームとして算出します。Androidの公開APIではglobal effect直後のPCMを保証できないため、入力キャプチャが使えない場合だけ `Visualizer(session 0)` をfallback表示し、native post-DSP値とは表示しません。入力PCMを `AudioTrack` へ戻さないため、解析開始で二重再生は起こしません。これは観測tapであり、音声を加工して差し替えるAudioPlaybackCapture backendではありません。Android 10以上では録音権限とMediaProjection同意が必要です。
 
 選択中プリセットの周波数・ゲイン・MBC・歪み緩和・Fading値は、画面の「プリセット値（試聴用）」からスライダーで調整できます。周波数6点は`−` / `＋`ボタンでも増減でき、低域・高域の傾斜途中にある中間境界とゲインも個別に追い込めます。変更は約80 msの補間で再生中のDynamicsProcessingへ反映されます。パネル内の周波数カーブは20 Hz〜20 kHzを対数軸で描き、低域／高域のカット帯、中域帯、6つの境界線を網掛けと線で示します。これは調整値から計算した目安であり、端末のnative effect出力を直接読み取ったものではありません。調整値は起動中だけ保持し、再起動すると初期値へ戻ります。
 

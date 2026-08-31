@@ -57,11 +57,11 @@
     <string name="noise_status_disabled">Disabled</string>
     <string name="noise_status_error">Error</string>
     <string name="spectrum_heading">スペクトラムアナライザー（検証用）</string>
-    <string name="spectrum_explanation">再生ミックスのコピー（AudioPlaybackCapture）と出力mix tap（session 0のVisualizer）を同時表示します。どちらがエフェクト前後かは端末の音声経路に依存し、公開APIでは保証されません。入力音声を再生し直さないため二重再生はしません。入力解析には録音権限と画面共有の許可が必要です。</string>
+    <string name="spectrum_explanation">入力はエフェクト前の基準（AudioPlaybackCaptureの解析用コピー）、出力は同じフレームへDynamicsProcessingを反映したエフェクト後の推定値です。Android公開APIではnativeなpost-DSP PCMを保証できないため、端末依存のVisualizer値はfallbackとしてのみ使います。入力音声を再生し直さないため二重再生はしません。入力解析には録音権限と画面共有の許可が必要です。</string>
     <string name="spectrum_start">解析を開始</string>
     <string name="spectrum_stop">解析を停止</string>
-    <string name="spectrum_input_label">入力tap / 再生ミックスのコピー（AudioPlaybackCapture）</string>
-    <string name="spectrum_output_label">出力mix tap / session 0（Visualizer）</string>
+    <string name="spectrum_input_label">入力（エフェクト前） / AudioPlaybackCapture</string>
+    <string name="spectrum_output_label">出力（エフェクト後・推定） / DynamicsProcessing</string>
     <string name="spectrum_rms">RMS %1$s</string>
     <string name="spectrum_peak">Peak %1$s</string>
     <string name="spectrum_waiting">信号待ち（対象アプリを再生してください）</string>
@@ -73,8 +73,8 @@
     <string name="spectrum_status_error">Error</string>
     <string name="capture_request_pending">権限／画面共有の同意待ちです。ダイアログを閉じるまで操作できません。</string>
     <string name="signal_meter_heading">出力レベルメーター</string>
-    <string name="signal_meter_explanation">出力mix tap（Visualizer）のRMS／PeakをLED風に表示します。厳密なpost-DSP readbackではなく、解析を開始したときだけ更新します。</string>
-    <string name="signal_meter_output_label">出力（Visualizer mix tap）</string>
+    <string name="signal_meter_explanation">入力フレームへDynamicsProcessingの設定を反映した、エフェクト後の推定RMS／PeakをLED風に表示します。native post-DSP readbackではなく、解析を開始したときだけ更新します。</string>
+    <string name="signal_meter_output_label">出力（エフェクト後・推定）</string>
     <string name="signal_meter_active">観測中</string>
     <string name="signal_meter_waiting">解析待ち</string>
     <string name="signal_meter_rms">RMS %1$s</string>

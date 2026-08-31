@@ -39,7 +39,10 @@ class RazioApp : Application() {
         preferences = RazioPreferences(this)
         audioEffects = GlobalAudioEffectController()
         noiseOverlay = NoiseOverlayController()
-        spectrumAnalyzer = SpectrumAnalyzerController(this)
+        spectrumAnalyzer = SpectrumAnalyzerController(
+            context = this,
+            effectProfileProvider = audioEffects::spectrumEffectProfile,
+        )
         audioEffects.initialize()
         AudioRouteMonitor(this, ::handleRouteChange).start()
         applicationScope.launch {

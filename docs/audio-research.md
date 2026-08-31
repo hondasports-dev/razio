@@ -595,6 +595,18 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: 検証範囲のfiltered logcatにRAZIO由来の `FATAL EXCEPTION`、ANR、`SecurityException` はなく、DynamicsProcessingのeffectとspecialUse FGSは維持された。出力先はPixel Buds Pro 2 Bluetooth A2DP
 - Status: **CIの3検証タスク・artifact設定、権限拒否時のスペクトラムUI復帰、実機のAudioEffect維持を確認済み**。音質そのものの聴感評価は今回の権限ガード変更の対象外
 
+### 2026-08-31 / スペクトラムのpre/post表示
+
+- Request: UIの入力をエフェクト前、出力をエフェクト後として表示し、両者の意味を混同しないようにする
+- Decision: Android 10以上でAudioPlaybackCaptureが動いている間は、取得したPCMフレームを `入力（エフェクト前）` の基準として保持する。同じフレームへ現在の `DynamicsProcessing` のPost-EQ、MBCの近似、makeup／入力ゲイン、Limiter上限を反映し、`出力（エフェクト後・推定）` としてFFTへ渡す。UI detailと説明文に「推定」を明記する
+- Reason: 通常アプリへglobal session `0` DynamicsProcessing直後のnative PCM tapを公開APIで保証する仕組みはなく、Pixelのsession `0` Visualizerが無音になる場合もある。native MBCエンベロープ、出力段、HAL処理まで読み出せないため、推定値を実測post-DSPと誤表示しない
+- Fallback: 入力キャプチャが権限・Projection・capture policy等で使えない場合だけ、既存の `Visualizer(session 0)` を出力fallbackとして使う。detailは `post-DSP非保証` とし、入力が取れているときの推定出力とは同時に採用しない
+- Safety: 入力PCMをAudioTrackへ戻さず、Spectrum analyzerは観測tapに留める。解析開始・停止で二重再生を作らず、AudioRecord / Visualizer / MediaProjectionは既存のlifecycleで解放する
+- Verification: `SpectrumEffectEstimatorTest`を含む `:app:testDebugUnitTest`、`:app:assembleDebug`、`:app:lint` はworkflow `00db3a3dff5a7dc2aa4eae2d5768cfd5` でPASS。debug APK SHA-256は `80BE61BF8082FD7473AE38908E09C50D7EFDA79FDFAAB16111D478A16D092CCD`
+- Device: Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）、Spotify（`PlaybackState=PLAYING`）、Pixel Buds Pro 2 Bluetooth A2DP。MediaProjection同意後、UIの入力 `AudioPlaybackCapture（エフェクト前）` と出力 `DynamicsProcessing（エフェクト後・推定）` が `Active（入力・出力）` のまま更新された。表示例は入力 `RMS -12.9 dB / Peak -3.7 dB`、出力 `RMS -14.8 dB / Peak -1.2 dB` で、選択中のVintage speakerプロファイルの高域カットが出力推定バーへ反映された
+- Evidence: `dumpsys activity services dev.hondasports.razio` で `isForeground=true`・Projection/effect FGS `types=0x40000020`、`dumpsys media_projection` でpackage `dev.hondasports.razio` のstarted projection、`dumpsys media.audio_flinger` でsession `0`のDynamicsProcessing／VisualizerとREMOTE_SUBMIX active trackを確認した。filtered `logcat`にRAZIO由来の `FATAL EXCEPTION`、`ANR in`、`AudioHardening` はなく、入力PCMを再生しないため二重再生も発生しなかった
+- Stop: 解析停止後はUIが `Stopped`、`dumpsys media_projection` の projectionが空、REMOTE_SUBMIXのAudioRecord patchがreleaseされ `No active record clients` となった。Spotify再生は継続した
+
 ## 判断基準
 
 ### Green

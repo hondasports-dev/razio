@@ -38,6 +38,16 @@ class GlobalAudioEffectController(
     private var transitionState: PresetTransition? = null
     private var fadingRunnable: Runnable? = null
 
+    /** Snapshot consumed by the spectrum analyzer's post-effect estimate. */
+    internal fun spectrumEffectProfile(): SpectrumEffectProfile {
+        val current = _state.value
+        val dynamicsEnabled = (current.dynamics as? AudioEngineReport.Ready)?.enabled == true
+        return SpectrumEffectProfile(
+            enabled = current.powerOn && dynamicsEnabled,
+            tuning = current.tuning,
+        )
+    }
+
     fun initialize() {
         stopFading()
         cancelPresetTransition(applyFinalPreset = false)
