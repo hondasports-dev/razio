@@ -64,18 +64,18 @@
 
 → Phase 1B の AudioPlaybackCapture PoC へ。
 
-## Phase 1B: AudioPlaybackCapture PoC
+## Phase 1B: AudioPlaybackCapture PoC（Mono代替経路の評価）
 
 Phase 1 が Red の場合だけ実施します。
 
-- [ ] MediaProjection permission flow
-- [ ] AudioPlaybackCaptureConfiguration
-- [ ] AudioRecord
-- [ ] PCM passthrough
-- [ ] custom band-pass DSP
-- [ ] AudioTrack playback
-- [ ] latency 測定
-- [ ] 元音声との二重再生確認
+- [x] MediaProjection permission flow（Pixel 10 Pro / Android 17で音声同意→FGS→Projection取得）
+- [x] AudioPlaybackCaptureConfiguration（MEDIA / GAME / UNKNOWN usageに一致する全体ミックス。アプリUID絞り込みは未対応）
+- [x] AudioRecord（stereo優先、mono fallbackはPartial表示）
+- [x] PCM passthrough / mixdown（2ch入力を`(L + R) / 2`でstereoへ複製。左右独立信号の相関検証は未実施）
+- [ ] custom band-pass DSP（製品音色の適用は未着手）
+- [x] AudioTrack playback（capture policy=NONE、AudioFocusなし）
+- [ ] latency 測定（現在はbuffer合計による概算約170–506 msのみ。end-to-end timestampは未測定）
+- [x] 元音声との二重再生確認（対象TrackとRAZIO Trackの同時`started` / `active`という構造を確認。元音声ミュートは不可）
 - [ ] capture 不可アプリの挙動確認
 
 採用条件:
@@ -120,7 +120,7 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
-- [ ] Mono 感の強化（DynamicsProcessing / Equalizerに左右混合APIがなく、session `0` での確実なモノラル化は不可。AudioPlaybackCaptureまたは自前再生の別PoCまで保留。詳細は `docs/audio-research.md`）
+- [ ] Mono 感の強化（DynamicsProcessing / Equalizerに左右混合APIはなく、session `0` global経路での確実なモノラル化は不可。別経路PoCのcapture→downmix→AudioTrackは技術成立したが、元音声抑制・二重再生・遅延・アプリ別policyの製品条件が未解決。詳細は `docs/audio-research.md`）
 
 AudioEffect API だけで困難な項目は backend の制約を確認してから実装します。
 

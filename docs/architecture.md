@@ -89,7 +89,9 @@ Android output mix ── Visualizer(session 0) → waveform → FFT → 出力�
 
 そのため、現行の session `0` global DynamicsProcessingへ `channelCount=1` を渡しても、他アプリのステレオ音声を確実にモノラル化できる根拠にはなりません。端末のeffect実装で生成に失敗するか、片チャンネルだけを処理するだけになる可能性があり、見かけだけの Mono トグルは追加しません。
 
-真のモノラル化には、RAZIOが所有するPCMをDSPで左右混合してから再生する経路が必要です。自前プレイヤーなら `AudioTrack` の前段で実装できますが、他アプリ音声を対象にする場合は `AudioPlaybackCapture` → `AudioRecord` → `AudioTrack` の差し替え経路になります。この経路は MediaProjection と再生側の capture policy / manifest 設定に依存し、加工前の元音声を抑制できない場合は二重再生になります（[AudioPlaybackCaptureConfiguration](https://developer.android.com/reference/android/media/AudioPlaybackCaptureConfiguration.html)）。Mono はこの代替経路のPoCを開始するまでロードマップ上で保留します。
+真のモノラル化には、RAZIOが所有するPCMをDSPで左右混合してから再生する経路が必要です。自前プレイヤーなら `AudioTrack` の前段で実装できますが、他アプリ音声を対象にする場合は `AudioPlaybackCapture` → `AudioRecord` → `AudioTrack` の差し替え経路になります。この経路は MediaProjection と再生側の capture policy / manifest 設定に依存し、加工前の元音声を抑制できない場合は二重再生になります（[AudioPlaybackCaptureConfiguration](https://developer.android.com/reference/android/media/AudioPlaybackCaptureConfiguration.html)）。
+
+2026-08-31から、代替経路の成立条件を確認するための明示的な `MonoPlaybackPocController` を詳細パネルへ追加しました。これは製品backendを置き換えず、`AudioPlaybackCapture` のPCMを `(L + R) / 2` で平均し、同じ値を左右へ複製して stereo `AudioTrack` へ返す実験です。出力trackには `ALLOW_CAPTURE_BY_NONE` を設定して自身の再捕捉を避けますが、元アプリの再生を止めるAPIは持たないため、二重再生と概算遅延をUIに明示します。Spectrum解析とはProjection ownerを分離し、同時起動は許可しません。Mono製品採用は、このPoCでアプリ別capture可否、遅延、元音声との競合を実機確認してから判断します。
 
 FGS の `startForeground` 失敗は logcat に出して隠さない。通知許可がなくても effect の enable は進める。
 
@@ -213,7 +215,7 @@ DynamicsProcessingの生成・enableに失敗した場合は状態を `Unsupport
 
 ## Phase 2 の代替アーキテクチャ
 
-Global AudioEffect が成立しない場合に、音声を加工して差し替える方式として AudioPlaybackCapture を検討します。上記のスペクトラムアナライザーは成立性・聴感を確認するための観測専用で、元音声を抑制したり加工音を再生したりしません。
+Global AudioEffect が成立しない場合に、音声を加工して差し替える方式として AudioPlaybackCapture を検討します。上記のスペクトラムアナライザーは成立性・聴感を確認するための観測専用で、元音声を抑制したり加工音を再生したりしません。Monoの差し替え検証は、詳細パネルから明示的に起動する別PoCへ分離しています。
 
 ```text
 Other app playback
@@ -241,7 +243,25 @@ AudioPlaybackCapture
 - 遅延が増える
 - 二重再生の可能性がある
 
-したがって、PoC で明確な利点が確認できる場合のみ採用します。
+Mono PoCの処理は次の固定順です。
+
+```text
+MediaProjection consent + projection FGS
+        │
+        ▼
+AudioPlaybackCaptureConfiguration (MEDIA / GAME / UNKNOWN; UID filterなし)
+        │
+        ▼
+AudioRecord (stereo; mono fallback is Partial)
+        │
+        ▼
+PCM mixer: mono = (L + R) / 2, duplicate to L/R
+        │
+        ▼
+AudioTrack (stereo, capture policy = NONE)
+```
+
+`AudioTrack`の出力は元アプリと同じsystem mixへ参加するため、元音声が継続して聞こえる二重再生を通常アプリから防げるとは扱いません。`USAGE_MEDIA` / `GAME` / `UNKNOWN` に一致する複数アプリの音が同じcaptureへ混ざる可能性もあり、現行PoCにアプリUIDフィルターはありません。PoCの合格は「2ch capture形式・downmix・再生・停止が観測できること」と「元音声を抑制できない条件を明示できること」に限定し、左右独立信号や音質、日常利用に耐える差し替えbackendの採用条件とは分けます。Activity task removalではMono/Spectrum controllerを停止してcapture資源を解放しますが、global effect ownerの寿命は別扱いです。
 
 ## root / privileged app
 

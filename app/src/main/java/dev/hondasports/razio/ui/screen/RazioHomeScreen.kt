@@ -48,6 +48,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,9 @@ import dev.hondasports.razio.R
 import dev.hondasports.razio.audio.AudioEngineReport
 import dev.hondasports.razio.audio.AudioEffectUiState
 import dev.hondasports.razio.audio.GlobalAudioEffectController
+import dev.hondasports.razio.audio.MonoPlaybackPocController
+import dev.hondasports.razio.audio.MonoPlaybackPocStatus
+import dev.hondasports.razio.audio.MonoPlaybackPocUiState
 import dev.hondasports.razio.audio.NoiseOverlayController
 import dev.hondasports.razio.audio.NoiseOverlayStatus
 import dev.hondasports.razio.audio.NoiseOverlayUiState
@@ -132,6 +136,7 @@ fun RazioHomeRoute(
     controller: GlobalAudioEffectController,
     noiseOverlay: NoiseOverlayController,
     spectrumAnalyzer: SpectrumAnalyzerController,
+    monoPlaybackPoc: MonoPlaybackPocController,
     onPowerChange: (Boolean) -> Unit,
     onPresetChange: (AudioPreset) -> Unit,
     onPresetTuningChange: (AudioPresetTuning) -> Unit = {},
@@ -141,12 +146,28 @@ fun RazioHomeRoute(
     onSpectrumProjectionResult: (Int, Intent?) -> Unit = { _, _ -> },
     onSpectrumConsentDenied: (String) -> Unit = {},
     onSpectrumStop: () -> Unit = {},
+    onMonoPlaybackStart: (Int, Intent?) -> Unit = { _, _ -> },
+    onMonoPlaybackConsentDenied: (String) -> Unit = {},
+    onMonoPlaybackStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
     val noiseState by noiseOverlay.state.collectAsState()
     val spectrumState by spectrumAnalyzer.state.collectAsState()
+    val monoPlaybackState by monoPlaybackPoc.state.collectAsState()
     val context = LocalContext.current
+    // Keep both capture buttons disabled while a permission/projection dialog is open.
+    // The controllers cannot report Starting until the projection FGS callback returns,
+    // so the UI needs this short-lived guard to prevent duplicate consent launches.
+    var captureRequestPending by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(captureRequestPending, spectrumState.status, monoPlaybackState.status) {
+        if (!captureRequestPending) return@LaunchedEffect
+        val spectrumStarted = spectrumState.status != SpectrumAnalyzerStatus.Idle &&
+            spectrumState.status != SpectrumAnalyzerStatus.Stopped
+        val monoStarted = monoPlaybackState.status != MonoPlaybackPocStatus.Idle &&
+            monoPlaybackState.status != MonoPlaybackPocStatus.Stopped
+        if (spectrumStarted || monoStarted) captureRequestPending = false
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
@@ -163,6 +184,7 @@ fun RazioHomeRoute(
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             onSpectrumProjectionResult(result.resultCode, result.data)
         } else {
+            captureRequestPending = false
             onSpectrumConsentDenied("MediaProjectionの同意がキャンセルされました")
         }
     }
@@ -170,11 +192,36 @@ fun RazioHomeRoute(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (!granted) {
+            captureRequestPending = false
             onSpectrumConsentDenied("マイク権限がないため入力解析を開始できません")
         } else if (projectionManager != null) {
             projectionLauncher.launch(createProjectionIntent(projectionManager))
         } else {
+            captureRequestPending = false
             onSpectrumStartWithoutProjection()
+        }
+    }
+    val monoProjectionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            onMonoPlaybackStart(result.resultCode, result.data)
+        } else {
+            captureRequestPending = false
+            onMonoPlaybackConsentDenied("MediaProjectionの同意がキャンセルされました")
+        }
+    }
+    val monoRecordPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (!granted) {
+            captureRequestPending = false
+            onMonoPlaybackConsentDenied("マイク権限がないためMono PoCを開始できません")
+        } else if (projectionManager != null) {
+            monoProjectionLauncher.launch(createProjectionIntent(projectionManager))
+        } else {
+            captureRequestPending = false
+            onMonoPlaybackConsentDenied("Android 10未満ではMono PoCを開始できません")
         }
     }
     RazioHomeScreen(
@@ -192,18 +239,38 @@ fun RazioHomeRoute(
         onHissChange = onHissChange,
         onCrackleChange = onCrackleChange,
         spectrumState = spectrumState,
+        monoPlaybackState = monoPlaybackState,
+        captureRequestPending = captureRequestPending,
         onSpectrumStart = {
+            if (captureRequestPending) return@RazioHomeScreen
             when {
-                needsRecordPermission(context) -> recordPermissionLauncher.launch(
-                    Manifest.permission.RECORD_AUDIO,
-                )
-                projectionManager != null -> projectionLauncher.launch(
-                    createProjectionIntent(projectionManager),
-                )
+                needsRecordPermission(context) -> {
+                    captureRequestPending = true
+                    recordPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+                projectionManager != null -> {
+                    captureRequestPending = true
+                    projectionLauncher.launch(createProjectionIntent(projectionManager))
+                }
                 else -> onSpectrumStartWithoutProjection()
             }
         },
         onSpectrumStop = onSpectrumStop,
+        onMonoPlaybackStart = {
+            if (captureRequestPending) return@RazioHomeScreen
+            when {
+                needsRecordPermission(context) -> {
+                    captureRequestPending = true
+                    monoRecordPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+                projectionManager != null -> {
+                    captureRequestPending = true
+                    monoProjectionLauncher.launch(createProjectionIntent(projectionManager))
+                }
+                else -> onMonoPlaybackConsentDenied("Android 10未満ではMono PoCを開始できません")
+            }
+        },
+        onMonoPlaybackStop = onMonoPlaybackStop,
         modifier = modifier,
     )
 }
@@ -226,8 +293,12 @@ fun RazioHomeScreen(
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
     spectrumState: SpectrumAnalyzerUiState = SpectrumAnalyzerUiState(),
+    monoPlaybackState: MonoPlaybackPocUiState = MonoPlaybackPocUiState(),
+    captureRequestPending: Boolean = false,
     onSpectrumStart: () -> Unit = {},
     onSpectrumStop: () -> Unit = {},
+    onMonoPlaybackStart: () -> Unit = {},
+    onMonoPlaybackStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     MaterialTheme(colorScheme = TerminalColorScheme) {
@@ -362,8 +433,12 @@ fun RazioHomeScreen(
                         onHissChange = onHissChange,
                         onCrackleChange = onCrackleChange,
                         spectrumState = spectrumState,
+                        captureRequestPending = captureRequestPending,
                         onSpectrumStart = onSpectrumStart,
                         onSpectrumStop = onSpectrumStop,
+                        monoPlaybackState = monoPlaybackState,
+                        onMonoPlaybackStart = onMonoPlaybackStart,
+                        onMonoPlaybackStop = onMonoPlaybackStop,
                     )
                 }
 
@@ -401,8 +476,12 @@ private fun DevelopmentPanels(
     onHissChange: (Boolean) -> Unit,
     onCrackleChange: (Boolean) -> Unit,
     spectrumState: SpectrumAnalyzerUiState,
+    captureRequestPending: Boolean,
     onSpectrumStart: () -> Unit,
     onSpectrumStop: () -> Unit,
+    monoPlaybackState: MonoPlaybackPocUiState,
+    onMonoPlaybackStart: () -> Unit,
+    onMonoPlaybackStop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -475,6 +554,7 @@ private fun DevelopmentPanels(
                 } else {
                     Button(
                         onClick = onSpectrumStart,
+                        enabled = !captureRequestPending && !monoPlaybackState.running,
                         modifier = Modifier.heightIn(min = 48.dp),
                         shape = RectangleShape,
                         colors = ButtonDefaults.buttonColors(
@@ -502,6 +582,22 @@ private fun DevelopmentPanels(
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }
+            if (monoPlaybackState.running) {
+                Text(
+                    text = stringResource(R.string.spectrum_mono_conflict),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TerminalAmber,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            if (captureRequestPending && !spectrumState.running) {
+                Text(
+                    text = stringResource(R.string.capture_request_pending),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TerminalAmber,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
             SpectrumMeter(
                 label = stringResource(R.string.spectrum_input_label),
                 snapshot = spectrumState.input,
@@ -515,6 +611,16 @@ private fun DevelopmentPanels(
             )
         }
 
+        MonoPlaybackPocPanel(
+            powerOn = state.powerOn,
+            initializing = state.initializing,
+            spectrumRunning = spectrumState.running,
+            captureRequestPending = captureRequestPending,
+            monoState = monoPlaybackState,
+            onStart = onMonoPlaybackStart,
+            onStop = onMonoPlaybackStop,
+        )
+
         RetroPanel {
             SectionHeading(text = stringResource(R.string.engine_status_heading))
             Text(
@@ -527,6 +633,112 @@ private fun DevelopmentPanels(
                 text = stringResource(R.string.dynamics_label, reportText(state.dynamics)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MonoPlaybackPocPanel(
+    powerOn: Boolean,
+    initializing: Boolean,
+    spectrumRunning: Boolean,
+    captureRequestPending: Boolean,
+    monoState: MonoPlaybackPocUiState,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+) {
+    RetroPanel {
+        SectionHeading(text = stringResource(R.string.mono_playback_poc_heading))
+        Text(
+            text = stringResource(R.string.mono_playback_poc_explanation),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (monoState.running) {
+                OutlinedButton(
+                    onClick = onStop,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                    shape = RectangleShape,
+                    border = BorderStroke(1.dp, TerminalLine),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = TerminalCyan,
+                    ),
+                ) {
+                    Text(
+                        text = stringResource(R.string.mono_playback_poc_stop),
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            } else {
+                Button(
+                    onClick = onStart,
+                    enabled = powerOn && !initializing && !spectrumRunning && !captureRequestPending,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TerminalAmber,
+                        contentColor = Color(0xFF2A1807),
+                    ),
+                ) {
+                    Text(
+                        text = stringResource(R.string.mono_playback_poc_start),
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
+            }
+            Text(
+                text = monoPlaybackStatusText(monoState.status),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (monoState.detail.isNotEmpty()) {
+            Text(
+                text = monoState.detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        if (monoState.sampleRateHz > 0) {
+            Text(
+                text = stringResource(
+                    R.string.mono_playback_poc_metrics,
+                    monoState.inputChannels,
+                    monoState.outputChannels,
+                    monoState.sampleRateHz,
+                    monoState.estimatedLatencyMs,
+                    monoState.capturedFrames,
+                    monoState.playedFrames,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        if (spectrumRunning) {
+            Text(
+                text = stringResource(R.string.mono_playback_poc_spectrum_conflict),
+                style = MaterialTheme.typography.bodySmall,
+                color = TerminalAmber,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        if (captureRequestPending && !monoState.running) {
+            Text(
+                text = stringResource(R.string.capture_request_pending),
+                style = MaterialTheme.typography.bodySmall,
+                color = TerminalAmber,
                 modifier = Modifier.padding(top = 6.dp),
             )
         }
@@ -1978,6 +2190,19 @@ private fun spectrumStatusText(status: SpectrumAnalyzerStatus): String {
         SpectrumAnalyzerStatus.Partial -> R.string.spectrum_status_partial
         SpectrumAnalyzerStatus.Stopped -> R.string.spectrum_status_stopped
         SpectrumAnalyzerStatus.Error -> R.string.spectrum_status_error
+    }
+    return stringResource(resId)
+}
+
+@Composable
+private fun monoPlaybackStatusText(status: MonoPlaybackPocStatus): String {
+    val resId = when (status) {
+        MonoPlaybackPocStatus.Idle -> R.string.mono_playback_poc_status_idle
+        MonoPlaybackPocStatus.Starting -> R.string.mono_playback_poc_status_starting
+        MonoPlaybackPocStatus.Active -> R.string.mono_playback_poc_status_active
+        MonoPlaybackPocStatus.Partial -> R.string.mono_playback_poc_status_partial
+        MonoPlaybackPocStatus.Stopped -> R.string.mono_playback_poc_status_stopped
+        MonoPlaybackPocStatus.Error -> R.string.mono_playback_poc_status_error
     }
     return stringResource(resId)
 }

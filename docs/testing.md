@@ -248,6 +248,30 @@ Phase 2 の実機 regression（変更したとき）:
 - `dumpsys activity services`でProjection型FGS `isForeground=true`、停止後に`dumpsys media_projection`が`null`、Spotify再生継続を確認した。アプリのcrash / ANRはなし
 - `:app:testDebugUnitTest` / `:app:assembleDebug` はworkflow `5a5253f24ae29370dc7f3a53472a2221`でPASS。入力の音声を再生し直さないため、二重再生を作らない構造をコードとUI detailで確認した
 
+### Mono passthrough mixdown PoC
+
+これは製品backendではなく、詳細パネルの `MONO MIXDOWN // EXPERIMENTAL` から明示的に起動する検証経路です。`MEDIA` / `GAME` / `UNKNOWN` usageに一致する再生ミックス全体（アプリUID指定なし）を、元アプリの再生を止めずに `AudioPlaybackCapture` で取得します。PCMを `(L + R) / 2` へ混合し、同じ値を左右へ複製したstereo `AudioTrack`へ返します。元音声のミュートは保証されず、二重再生・遅延が起こり得るため、聴感確認では音量二重化やエコーを合否とは別に記録します。
+
+必須確認:
+
+1. `:app:testDebugUnitTest` / `lint` / `:app:assembleDebug` を `gradle-run` で通し、debug APKをPixelへinstallする
+2. RAZIOをONにして対象アプリ（Spotify / radiko等）を再生し、詳細パネルの `Mono PoCを開始` を押す。`RECORD_AUDIO`許可後、Android 17では音声取得を要求したMediaProjection同意を通す
+3. UIが `Active（stereoをmixdown）` になり、`capture=2ch / output 2ch / 48000Hz` と概算遅延、capture/output frame counterが表示されることを確認する。stereo初期化に失敗した場合は `Partial（mono capture）` であり、L/R混合成功とは判定しない。2ch形式は確認できても、左右に独立した元信号が入っていた証明にはならない
+4. `dumpsys media_session`で対象アプリが`PLAYING`、`dumpsys audio` / `dumpsys media.audio_flinger`で対象アプリとRAZIOのAudioTrackが同時に`started` / `active`、`dumpsys activity services dev.hondasports.razio`で`types=0x40000020`を確認する。RAZIOがAudioFocusを奪っていないことも確認する
+5. 元音声の抑制は未実装なので、元音声が継続して聞こえることを確認し、二重再生の音量差・エコー・遅延をメモする。元音声が消えた場合も成功扱いにせず、capture policy / focusの一次ログを残す
+6. `Mono PoCを停止`を押す。UIが`Stopped`、`dumpsys media_projection`が`null`、RAZIOのPoC AudioTrackとmediaProjection型FGSが消え、対象アプリだけが継続することを確認する
+7. PoC実行中にRAZIO電源をOFFにし、同じ解放が行われることを確認する。route change・画面OFF・Projection status bar chip停止は別試行として記録する
+8. Activity taskをスワイプ終了し、Mono/Spectrumのcapture track・projection・FGSが解放されることを確認する（global effect ownerは別途継続し得る）
+9. filtered `logcat`で`mono playback PoC`、`FATAL EXCEPTION`、`ANR in`、`AudioHardening`の新規出力を保存する。失敗時はUIの`Error` / `Partial`理由を優先し、無言で通常backendへfallbackしたと扱わない
+
+2026-08-31 の実機結果:
+
+- Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）、radiko（`jp.radiko.Player`）、Pixel Buds Pro 2 Bluetooth A2DPでMediaProjection同意後に`Active（stereoをmixdown）`を確認。最新版APKの表示は`capture=2ch / output 2ch / 48000Hz / 概算遅延 506ms`（過去試行は約170 msで、buffer依存）。frame counterは同じ処理ループの進捗値としてcapture/outputとも増加したが、独立したread/write完全性や左右独立信号の証明ではない
+- `dumpsys audio`でradikoとRAZIOのstereo AudioTrackが同時に`state=started`、`dumpsys media.audio_flinger`でも両trackが`active`。RAZIO側は`FLAG_NO_SYSTEM_CAPTURE`（`ALLOW_CAPTURE_BY_NONE`）で、radikoの再生状態は維持された。実行中のFGSは`isForeground=true` / `types=0x40000020`
+- 停止ボタンでUIが`Stopped`、`dumpsys media_projection`が`null`、RAZIO AudioTrackが消え、specialUse FGSだけが残った。電源OFFでもMono trackとFGSが消え、radikoだけが継続した。ONへ戻すとDynamicsProcessing用specialUse FGSを再確認した
+- MediaProjection同意ダイアログ表示中に開始ボタンを再タップしても、Projection permission activityが1つのまま増殖せず、背面UIには同意待ちメッセージを表示した
+- clean logcat（開始前に`adb logcat -c`）ではRAZIO由来の`FATAL EXCEPTION` / `ANR in` / `AudioHardening`新規出力なし。元音声のミュート・二重再生量の聴感を人手で定量化していないため、2ch capture/downmix再生ループの動作を確認した状態であり、製品採用は未判定。RecentsからActivity taskをスワイプ終了した試行でもMono停止ログ、projection消失、Mono AudioTrack消失、global effect ownerのspecialUse FGS継続を確認した
+
 ### Hiss / Crackle AudioTrack overlay PoC
 
 元音声を `AudioPlaybackCapture` でコピーして再生するのではなく、RAZIO生成ノイズだけを `AudioTrack` で同時再生する検証。PoCの実装・測定条件は `docs/audio-research.md` の計画に合わせる。
