@@ -262,6 +262,7 @@ Phase 2 の実機 regression（変更したとき）:
 - radiko（`jp.radiko.Player`）を `PlaybackState=PLAYING` にし、Pixel 10 Pro / Android 17 / Pixel Buds Pro 2 A2DPでMediaProjectionの共有対象へ指定した。`AudioRecord` remote-submix trackはactiveだったが、有効信号は得られず、修正前は `Active（入力・出力）` のままRMS／Peak `−∞ dB` になった
 - 入力開始後2秒間、表示床（約`-80 dBFS`）を超えるpeakが無い場合に入力をunavailableへ戻すヘルス判定を追加。最新APK（SHA-256 `7584A65FC15111F3A8E3EB5B32661270B78E526DBA384F28A591FB6B873E7F43`）ではUIが `Partial（片側のみ）`、detailが `入力信号なし（無音または対象アプリのcapture policy制限の可能性）` となり、入力側に `信号待ち` を表示した（画面: `C:\Users\tatsuya\AppData\Local\Temp\razio-spectrum-evidence\radiko-partial-detail.png`）
 - 同じ解析セッションでradikoを停止してSpotifyを再生すると、UIが `Active（入力・出力）` へ復帰し、入力 `RMS -17.2 dB / Peak -6.3 dB`、出力推定 `RMS -23.1 dB / Peak -3.7 dB` を確認した（画面: `C:\Users\tatsuya\AppData\Local\Temp\razio-spectrum-evidence\spotify-active-postfix.png`）。入力PCMを再生し直さないため、解析開始による二重再生は発生しない
+- 継続監視の追試では、最新APK（SHA-256 `81F21C86E98672868E2EC5E7A173BBDE202D4206DCBAE1DFF388D2937473DC20`）でSpotify解析中にメディアを一時停止し、4秒後に `Partial（片側のみ）` と入力信号なし理由へ遷移した。再生を再開すると約3秒で `Active（入力・出力）` へ戻り、入力 `RMS -6.7 dB / Peak -0.1 dB` を確認した（画面: `C:\Users\tatsuya\AppData\Local\Temp\razio-spectrum-evidence\continuous-health-partial.png` / `continuous-health-active.png`）
 - 停止後はUI `Stopped`、`dumpsys media_projection` 空、`No active record clients`。capture policyの具体値は公開APIで取得できないため、原因はpolicy制限または無音の可能性として表示し、成功・失敗を断定せずにPartialへ落とす
 
 ### Mono passthrough mixdown PoC（削除済み・履歴）

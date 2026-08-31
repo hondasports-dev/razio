@@ -8,12 +8,13 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTrack
+import android.media.audiofx.Visualizer
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjection.Callback
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.media.audiofx.Visualizer
+import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
@@ -50,7 +51,7 @@ class SpectrumAnalyzerController(
     private var inputFrames = 0L
     private var outputFrames = 0L
     private var estimatedOutput = false
-    private var inputSignalObserved = false
+    private var inputSignalLastSeenAtMs = 0L
     private var inputSignalWarningShown = false
     private var inputHealthCheck: Runnable? = null
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -63,6 +64,7 @@ class SpectrumAnalyzerController(
         const val STOP_JOIN_TIMEOUT_MS = 500L
         const val INPUT_THREAD_NAME = "RazioSpectrumInput"
         const val INPUT_SIGNAL_TIMEOUT_MS = 2_000L
+        const val INPUT_SIGNAL_CHECK_INTERVAL_MS = 500L
         const val INPUT_SIGNAL_WARNING =
             "入力信号なし（無音または対象アプリのcapture policy制限の可能性）"
     }
@@ -81,7 +83,7 @@ class SpectrumAnalyzerController(
             running = true
             inputFrames = 0L
             outputFrames = 0L
-            inputSignalObserved = false
+            inputSignalLastSeenAtMs = 0L
             inputSignalWarningShown = false
             this.projection = projection
             generation
@@ -223,7 +225,7 @@ class SpectrumAnalyzerController(
             projection = null
             projectionCallback = null
             estimatedOutput = false
-            inputSignalObserved = false
+            inputSignalLastSeenAtMs = 0L
             inputSignalWarningShown = false
             oldVisualizer to Triple(oldInput, oldProjection, oldProjectionCallback)
         }
@@ -413,10 +415,9 @@ class SpectrumAnalyzerController(
         synchronized(lock) {
             if (!running || generation != token) return
             val signalPresent = SpectrumMath.hasUsableSignal(frame)
-            val signalRecovered = signalPresent && !inputSignalObserved
-            val recoveringFromWarning = signalRecovered && inputSignalWarningShown
+            val recoveringFromWarning = signalPresent && inputSignalWarningShown
             if (signalPresent) {
-                inputSignalObserved = true
+                inputSignalLastSeenAtMs = SystemClock.elapsedRealtime()
             }
             if (recoveringFromWarning) {
                 inputSignalWarningShown = false
@@ -469,21 +470,32 @@ class SpectrumAnalyzerController(
     private fun scheduleInputHealthCheck(capture: InputCapture) {
         val check = object : Runnable {
             override fun run() {
+                val nowMs = SystemClock.elapsedRealtime()
                 val shouldWarn = synchronized(lock) {
+                    val lastSeenAtMs = inputSignalLastSeenAtMs
                     running &&
                         generation == capture.token &&
                         inputCapture === capture &&
-                        !inputSignalObserved &&
-                        !inputSignalWarningShown
+                        !capture.stopSignal.get() &&
+                        !inputSignalWarningShown &&
+                        (lastSeenAtMs == 0L || nowMs - lastSeenAtMs >= INPUT_SIGNAL_TIMEOUT_MS)
                 }
                 if (shouldWarn) reportInputSignalUnavailable(capture.token)
                 synchronized(lock) {
-                    if (inputHealthCheck === this) inputHealthCheck = null
+                    val shouldContinue = running &&
+                        generation == capture.token &&
+                        inputCapture === capture &&
+                        !capture.stopSignal.get()
+                    if (shouldContinue) {
+                        mainHandler.postDelayed(this, INPUT_SIGNAL_CHECK_INTERVAL_MS)
+                    } else if (inputHealthCheck === this) {
+                        inputHealthCheck = null
+                    }
                 }
             }
         }
         synchronized(lock) {
-            if (!running || generation != capture.token || inputCapture !== capture || inputSignalObserved) {
+            if (!running || generation != capture.token || inputCapture !== capture || capture.stopSignal.get()) {
                 return
             }
             inputHealthCheck?.let { mainHandler.removeCallbacks(it) }
@@ -494,8 +506,12 @@ class SpectrumAnalyzerController(
 
     private fun reportInputSignalUnavailable(token: Long) {
         synchronized(lock) {
-            if (!running || generation != token || inputCapture == null ||
-                inputSignalObserved || inputSignalWarningShown
+            val capture = inputCapture
+            val lastSeenAtMs = inputSignalLastSeenAtMs
+            val signalStillFresh = lastSeenAtMs != 0L &&
+                SystemClock.elapsedRealtime() - lastSeenAtMs < INPUT_SIGNAL_TIMEOUT_MS
+            if (!running || generation != token || capture == null || capture.stopSignal.get() ||
+                signalStillFresh || inputSignalWarningShown
             ) {
                 return
             }
