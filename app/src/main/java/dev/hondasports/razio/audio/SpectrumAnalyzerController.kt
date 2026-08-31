@@ -1,6 +1,9 @@
 package dev.hondasports.razio.audio
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -258,10 +261,17 @@ class SpectrumAnalyzerController(
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
+    @SuppressLint("MissingPermission")
     private fun createInputCapture(
         projection: MediaProjection,
         token: Long,
     ): InputCapture {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            appContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            throw SecurityException("RECORD_AUDIO permission not granted")
+        }
         val sampleRate = AudioTrack.getNativeOutputSampleRate(android.media.AudioManager.STREAM_MUSIC)
             .takeIf { it >= MIN_SAMPLE_RATE }
             ?: DEFAULT_SAMPLE_RATE

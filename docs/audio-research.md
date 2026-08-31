@@ -566,6 +566,15 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: dark / light切替・launcher表示・アプリ再起動後のfiltered logcatに`FATAL EXCEPTION`、`ANR in`、`AudioHardening`、RAZIO由来の未処理Exceptionはなかった。画面オフ設定は60秒へ戻した
 - Status: **テーマ方針とランチャーブランディングのunit test / build / Pixel実機表示確認PASS**。この変更は音声backendやeffectの挙動を変更しない
 
+### 2026-08-31 / CI lint とスペクトラム入力権限ガード
+
+- Scope: GitHub Actionsで `test` / `lint` / `assembleDebug` を個別実行し、成功時に `app-debug.apk` をartifact化する。スペクトラム入力tapの `AudioRecord` 作成前に `RECORD_AUDIO` のruntime permissionを再確認し、権限が失われた場合は例外を握りつぶさずUIの `Error` へ戻す
+- Unit / lint / build: workflow `99781c79ea971da017379771b2901767` で `:app:testDebugUnitTest`、`lint`、`:app:assembleDebug` をすべてPASS（wrapperログはfinish後に削除）。debug APK SHA-256は `E47C896483EDE152E879733405CB2E0CE8796F20032DED99735567091C7899CA`
+- Device: Pixel 10 Pro（`blazer`、serial `56101FDCH006CX`）、Android 17（build `15828068`）、Pixel Buds Pro 2 Bluetooth A2DP。APKを `adb install -r` で更新し、RAZIOを起動、ON後にUIの `session 0 :: Active`、`DynamicsProcessing (Equalizer unused)`、FGS `isForeground=true`、`dumpsys media.audio_flinger` のsession `0` `DynamicsProcessing` 1 effectを確認した
+- Permission denial path: `RECORD_AUDIO`を一時的にrevokeして「解析を開始」を操作し、OSの録音権限ダイアログ表示後に拒否。UIが `Error` / `マイク権限がないため入力解析を開始できません` となり、クラッシュせず入力tapを開始しなかった。検証後はpermissionをgrantへ戻した
+- Stability: 検証範囲のfiltered logcatにRAZIO由来の `FATAL EXCEPTION`、ANR、`SecurityException` はなく、DynamicsProcessingのeffectとspecialUse FGSは維持された。出力先はPixel Buds Pro 2 Bluetooth A2DP
+- Status: **CIの3検証タスク・artifact設定、権限拒否時のスペクトラムUI復帰、実機のAudioEffect維持を確認済み**。音質そのものの聴感評価は今回の権限ガード変更の対象外
+
 ## 判断基準
 
 ### Green

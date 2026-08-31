@@ -92,6 +92,10 @@ adb logcat
 
 Windows では `gradlew.bat` を使う。
 
+### GitHub Actions
+
+`main` への push と pull request では `.github/workflows/ci.yml` が起動し、Android 37 / Build Tools 36.0.0 を準備したうえで `test`、`lint`、`assembleDebug` を個別に実行します。成功した実行では `razio-debug-apk` artifact として `app-debug.apk` をダウンロードできます。実機へのインストールと音声確認は、引き続きローカルのPixel検証で行います。
+
 ## 実機接続の確認
 
 ```bash

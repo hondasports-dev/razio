@@ -138,11 +138,11 @@ UI が audio backend の仕様を隠さないようにします。
 
 ## Phase 5: Automation
 
-- [ ] GitHub Actions
-- [ ] unit test
-- [ ] lint
-- [ ] assembleDebug
-- [ ] artifact APK
+- [x] GitHub Actions（`.github/workflows/ci.yml` で Android SDK準備・Gradle cache・検証ジョブを定義）
+- [x] unit test（CIで `./gradlew test` を実行）
+- [x] lint（CIで `./gradlew lint` を実行）
+- [x] assembleDebug（CIで `./gradlew assembleDebug` を実行）
+- [x] artifact APK（CIで `app-debug.apk` を `razio-debug-apk` としてupload）
 - [ ] AI エージェント用実装ループ改善
 
 ADB 実機試験はローカル環境を基本とし、必要になった場合に device farm を検討します。
