@@ -6,9 +6,7 @@ import android.os.Build
 import android.media.projection.MediaProjectionManager
 import dev.hondasports.razio.audio.AudioRouteMonitor
 import dev.hondasports.razio.audio.GlobalAudioEffectController
-import dev.hondasports.razio.audio.MonoPlaybackPocController
 import dev.hondasports.razio.audio.NoiseOverlayController
-import dev.hondasports.razio.audio.ProjectionOwner
 import dev.hondasports.razio.audio.RazioAudioService
 import dev.hondasports.razio.audio.RazioPreferences
 import dev.hondasports.razio.audio.SpectrumAnalyzerController
@@ -32,9 +30,6 @@ class RazioApp : Application() {
     lateinit var spectrumAnalyzer: SpectrumAnalyzerController
         private set
 
-    lateinit var monoPlaybackPoc: MonoPlaybackPocController
-        private set
-
     private lateinit var preferences: RazioPreferences
     private var powerPersistenceJob: Job? = null
     private var presetPersistenceJob: Job? = null
@@ -45,7 +40,6 @@ class RazioApp : Application() {
         audioEffects = GlobalAudioEffectController()
         noiseOverlay = NoiseOverlayController()
         spectrumAnalyzer = SpectrumAnalyzerController(this)
-        monoPlaybackPoc = MonoPlaybackPocController(this, ::stopMonoPlaybackPoc)
         audioEffects.initialize()
         AudioRouteMonitor(this, ::handleRouteChange).start()
         applicationScope.launch {
@@ -95,12 +89,6 @@ class RazioApp : Application() {
         resultCode: Int,
         data: Intent?,
     ) {
-        if (monoPlaybackPoc.state.value.running) {
-            spectrumAnalyzer.reportConsentDenied(
-                "Mono PoCを停止してからスペクトラム解析を開始してください",
-            )
-            return
-        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || data == null) {
             spectrumAnalyzer.reportConsentDenied("MediaProjectionはこの端末で利用できません")
             return
@@ -133,7 +121,7 @@ class RazioApp : Application() {
                 return@startForMediaProjection
             }
             spectrumAnalyzer.start(mediaProjection)
-        }, owner = ProjectionOwner.SPECTRUM)
+        })
     }
 
     fun spectrumConsentDenied(reason: String) {
@@ -149,75 +137,12 @@ class RazioApp : Application() {
         }
     }
 
-    fun startMonoPlaybackPoc(
-        resultCode: Int,
-        data: Intent?,
-    ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || data == null) {
-            monoPlaybackPoc.reportConsentDenied("Android 10未満ではAudioPlaybackCapture非対応")
-            return
-        }
-        if (spectrumAnalyzer.state.value.running) {
-            monoPlaybackPoc.reportConsentDenied(
-                "スペクトラム解析を停止してからMono PoCを開始してください",
-            )
-            return
-        }
-        val projectionManager = runCatching {
-            getSystemService(MediaProjectionManager::class.java)
-        }.getOrNull()
-        if (projectionManager == null) {
-            monoPlaybackPoc.reportConsentDenied("MediaProjection管理サービスを取得できませんでした")
-            return
-        }
-        monoServiceStarted = true
-        RazioAudioService.startForMediaProjection(
-            this,
-            onReady = { fgsReady ->
-                if (!fgsReady) {
-                    monoServiceStarted = false
-                    monoPlaybackPoc.reportConsentDenied(
-                        "MediaProjection用のforeground serviceを開始できませんでした",
-                    )
-                    return@startForMediaProjection
-                }
-                val mediaProjection = runCatching {
-                    projectionManager.getMediaProjection(resultCode, data)
-                }.getOrNull()
-                if (mediaProjection == null) {
-                    monoServiceStarted = false
-                    RazioAudioService.stopMono(this)
-                    monoPlaybackPoc.reportConsentDenied(
-                        "MediaProjectionの同意トークンを取得できませんでした",
-                    )
-                    return@startForMediaProjection
-                }
-                monoPlaybackPoc.start(mediaProjection)
-            },
-            owner = ProjectionOwner.MONO,
-        )
-    }
-
-    fun monoPlaybackConsentDenied(reason: String) {
-        stopMonoPlaybackPoc()
-        monoPlaybackPoc.reportConsentDenied(reason)
-    }
-
-    fun stopMonoPlaybackPoc() {
-        monoPlaybackPoc.stop()
-        if (monoServiceStarted) {
-            RazioAudioService.stopMono(this)
-            monoServiceStarted = false
-        }
-    }
-
     private fun applyPower(
         enabled: Boolean,
         persist: Boolean,
     ) {
         if (!enabled) {
             noiseOverlay.setPowerOn(false)
-            stopMonoPlaybackPoc()
         }
         audioEffects.setEnabled(enabled)
         if (enabled) {
@@ -238,9 +163,7 @@ class RazioApp : Application() {
         audioEffects.handleRouteChange()
         noiseOverlay.handleRouteChange()
         spectrumAnalyzer.handleRouteChange()
-        monoPlaybackPoc.handleRouteChange()
     }
 
     private var spectrumServiceStarted = false
-    private var monoServiceStarted = false
 }

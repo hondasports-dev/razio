@@ -512,7 +512,15 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Double playback finding: PoCは元アプリのAudioTrackを所有せず、ミュート・duck・差し替えを行わない。したがって上記の同時`started`状態は「元音声 + 加工音」の二重再生が起こり得ることの実機Evidenceであり、二重再生を防げたとは判定しない。RAZIO側はAudioFocusを要求していないため、radikoの再生状態は維持された。ユーザー聴感でも元音声と加工音の二重化が明確に確認され、Monoは不可と判定した。これはdownmix算術の不具合ではなく、通常アプリから元AudioTrackを抑制できない構造上の制約である。音量差／エコーの定量測定は未実施だが、製品採用条件を満たさないためMonoは不採用とする
 - Stop / power lifecycle: Mono PoCの停止ボタンで `mono playback PoC stopped` が出力され、`dumpsys media_projection` は`null`へ戻った。RAZIO電源をOFFにした場合も `mono playback PoC stopped`、RAZIOのAudioTrack消失、mediaProjection型FGS消失を確認し、radikoのAudioTrackだけが継続した。電源OFF後に残ったFGSはなく、ONへ戻すと既存DynamicsProcessingのspecialUse FGSだけが再開した。Activity taskをRecentsからスワイプ終了した試行でもMonoの停止ログ、projection消失、RAZIO AudioTrack消失を確認し、global effect ownerのspecialUse FGSだけが残った
 - Failure / stability: MediaProjection同意・AudioRecord stereo初期化・AudioTrack再生までのclean logcatでRAZIO由来の`FATAL EXCEPTION` / `ANR in` / `AudioHardening`新規記録はなかった。projection callbackの停止時はcontrollerがtrack／record／projectionを解放し、RazioAppがmono ownerのFGSを停止する。capture policyでPCMが取れないアプリやmono fallbackは`Error` / `Partial`として理由をUIへ出す。DRM・アプリ別policyの網羅検証は未実施
-- Status: **Pixel 10 Proで2ch入力形式のcapture→downmix→AudioTrack再生→停止ループが動作した**。これは左右独立信号や音質を証明する合格ではない。元音声の抑制はできず、ユーザー聴感でも二重化が確認されたため、Mono差し替えbackendの製品採用はNo-go（不採用）とする。buffer依存の概算遅延（約170–506 ms）とusage全体取得（UID指定なし）も残る。現行製品backendはDynamicsProcessing global経路のままとし、Mono UI／コードは検証証跡用の明示的opt-inに限定する
+- Status: **Pixel 10 Proで2ch入力形式のcapture→downmix→AudioTrack再生→停止ループが動作した**。これは左右独立信号や音質を証明する合格ではない。元音声の抑制はできず、ユーザー聴感でも二重化が確認されたため、Mono差し替えbackendの製品採用はNo-go（不採用）とする。buffer依存の概算遅延（約170–506 ms）とusage全体取得（UID指定なし）も残る。現行製品backendはDynamicsProcessing global経路のままとし、Mono UI／コードは後続変更で削除する
+
+### 2026-08-31 / Mono PoC removal
+
+- User decision: 二重再生を許容できないため、Mono差し替え経路は採用せず、監査用に残す方針も取り消して製品コードから削除した
+- Removed: `MonoPlaybackPocController`、`MonoPcmMixer`、`MonoPcmMixerTest`、Mono用MediaProjection／FGS owner・permission flow・UI・strings・service callbacks
+- Preserved: `AudioPlaybackCapture` は入力スペクトラムの観測tapとしてのみ残し、入力PCMを再生しない。通常のsession `0` DynamicsProcessing経路、NoiseOverlay、Spectrum analyzerは変更していない
+- Verification: workflow `3d83656746f6eb6b0beca5b9e9742364` の `test` / `lint` / `assembleDebug` がPASS。debug APK SHA-256は `BE93D00F8D5108519EE0E7D3B67CCDFBEFED6775097AC4373A956B5CAA4A7600`
+- Device: Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）へ`adb install -r`後に起動。UI treeにMono導線・文字列がなく、`session 0 :: Active`、`DynamicsProcessing (Equalizer unused)`、`RazioAudioService isForeground=true`、`media.audio_flinger`のsession `0`にDynamicsProcessing 1 effectを確認。起動後のfiltered logcatに`FATAL EXCEPTION`はなし
 
 ### 2026-08-30 / DynamicsProcessing-only production path and deeper high cut
 

@@ -248,11 +248,11 @@ Phase 2 の実機 regression（変更したとき）:
 - `dumpsys activity services`でProjection型FGS `isForeground=true`、停止後に`dumpsys media_projection`が`null`、Spotify再生継続を確認した。アプリのcrash / ANRはなし
 - `:app:testDebugUnitTest` / `:app:assembleDebug` はworkflow `5a5253f24ae29370dc7f3a53472a2221`でPASS。入力の音声を再生し直さないため、二重再生を作らない構造をコードとUI detailで確認した
 
-### Mono passthrough mixdown PoC
+### Mono passthrough mixdown PoC（削除済み・履歴）
 
-これは製品backendではなく、詳細パネルの `MONO MIXDOWN // EXPERIMENTAL` から明示的に起動する検証経路です。`MEDIA` / `GAME` / `UNKNOWN` usageに一致する再生ミックス全体（アプリUID指定なし）を、元アプリの再生を止めずに `AudioPlaybackCapture` で取得します。PCMを `(L + R) / 2` へ混合し、同じ値を左右へ複製したstereo `AudioTrack`へ返します。元音声のミュートは保証されず、二重再生・遅延が起こり得るため、聴感確認では音量二重化やエコーを合否とは別に記録します。
+これは2026-08-31に実施したが、現在の製品APKからは削除済みの履歴です。`MEDIA` / `GAME` / `UNKNOWN` usageに一致する再生ミックス全体（アプリUID指定なし）を、元アプリの再生を止めずに `AudioPlaybackCapture` で取得し、PCMを `(L + R) / 2` へ混合してstereo `AudioTrack`へ返していました。元音声のミュートができず、ユーザー聴感で二重化が明確だったため、Mono差し替えbackendは不採用とし、以下の手順は再実行しません。
 
-必須確認:
+削除前の確認手順（参照用・現行APKでは実行不可）:
 
 1. `:app:testDebugUnitTest` / `lint` / `:app:assembleDebug` を `gradle-run` で通し、debug APKをPixelへinstallする
 2. RAZIOをONにして対象アプリ（Spotify / radiko等）を再生し、詳細パネルの `Mono PoCを開始` を押す。`RECORD_AUDIO`許可後、Android 17では音声取得を要求したMediaProjection同意を通す
@@ -270,7 +270,7 @@ Phase 2 の実機 regression（変更したとき）:
 - `dumpsys audio`でradikoとRAZIOのstereo AudioTrackが同時に`state=started`、`dumpsys media.audio_flinger`でも両trackが`active`。RAZIO側は`FLAG_NO_SYSTEM_CAPTURE`（`ALLOW_CAPTURE_BY_NONE`）で、radikoの再生状態は維持された。実行中のFGSは`isForeground=true` / `types=0x40000020`
 - 停止ボタンでUIが`Stopped`、`dumpsys media_projection`が`null`、RAZIO AudioTrackが消え、specialUse FGSだけが残った。電源OFFでもMono trackとFGSが消え、radikoだけが継続した。ONへ戻すとDynamicsProcessing用specialUse FGSを再確認した
 - MediaProjection同意ダイアログ表示中に開始ボタンを再タップしても、Projection permission activityが1つのまま増殖せず、背面UIには同意待ちメッセージを表示した
-- clean logcat（開始前に`adb logcat -c`）ではRAZIO由来の`FATAL EXCEPTION` / `ANR in` / `AudioHardening`新規出力なし。ユーザー聴感で元音声と加工音の二重化が明確に確認され、Monoは不可と判定した。これはdownmix処理の失敗ではなく、通常アプリから元音声をミュートできない経路上の制約である。したがって2ch capture/downmix再生ループは技術PoCとして成立したものの、Mono差し替えbackendの製品採用はNo-go（不採用）とする。RecentsからActivity taskをスワイプ終了した試行でもMono停止ログ、projection消失、Mono AudioTrack消失、global effect ownerのspecialUse FGS継続を確認した
+- clean logcat（開始前に`adb logcat -c`）ではRAZIO由来の`FATAL EXCEPTION` / `ANR in` / `AudioHardening`新規出力なし。ユーザー聴感で元音声と加工音の二重化が明確に確認され、Monoは不可と判定した。これはdownmix処理の失敗ではなく、通常アプリから元音声をミュートできない経路上の制約である。したがって2ch capture/downmix再生ループは技術PoCとして成立したものの、Mono差し替えbackendの製品採用はNo-go（不採用）とし、PoCのcontroller・mixer・UI・service連携・unit testも削除した。RecentsからActivity taskをスワイプ終了した試行では削除前のMono停止ログ、projection消失、Mono AudioTrack消失、global effect ownerのspecialUse FGS継続を確認した
 
 ### Hiss / Crackle AudioTrack overlay PoC
 

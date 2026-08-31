@@ -26,7 +26,6 @@ class MainActivity : ComponentActivity() {
                         controller = app.audioEffects,
                         noiseOverlay = app.noiseOverlay,
                         spectrumAnalyzer = app.spectrumAnalyzer,
-                        monoPlaybackPoc = app.monoPlaybackPoc,
                         onPowerChange = app::setPowerOn,
                         onPresetChange = app::setPreset,
                         onPresetTuningChange = app::setPresetTuning,
@@ -36,9 +35,6 @@ class MainActivity : ComponentActivity() {
                         onSpectrumProjectionResult = app::startSpectrumProjection,
                         onSpectrumConsentDenied = app::spectrumConsentDenied,
                         onSpectrumStop = app::stopSpectrum,
-                        onMonoPlaybackStart = app::startMonoPlaybackPoc,
-                        onMonoPlaybackConsentDenied = app::monoPlaybackConsentDenied,
-                        onMonoPlaybackStop = app::stopMonoPlaybackPoc,
                     )
                 }
             }
