@@ -73,11 +73,13 @@
     <string name="preset_tuning_fade_depth">Fading深度</string>
     <string name="preset_tuning_fade_period">Fading周期</string>
     <string name="noise_overlay_label">ノイズオーバーレイ（PoC）</string>
+    <string name="noise_face_label">ノイズ</string>
     <string name="noise_hiss_label">Hiss</string>
     <string name="noise_crackle_label">Crackle</string>
     <string name="noise_hiss_gain_label">Hiss ゲイン</string>
     <string name="noise_crackle_gain_label">Crackle ゲイン</string>
-    <string name="noise_face_label">ノイズ</string>
+    <string name="noise_gain_decrease">%1$s を下げる</string>
+    <string name="noise_gain_increase">%1$s を上げる</string>
     <string name="noise_level_hint">ゲインは基準振幅を0 dBとして、-24〜+12 dBで調整できます。電源・プリセット調整・ノイズは再起動後も残ります。</string>
     <string name="noise_overlay_status">ノイズ: %1$s</string>
     <string name="noise_status_idle">Idle</string>

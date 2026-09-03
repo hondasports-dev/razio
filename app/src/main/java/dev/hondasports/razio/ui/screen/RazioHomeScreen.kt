@@ -14,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,7 +68,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -1852,17 +1856,19 @@ private fun NoiseFaceControls(
     onCrackleGainChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = stringResource(R.string.noise_face_label),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 3.sp),
+            color = MaterialTheme.colorScheme.primary,
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
+                .padding(top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             NoiseFaceSwitch(
@@ -1880,27 +1886,203 @@ private fun NoiseFaceControls(
                 modifier = Modifier.weight(1f),
             )
         }
-        TuningSlider(
+        FaceGainStrip(
             label = stringResource(R.string.noise_hiss_gain_label),
             value = noiseState.hissGainDb,
-            valueRange = NoiseGainRange.MIN_DB..NoiseGainRange.MAX_DB,
-            valueFormatter = ::formatTuningDb,
             enabled = enabled,
-            step = 1f,
             onValueChange = onHissGainChange,
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = 12.dp),
         )
-        TuningSlider(
+        FaceGainStrip(
             label = stringResource(R.string.noise_crackle_gain_label),
             value = noiseState.crackleGainDb,
-            valueRange = NoiseGainRange.MIN_DB..NoiseGainRange.MAX_DB,
-            valueFormatter = ::formatTuningDb,
             enabled = enabled,
-            step = 1f,
             onValueChange = onCrackleGainChange,
-            modifier = Modifier.padding(top = 2.dp),
+            modifier = Modifier.padding(top = 8.dp),
         )
     }
+}
+
+@Composable
+private fun FaceGainStrip(
+    label: String,
+    value: Float,
+    enabled: Boolean,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val valueRange = NoiseGainRange.MIN_DB..NoiseGainRange.MAX_DB
+    var localValue by remember(value) {
+        mutableStateOf(value.coerceIn(valueRange.start, valueRange.endInclusive))
+    }
+    val decreaseLabel = stringResource(R.string.noise_gain_decrease, label)
+    val increaseLabel = stringResource(R.string.noise_gain_increase, label)
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = formatTuningDb(localValue),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            FaceSegmentTrack(
+                fraction = gainFraction(localValue, valueRange),
+                enabled = enabled,
+                onFraction = { fraction ->
+                    localValue = snapToStep(
+                        valueRange.start + fraction * (valueRange.endInclusive - valueRange.start),
+                        valueRange,
+                        1f,
+                    )
+                },
+                onFinished = {
+                    if (localValue != value) onValueChange(localValue)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 52.dp)
+                    .align(Alignment.Center),
+            )
+            FaceStepButton(
+                glyph = "‹",
+                enabled = enabled && localValue > valueRange.start,
+                onClickLabel = decreaseLabel,
+                onClick = {
+                    val next = snapToStep(localValue - 1f, valueRange, 1f)
+                    localValue = next
+                    onValueChange(next)
+                },
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
+            FaceStepButton(
+                glyph = "›",
+                enabled = enabled && localValue < valueRange.endInclusive,
+                onClickLabel = increaseLabel,
+                onClick = {
+                    val next = snapToStep(localValue + 1f, valueRange, 1f)
+                    localValue = next
+                    onValueChange(next)
+                },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FaceStepButton(
+    glyph: String,
+    enabled: Boolean,
+    onClickLabel: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clickable(
+                enabled = enabled,
+                onClickLabel = onClickLabel,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = glyph,
+            style = MaterialTheme.typography.headlineMedium,
+            color = if (enabled) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.32f)
+            },
+        )
+    }
+}
+
+@Composable
+private fun FaceSegmentTrack(
+    fraction: Float,
+    enabled: Boolean,
+    onFraction: (Float) -> Unit,
+    onFinished: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val warm = colorScheme.primary
+    val idle = colorScheme.outline.copy(alpha = 0.28f)
+    val segmentCount = 24
+    val activeSegments = (fraction.coerceIn(0f, 1f) * segmentCount)
+        .roundToInt()
+        .coerceIn(0, segmentCount)
+    val latestOnFraction by rememberUpdatedState(onFraction)
+    val latestOnFinished by rememberUpdatedState(onFinished)
+    var widthPx by remember { mutableStateOf(0f) }
+    Row(
+        modifier = modifier
+            .onSizeChanged { widthPx = it.width.toFloat() }
+            .height(32.dp)
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    down.consume()
+                    fun emit(x: Float) {
+                        val next = if (widthPx <= 0f) 0f else (x / widthPx).coerceIn(0f, 1f)
+                        latestOnFraction(next)
+                    }
+                    emit(down.position.x)
+                    do {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        emit(change.position.x)
+                        change.consume()
+                    } while (event.changes.any { it.pressed })
+                    latestOnFinished()
+                }
+            },
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(segmentCount) { index ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        color = if (index < activeSegments) {
+                            warm.copy(
+                                alpha = if (enabled) {
+                                    0.45f + 0.55f * (index / segmentCount.toFloat())
+                                } else {
+                                    0.28f
+                                },
+                            )
+                        } else {
+                            idle
+                        },
+                    ),
+            )
+        }
+    }
+}
+
+private fun gainFraction(
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+): Float {
+    val span = valueRange.endInclusive - valueRange.start
+    if (span <= 0f) return 0f
+    return ((value - valueRange.start) / span).coerceIn(0f, 1f)
 }
 
 @Composable

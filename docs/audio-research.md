@@ -662,6 +662,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: アプリ由来の `FATAL EXCEPTION` / `ANR in` なし。Shortwave の `fading input gain update failed` は今回の変更範囲外で再現した
 - Status: dB ゲイン操作と永続化の実機構造確認は PASS
 
+### 2026-09-03 / 第一面ゲインをプリセット面の操作に合わせる
+
+- Change: 第一面の Hiss / Crackle ゲインから Material `Slider` を外し、プリセットの `‹ ›` と出力メーターと同じ24セグメント帯にした。dB範囲とPCMゲインは変更していない
+- Device: Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）。debug APK（SHA-256 `FCD26DE0D4B47E288A6D589E12317F164000DA5F141EEFC0611649F7DD16F0F7`）をinstallし、第一面UI treeの SeekBar は0件。`Hiss ゲイン` `4.0 dB` / `Crackle ゲイン` `2.0 dB` と両側 `‹ ›` を確認した
+- Interaction: Hiss `›` を2回タップして `6.0 dB`。セグメント帯の中央タップで `-6.0 dB` へ変わり、Crackle は `2.0 dB` のまま
+- Stability: `AndroidRuntime:E` dump に `FATAL EXCEPTION` / `ANR in` はなく、操作後もプロセス `20519` が生存していた
+- Status: 第一面ゲインUIの実機構造確認は PASS
+
 ## 判断基準
 
 ### Green

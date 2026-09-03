@@ -62,7 +62,7 @@ Other app playback ───────────────┐
 RAZIO generated noise → AudioTrack ┘
 ```
 
-この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。Hiss / Crackle は基準振幅を `0 dB` とし、第一面のスイッチとスライダーで `-24〜+12 dB` を1 dB刻みで変更できます。`+12 dB` は旧400%と同じ4倍です。値は `NoiseSignalGenerator` が各PCMバッファへ反映し、合算後は従来どおり `[-1, 1]` にclampします。スイッチとゲインは `RazioPreferences` のDataStoreへ保存し、再起動後も復元します。AudioTrackの再生成なしで次のバッファから反映します。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
+この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。Hiss / Crackle は基準振幅を `0 dB` とし、第一面のスイッチと、プリセットと同じ `‹ ›`・出力メーターと同じセグメント帯で `-24〜+12 dB` を1 dB刻みで変更できます。`+12 dB` は旧400%と同じ4倍です。値は `NoiseSignalGenerator` が各PCMバッファへ反映し、合算後は従来どおり `[-1, 1]` にclampします。スイッチとゲインは `RazioPreferences` のDataStoreへ保存し、再起動後も復元します。AudioTrackの再生成なしで次のバッファから反映します。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
 
 ### 入出力スペクトラムアナライザー（検証用）
 
@@ -136,7 +136,7 @@ Error
 
 音声経路の状態を隠さないまま、ホームの第一面はラジオ製品面にします。`RazioTheme` は端末壁紙の dynamic color を既定では使わず、琥珀色をアクセントにした dark / light scheme を提供します。`RazioHomeScreen` はこのテーマを局所上書きせず、FilterChip や設定画面風の状態チップを第一面に置きません。
 
-第一面の構成は、上部のアンバー光、大きな `RAZIO`、円形の電源、単一の `LIVE` / `STANDBY`（失敗時は既存の Error / Unsupported 文言）、プリセットの `‹ 名前 ›` と6点インジケータ、一行blurb、塗りつぶしの周波数カーブ、細い出力メーター、Hiss / Crackle のスイッチと強さ、`詳細設定を開く` です。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値から外れているときだけアンバーの活性表示で押せます。未変更時は非活性の輪郭だけにします。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプのどれでも切り替わります。`session 0` や `DynamicsProcessing` の観測文言、6本の周波数スライダー、同調ダイヤルは詳細へ下げます。電源は既存の `onPowerChange` へ接続します。CRTテクスチャや端末ログ風のフッターは使いません。
+第一面の構成は、上部のアンバー光、大きな `RAZIO`、円形の電源、単一の `LIVE` / `STANDBY`（失敗時は既存の Error / Unsupported 文言）、プリセットの `‹ 名前 ›` と6点インジケータ、一行blurb、塗りつぶしの周波数カーブ、細い出力メーター、Hiss / Crackle のスイッチとプリセットと同じ `‹ ›`・セグメント帯のゲイン、`詳細設定を開く` です。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値から外れているときだけアンバーの活性表示で押せます。未変更時は非活性の輪郭だけにします。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプのどれでも切り替わります。`session 0` や `DynamicsProcessing` の観測文言、6本の周波数スライダー、同調ダイヤルは詳細へ下げます。電源は既存の `onPowerChange` へ接続します。CRTテクスチャや端末ログ風のフッターは使いません。
 
 ランチャーは標準テンプレートのロボット画像を使わず、ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO用adaptive iconへ置き換えます。API 21〜25向けには同じベクターをlayer-listでフォールバックし、API 26以降はadaptive iconのmaskに任せます。ホームのヒーローは選択中プリセットの `PresetFrequencyCurve` です。dB軸・6本の境界線・凡例は出さず、塗りとグローのカーブだけを置きます。検証用スペクトラムとは別に、出力mix tapのPeakを示す細いsignal meterも第一面に残します。どれもAudioEffectの成立や聴感を単独で保証するものではなく、tapの前後位置は端末依存です。
 
