@@ -79,7 +79,7 @@ import dev.hondasports.razio.audio.AudioEngineReport
 import dev.hondasports.razio.audio.AudioEffectUiState
 import dev.hondasports.razio.audio.GlobalAudioEffectController
 import dev.hondasports.razio.audio.NoiseOverlayController
-import dev.hondasports.razio.audio.NoiseLevelRange
+import dev.hondasports.razio.audio.NoiseGainRange
 import dev.hondasports.razio.audio.NoiseOverlayStatus
 import dev.hondasports.razio.audio.NoiseOverlayUiState
 import dev.hondasports.razio.audio.RazioStatus
@@ -109,8 +109,8 @@ fun RazioHomeRoute(
     onPresetTuningChange: (AudioPresetTuning) -> Unit = {},
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
-    onHissLevelChange: (Float) -> Unit = {},
-    onCrackleLevelChange: (Float) -> Unit = {},
+    onHissGainChange: (Float) -> Unit = {},
+    onCrackleGainChange: (Float) -> Unit = {},
     onSpectrumStartWithoutProjection: () -> Unit = {},
     onSpectrumProjectionResult: (Int, Intent?) -> Unit = { _, _ -> },
     onSpectrumConsentDenied: (String) -> Unit = {},
@@ -178,8 +178,8 @@ fun RazioHomeRoute(
         noiseState = noiseState,
         onHissChange = onHissChange,
         onCrackleChange = onCrackleChange,
-        onHissLevelChange = onHissLevelChange,
-        onCrackleLevelChange = onCrackleLevelChange,
+        onHissGainChange = onHissGainChange,
+        onCrackleGainChange = onCrackleGainChange,
         spectrumState = spectrumState,
         captureRequestPending = captureRequestPending,
         onSpectrumStart = {
@@ -218,8 +218,8 @@ fun RazioHomeScreen(
     noiseState: NoiseOverlayUiState = NoiseOverlayUiState(),
     onHissChange: (Boolean) -> Unit = {},
     onCrackleChange: (Boolean) -> Unit = {},
-    onHissLevelChange: (Float) -> Unit = {},
-    onCrackleLevelChange: (Float) -> Unit = {},
+    onHissGainChange: (Float) -> Unit = {},
+    onCrackleGainChange: (Float) -> Unit = {},
     spectrumState: SpectrumAnalyzerUiState = SpectrumAnalyzerUiState(),
     captureRequestPending: Boolean = false,
     onSpectrumStart: () -> Unit = {},
@@ -279,8 +279,8 @@ fun RazioHomeScreen(
                 enabled = state.powerOn && !state.initializing,
                 onHissChange = onHissChange,
                 onCrackleChange = onCrackleChange,
-                onHissLevelChange = onHissLevelChange,
-                onCrackleLevelChange = onCrackleLevelChange,
+                onHissGainChange = onHissGainChange,
+                onCrackleGainChange = onCrackleGainChange,
                 modifier = Modifier.padding(top = 10.dp),
             )
             DetailsToggle(
@@ -1675,10 +1675,6 @@ private fun formatDb(value: Float): String {
     return String.format(Locale.US, "%.1f dB", value)
 }
 
-private fun formatNoiseLevel(value: Float): String {
-    return String.format(Locale.US, "%.0f%%", value * 100f)
-}
-
 @Composable
 private fun spectrumStatusText(status: SpectrumAnalyzerStatus): String {
     val resId = when (status) {
@@ -1852,8 +1848,8 @@ private fun NoiseFaceControls(
     enabled: Boolean,
     onHissChange: (Boolean) -> Unit,
     onCrackleChange: (Boolean) -> Unit,
-    onHissLevelChange: (Float) -> Unit,
-    onCrackleLevelChange: (Float) -> Unit,
+    onHissGainChange: (Float) -> Unit,
+    onCrackleGainChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -1885,23 +1881,23 @@ private fun NoiseFaceControls(
             )
         }
         TuningSlider(
-            label = stringResource(R.string.noise_hiss_level_label),
-            value = noiseState.hissLevel,
-            valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
-            valueFormatter = ::formatNoiseLevel,
+            label = stringResource(R.string.noise_hiss_gain_label),
+            value = noiseState.hissGainDb,
+            valueRange = NoiseGainRange.MIN_DB..NoiseGainRange.MAX_DB,
+            valueFormatter = ::formatTuningDb,
             enabled = enabled,
-            step = 0.05f,
-            onValueChange = onHissLevelChange,
+            step = 1f,
+            onValueChange = onHissGainChange,
             modifier = Modifier.padding(top = 4.dp),
         )
         TuningSlider(
-            label = stringResource(R.string.noise_crackle_level_label),
-            value = noiseState.crackleLevel,
-            valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
-            valueFormatter = ::formatNoiseLevel,
+            label = stringResource(R.string.noise_crackle_gain_label),
+            value = noiseState.crackleGainDb,
+            valueRange = NoiseGainRange.MIN_DB..NoiseGainRange.MAX_DB,
+            valueFormatter = ::formatTuningDb,
             enabled = enabled,
-            step = 0.05f,
-            onValueChange = onCrackleLevelChange,
+            step = 1f,
+            onValueChange = onCrackleGainChange,
             modifier = Modifier.padding(top = 2.dp),
         )
     }

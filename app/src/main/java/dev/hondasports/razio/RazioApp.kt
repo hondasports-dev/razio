@@ -86,13 +86,13 @@ class RazioApp : Application() {
         persistNoiseSettings()
     }
 
-    fun setHissLevel(level: Float) {
-        noiseOverlay.setHissLevel(level)
+    fun setHissGainDb(gainDb: Float) {
+        noiseOverlay.setHissGainDb(gainDb)
         persistNoiseSettings()
     }
 
-    fun setCrackleLevel(level: Float) {
-        noiseOverlay.setCrackleLevel(level)
+    fun setCrackleGainDb(gainDb: Float) {
+        noiseOverlay.setCrackleGainDb(gainDb)
         persistNoiseSettings()
     }
 

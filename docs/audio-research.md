@@ -654,6 +654,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: アプリ由来の `FATAL EXCEPTION` / `ANR in` なし。Shortwave 復元直後に `fading input gain update failed`（`AudioEffect: invalid parameter operation`）が1回出て fading modulation が停止した。effect 自体は `preset=shortwave` / `setEnabled actual=true` で生成できている
 - Status: 機能追加の実機構造確認は PASS。Shortwave の揺れ聴感と fading input gain 失敗は未クローズ
 
+### 2026-09-03 / Hiss・Crackle を dB ゲインへ
+
+- Change: 第一面スライダーをパーセント倍率から mix gain（dB）へ変更した。基準振幅は `0 dB`（旧100%）、範囲は `-24〜+12 dB`（`+12 dB` は旧400%と同じ約4倍）。PCM は `10^(dB/20)` を既存の Hiss `0.04` / Crackle `0.20` に掛ける。旧 `hiss_level` / `crackle_level` は起動時に dB へ変換する
+- Device: Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）。UIは `Hiss ゲイン` `1.0 dB`（旧110%からの移行）と `Crackle ゲイン` `0.0 dB` を表示した
+- Persistence: Hiss を `4.0 dB`、Crackle を `2.0 dB` へ変更後に force-stop → 再起動。UIが同じ dB を復元し、logcat は `noise overlay started hiss=true hissGain=4.0dB crackle=false crackleGain=2.0dB`
+- Stability: アプリ由来の `FATAL EXCEPTION` / `ANR in` なし。Shortwave の `fading input gain update failed` は今回の変更範囲外で再現した
+- Status: dB ゲイン操作と永続化の実機構造確認は PASS
+
 ## 判断基準
 
 ### Green

@@ -1,5 +1,6 @@
 package dev.hondasports.razio.audio
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -40,30 +41,14 @@ class NoiseSignalGeneratorTest {
     }
 
     @Test
-    fun zeroLevelsMuteBothSources() {
-        val buffer = ShortArray(48_000)
-
-        NoiseSignalGenerator(sampleRate = 48_000, seed = 4L)
-            .fill(
-                buffer,
-                hiss = true,
-                crackle = true,
-                hissLevel = 0f,
-                crackleLevel = 0f,
-            )
-
-        assertTrue(buffer.all { it == 0.toShort() })
-    }
-
-    @Test
-    fun increasingHissLevelIncreasesNoiseEnergy() {
+    fun increasingHissGainIncreasesNoiseEnergy() {
         val quiet = ShortArray(48_000)
         val loud = ShortArray(48_000)
 
         NoiseSignalGenerator(sampleRate = 48_000, seed = 5L)
-            .fill(quiet, hiss = true, crackle = false, hissLevel = 0.5f)
+            .fill(quiet, hiss = true, crackle = false, hissGainDb = -6f)
         NoiseSignalGenerator(sampleRate = 48_000, seed = 5L)
-            .fill(loud, hiss = true, crackle = false, hissLevel = 2f)
+            .fill(loud, hiss = true, crackle = false, hissGainDb = 6f)
 
         val quietEnergy = quiet.sumOf { kotlin.math.abs(it.toInt()).toLong() }
         val loudEnergy = loud.sumOf { kotlin.math.abs(it.toInt()).toLong() }
@@ -71,14 +56,14 @@ class NoiseSignalGeneratorTest {
     }
 
     @Test
-    fun increasingCrackleLevelIncreasesTransientPeaks() {
+    fun increasingCrackleGainIncreasesTransientPeaks() {
         val quiet = ShortArray(48_000 * 4)
         val loud = ShortArray(48_000 * 4)
 
         NoiseSignalGenerator(sampleRate = 48_000, seed = 6L)
-            .fill(quiet, hiss = false, crackle = true, crackleLevel = 0.5f)
+            .fill(quiet, hiss = false, crackle = true, crackleGainDb = -6f)
         NoiseSignalGenerator(sampleRate = 48_000, seed = 6L)
-            .fill(loud, hiss = false, crackle = true, crackleLevel = 2f)
+            .fill(loud, hiss = false, crackle = true, crackleGainDb = 6f)
 
         val quietPeak = quiet.maxOf { kotlin.math.abs(it.toInt()) }
         val loudPeak = loud.maxOf { kotlin.math.abs(it.toInt()) }
@@ -86,7 +71,7 @@ class NoiseSignalGeneratorTest {
     }
 
     @Test
-    fun maxLevelsProduceMeaningfulOutputWithoutClipping() {
+    fun maxGainProducesMeaningfulOutputWithoutClipping() {
         val buffer = ShortArray(48_000 * 4)
 
         NoiseSignalGenerator(sampleRate = 48_000, seed = 7L)
@@ -94,8 +79,8 @@ class NoiseSignalGeneratorTest {
                 buffer,
                 hiss = true,
                 crackle = true,
-                hissLevel = NoiseLevelRange.MAX,
-                crackleLevel = NoiseLevelRange.MAX,
+                hissGainDb = NoiseGainRange.MAX_DB,
+                crackleGainDb = NoiseGainRange.MAX_DB,
             )
 
         val peak = buffer.maxOf { kotlin.math.abs(it.toInt()) }
@@ -106,5 +91,19 @@ class NoiseSignalGeneratorTest {
         val rms = kotlin.math.sqrt(sumSquares.toDouble() / buffer.size)
         assertTrue(rms > 1_000.0)
         assertTrue(peak < Short.MAX_VALUE)
+    }
+
+    @Test
+    fun legacyPercentLevelsMapOntoGainDb() {
+        assertEquals(0f, NoiseGainRange.fromLegacyLevel(1f), 0.01f)
+        assertEquals(6f, NoiseGainRange.fromLegacyLevel(2f), 0.01f)
+        assertEquals(12f, NoiseGainRange.fromLegacyLevel(4f), 0.01f)
+        assertEquals(NoiseGainRange.MIN_DB, NoiseGainRange.fromLegacyLevel(0f), 0.01f)
+    }
+
+    @Test
+    fun defaultGainIsUnityLinear() {
+        assertEquals(1f, NoiseGainRange.toLinear(0f), 0.01f)
+        assertEquals(2f, NoiseGainRange.toLinear(6f), 0.02f)
     }
 }

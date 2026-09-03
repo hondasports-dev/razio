@@ -75,10 +75,10 @@
     <string name="noise_overlay_label">ノイズオーバーレイ（PoC）</string>
     <string name="noise_hiss_label">Hiss</string>
     <string name="noise_crackle_label">Crackle</string>
-    <string name="noise_hiss_level_label">Hiss 強さ</string>
-    <string name="noise_crackle_level_label">Crackle 強さ</string>
+    <string name="noise_hiss_gain_label">Hiss ゲイン</string>
+    <string name="noise_crackle_gain_label">Crackle ゲイン</string>
     <string name="noise_face_label">ノイズ</string>
-    <string name="noise_level_hint">強さは基準値を100％として、0〜400％で調整できます。電源・プリセット調整・ノイズは再起動後も残ります。</string>
+    <string name="noise_level_hint">ゲインは基準振幅を0 dBとして、-24〜+12 dBで調整できます。電源・プリセット調整・ノイズは再起動後も残ります。</string>
     <string name="noise_overlay_status">ノイズ: %1$s</string>
     <string name="noise_status_idle">Idle</string>
     <string name="noise_status_starting">Starting</string>

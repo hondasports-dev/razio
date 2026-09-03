@@ -5,7 +5,10 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.log10
 import kotlin.math.max
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,8 +28,8 @@ class NoiseOverlayController {
     private var powerOn = false
     private var hissEnabled = false
     private var crackleEnabled = false
-    private var hissLevel = NoiseLevelRange.DEFAULT
-    private var crackleLevel = NoiseLevelRange.DEFAULT
+    private var hissGainDb = NoiseGainRange.DEFAULT_DB
+    private var crackleGainDb = NoiseGainRange.DEFAULT_DB
     private var playback: Playback? = null
     private var playbackDetail: String? = null
     private var released = false
@@ -45,8 +48,8 @@ class NoiseOverlayController {
             if (released) return
             hissEnabled = settings.hissEnabled
             crackleEnabled = settings.crackleEnabled
-            hissLevel = sanitizeLevel(settings.hissLevel)
-            crackleLevel = sanitizeLevel(settings.crackleLevel)
+            hissGainDb = NoiseGainRange.sanitize(settings.hissGainDb)
+            crackleGainDb = NoiseGainRange.sanitize(settings.crackleGainDb)
         }
         reconcile()
     }
@@ -56,8 +59,8 @@ class NoiseOverlayController {
             NoiseOverlaySettings(
                 hissEnabled = hissEnabled,
                 crackleEnabled = crackleEnabled,
-                hissLevel = hissLevel,
-                crackleLevel = crackleLevel,
+                hissGainDb = hissGainDb,
+                crackleGainDb = crackleGainDb,
             )
         }
     }
@@ -78,20 +81,20 @@ class NoiseOverlayController {
         reconcile()
     }
 
-    /** Updates the Hiss amplitude multiplier while the overlay is available. */
-    fun setHissLevel(level: Float) {
+    /** Updates the Hiss mix gain while the overlay is available. */
+    fun setHissGainDb(gainDb: Float) {
         synchronized(lock) {
             if (released || !powerOn) return
-            hissLevel = sanitizeLevel(level)
+            hissGainDb = NoiseGainRange.sanitize(gainDb)
         }
         reconcile()
     }
 
-    /** Updates the Crackle amplitude multiplier while the overlay is available. */
-    fun setCrackleLevel(level: Float) {
+    /** Updates the Crackle mix gain while the overlay is available. */
+    fun setCrackleGainDb(gainDb: Float) {
         synchronized(lock) {
             if (released || !powerOn) return
-            crackleLevel = sanitizeLevel(level)
+            crackleGainDb = NoiseGainRange.sanitize(gainDb)
         }
         reconcile()
     }
@@ -145,8 +148,8 @@ class NoiseOverlayController {
                 NoiseOverlaySettings(
                     hissEnabled = hissEnabled,
                     crackleEnabled = crackleEnabled,
-                    hissLevel = hissLevel,
-                    crackleLevel = crackleLevel,
+                    hissGainDb = hissGainDb,
+                    crackleGainDb = crackleGainDb,
                 )
             }
         } ?: return
@@ -223,9 +226,9 @@ class NoiseOverlayController {
             }
             AudioEffectLog.i(
                 "noise overlay started hiss=${requested.hissEnabled} " +
-                    "hissLevel=${formatLevel(requested.hissLevel)} " +
+                    "hissGain=${formatGain(requested.hissGainDb)} " +
                     "crackle=${requested.crackleEnabled} " +
-                    "crackleLevel=${formatLevel(requested.crackleLevel)} " +
+                    "crackleGain=${formatGain(requested.crackleGainDb)} " +
                     newPlayback.detail,
             )
             publishActiveState(newPlayback.detail)
@@ -253,8 +256,8 @@ class NoiseOverlayController {
                         NoiseOverlaySettings(
                             hissEnabled = hissEnabled,
                             crackleEnabled = crackleEnabled,
-                            hissLevel = hissLevel,
-                            crackleLevel = crackleLevel,
+                            hissGainDb = hissGainDb,
+                            crackleGainDb = crackleGainDb,
                         )
                     }
                 } ?: break
@@ -262,8 +265,8 @@ class NoiseOverlayController {
                     buffer,
                     hiss = requested.hissEnabled,
                     crackle = requested.crackleEnabled,
-                    hissLevel = requested.hissLevel,
-                    crackleLevel = requested.crackleLevel,
+                    hissGainDb = requested.hissGainDb,
+                    crackleGainDb = requested.crackleGainDb,
                 )
                 val written = track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
                 if (written < 0) {
@@ -314,8 +317,8 @@ class NoiseOverlayController {
             powerOn = true,
             hissEnabled = settings.hissEnabled,
             crackleEnabled = settings.crackleEnabled,
-            hissLevel = settings.hissLevel,
-            crackleLevel = settings.crackleLevel,
+            hissGainDb = settings.hissGainDb,
+            crackleGainDb = settings.crackleGainDb,
             status = NoiseOverlayStatus.Starting,
             detail = "AudioTrackを初期化中（AudioFocusなし）",
         )
@@ -327,8 +330,8 @@ class NoiseOverlayController {
                 powerOn = powerOn,
                 hissEnabled = hissEnabled,
                 crackleEnabled = crackleEnabled,
-                hissLevel = hissLevel,
-                crackleLevel = crackleLevel,
+                hissGainDb = hissGainDb,
+                crackleGainDb = crackleGainDb,
                 status = NoiseOverlayStatus.Active,
                 detail = detail,
             )
@@ -342,8 +345,8 @@ class NoiseOverlayController {
                 powerOn = powerOn,
                 hissEnabled = hissEnabled,
                 crackleEnabled = crackleEnabled,
-                hissLevel = hissLevel,
-                crackleLevel = crackleLevel,
+                hissGainDb = hissGainDb,
+                crackleGainDb = crackleGainDb,
                 status = NoiseOverlayStatus.Error,
                 detail = throwable.message ?: throwable.javaClass.simpleName,
             )
@@ -357,15 +360,15 @@ class NoiseOverlayController {
                 !powerOn -> NoiseOverlayUiState(
                     hissEnabled = hissEnabled,
                     crackleEnabled = crackleEnabled,
-                    hissLevel = hissLevel,
-                    crackleLevel = crackleLevel,
+                    hissGainDb = hissGainDb,
+                    crackleGainDb = crackleGainDb,
                 )
                 hissEnabled || crackleEnabled -> NoiseOverlayUiState(
                     powerOn = true,
                     hissEnabled = hissEnabled,
                     crackleEnabled = crackleEnabled,
-                    hissLevel = hissLevel,
-                    crackleLevel = crackleLevel,
+                    hissGainDb = hissGainDb,
+                    crackleGainDb = crackleGainDb,
                     status = if (playback == null) {
                         NoiseOverlayStatus.Disabled
                     } else {
@@ -375,8 +378,8 @@ class NoiseOverlayController {
                 )
                 else -> NoiseOverlayUiState(
                     powerOn = true,
-                    hissLevel = hissLevel,
-                    crackleLevel = crackleLevel,
+                    hissGainDb = hissGainDb,
+                    crackleGainDb = crackleGainDb,
                     status = NoiseOverlayStatus.Disabled,
                     detail = "Hiss / Crackle はOFF",
                 )
@@ -393,17 +396,8 @@ class NoiseOverlayController {
             ?: DEFAULT_SAMPLE_RATE
     }
 
-    private fun sanitizeLevel(level: Float): Float {
-        return if (level.isFinite()) {
-            level.coerceIn(NoiseLevelRange.MIN, NoiseLevelRange.MAX)
-        } else {
-            NoiseLevelRange.DEFAULT
-        }
-    }
-
-    private fun formatLevel(level: Float): String {
-        return "${(level * 100f).toInt()}%"
-    }
+    private fun formatGain(gainDb: Float): String =
+        String.format(java.util.Locale.US, "%.1fdB", gainDb)
 
     private fun releaseTrack(track: AudioTrack) {
         runCatching { track.stop() }
@@ -445,24 +439,36 @@ enum class NoiseOverlayStatus {
 data class NoiseOverlaySettings(
     val hissEnabled: Boolean = false,
     val crackleEnabled: Boolean = false,
-    val hissLevel: Float = NoiseLevelRange.DEFAULT,
-    val crackleLevel: Float = NoiseLevelRange.DEFAULT,
+    val hissGainDb: Float = NoiseGainRange.DEFAULT_DB,
+    val crackleGainDb: Float = NoiseGainRange.DEFAULT_DB,
 )
 
 data class NoiseOverlayUiState(
     val powerOn: Boolean = false,
     val hissEnabled: Boolean = false,
     val crackleEnabled: Boolean = false,
-    val hissLevel: Float = NoiseLevelRange.DEFAULT,
-    val crackleLevel: Float = NoiseLevelRange.DEFAULT,
+    val hissGainDb: Float = NoiseGainRange.DEFAULT_DB,
+    val crackleGainDb: Float = NoiseGainRange.DEFAULT_DB,
     val status: NoiseOverlayStatus = NoiseOverlayStatus.Idle,
     val detail: String = "",
 )
 
-internal object NoiseLevelRange {
-    const val MIN = 0f
-    const val MAX = 4f
-    const val DEFAULT = 1f
+internal object NoiseGainRange {
+    const val MIN_DB = -24f
+    const val MAX_DB = 12f
+    const val DEFAULT_DB = 0f
+
+    fun sanitize(gainDb: Float): Float {
+        if (!gainDb.isFinite()) return DEFAULT_DB
+        return gainDb.roundToInt().toFloat().coerceIn(MIN_DB, MAX_DB)
+    }
+
+    fun toLinear(gainDb: Float): Float = 10f.pow(sanitize(gainDb) / 20f)
+
+    fun fromLegacyLevel(level: Float): Float {
+        if (!level.isFinite() || level <= 0f) return MIN_DB
+        return sanitize(20f * log10(level))
+    }
 }
 
 /** Pure PCM source used by the AudioTrack writer and unit-tested without a device. */
@@ -480,16 +486,16 @@ internal class NoiseSignalGenerator(
         buffer: ShortArray,
         hiss: Boolean,
         crackle: Boolean,
-        hissLevel: Float = NoiseLevelRange.DEFAULT,
-        crackleLevel: Float = NoiseLevelRange.DEFAULT,
+        hissGainDb: Float = NoiseGainRange.DEFAULT_DB,
+        crackleGainDb: Float = NoiseGainRange.DEFAULT_DB,
     ) {
-        val safeHissLevel = sanitizeLevel(hissLevel)
-        val safeCrackleLevel = sanitizeLevel(crackleLevel)
+        val hissLinear = NoiseGainRange.toLinear(hissGainDb)
+        val crackleLinear = NoiseGainRange.toLinear(crackleGainDb)
         for (index in buffer.indices) {
             val white = nextSigned()
             lowPass += (white - lowPass) * HISS_LOW_PASS_ALPHA
             var sample = if (hiss) {
-                (white - lowPass) * HISS_GAIN * safeHissLevel
+                (white - lowPass) * HISS_GAIN * hissLinear
             } else {
                 0f
             }
@@ -498,7 +504,7 @@ internal class NoiseSignalGenerator(
                     nextUnit() < CRACKLE_EVENTS_PER_SECOND / sampleRate.toFloat()
                 ) {
                     crackleRemaining = 1 + (nextLong().ushr(62).toInt() and 0x3)
-                    crackleValue = nextSigned() * CRACKLE_GAIN * safeCrackleLevel
+                    crackleValue = nextSigned() * CRACKLE_GAIN * crackleLinear
                 }
                 if (crackleRemaining > 0) {
                     sample += crackleValue
@@ -509,14 +515,6 @@ internal class NoiseSignalGenerator(
             buffer[index] = (sample.coerceIn(-1f, 1f) * Short.MAX_VALUE)
                 .toInt()
                 .toShort()
-        }
-    }
-
-    private fun sanitizeLevel(level: Float): Float {
-        return if (level.isFinite()) {
-            level.coerceIn(NoiseLevelRange.MIN, NoiseLevelRange.MAX)
-        } else {
-            NoiseLevelRange.DEFAULT
         }
     }
 

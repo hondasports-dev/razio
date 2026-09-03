@@ -171,7 +171,7 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品UI（現行）
 
-第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は大きな `RAZIO`、円形電源、`LIVE` / `STANDBY`、プリセットの `‹ 名前 ›` と点インジケータ、塗りカーブ、細い出力メーター、Hiss / Crackle のスイッチと `0〜400%` スライダー、`詳細設定を開く` で構成する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと周波数スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
+第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は大きな `RAZIO`、円形電源、`LIVE` / `STANDBY`、プリセットの `‹ 名前 ›` と点インジケータ、塗りカーブ、細い出力メーター、Hiss / Crackle のスイッチと `-24〜+12 dB` ゲインスライダー、`詳細設定を開く` で構成する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと周波数スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
 
 必須確認:
 
@@ -300,8 +300,8 @@ Phase 2 の実機 regression（変更したとき）:
 
 レベル調整の追加確認:
 
-1. 第一面で `Hiss` / `Crackle` スイッチと `Hiss 強さ` / `Crackle 強さ` が表示され、`0〜400%`を5%刻みで変更できること
-2. Hissだけ、Crackleだけをそれぞれ0%→100%→400%へ動かし、他方のスイッチ状態とAudioTrackを維持したまま聴感の強さが変わること
+1. 第一面で `Hiss` / `Crackle` スイッチと `Hiss ゲイン` / `Crackle ゲイン` が表示され、`-24〜+12 dB`を1 dB刻みで変更できること
+2. Hissだけ、Crackleだけをそれぞれ `-6 dB → 0 dB → +12 dB` へ動かし、他方のスイッチ状態とAudioTrackを維持したまま聴感の強さが変わること
 3. 変更後にRAZIOをOFFへ戻すとノイズAudioTrackが停止し、再ON時は最後のスイッチとレベルが復元されること。force-stop後の再起動でもDataStoreから復元されること
 
 2026-08-31 のPixel確認結果:
@@ -313,8 +313,8 @@ Phase 2 の実機 regression（変更したとき）:
 
 2026-09-03 の製品面・永続化確認:
 
-- Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）で第一面の `ノイズ` / Hiss / Crackle と `0〜400%` スライダー、6つ目の `Shortwave` を確認した
-- Shortwave の低域カット開始 `510 Hz` と Hiss ON / `110%` が force-stop 後も復元された。詳細は `docs/audio-research.md`
+- Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）で第一面の `ノイズ` / Hiss / Crackle と `-24〜+12 dB` ゲインスライダー、6つ目の `Shortwave` を確認した
+- Shortwave の低域カット開始 `510 Hz` と Hiss ON / ゲイン `4.0 dB` が force-stop 後も復元された。詳細は `docs/audio-research.md`
 
 ### DynamicsProcessing単独経路
 

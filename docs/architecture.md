@@ -62,7 +62,7 @@ Other app playback ───────────────┐
 RAZIO generated noise → AudioTrack ┘
 ```
 
-この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。Hiss / Crackle はそれぞれ基準値 `100%` の振幅倍率を持ち、第一面のスイッチとスライダーで `0〜400%` を5%刻みで変更できます。値は `NoiseSignalGenerator` が各PCMバッファへ反映し、合算後は従来どおり `[-1, 1]` にclampします。スイッチとレベルは `RazioPreferences` のDataStoreへ保存し、再起動後も復元します。AudioTrackの再生成なしで次のバッファから反映します。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
+この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。Hiss / Crackle は基準振幅を `0 dB` とし、第一面のスイッチとスライダーで `-24〜+12 dB` を1 dB刻みで変更できます。`+12 dB` は旧400%と同じ4倍です。値は `NoiseSignalGenerator` が各PCMバッファへ反映し、合算後は従来どおり `[-1, 1]` にclampします。スイッチとゲインは `RazioPreferences` のDataStoreへ保存し、再起動後も復元します。AudioTrackの再生成なしで次のバッファから反映します。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
 
 ### 入出力スペクトラムアナライザー（検証用）
 

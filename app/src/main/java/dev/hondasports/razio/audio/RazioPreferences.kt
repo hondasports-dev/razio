@@ -69,8 +69,12 @@ class RazioPreferences(
         return NoiseOverlaySettings(
             hissEnabled = prefs[HISS_ENABLED] ?: false,
             crackleEnabled = prefs[CRACKLE_ENABLED] ?: false,
-            hissLevel = prefs[HISS_LEVEL] ?: NoiseLevelRange.DEFAULT,
-            crackleLevel = prefs[CRACKLE_LEVEL] ?: NoiseLevelRange.DEFAULT,
+            hissGainDb = prefs[HISS_GAIN_DB]
+                ?: prefs[HISS_LEVEL]?.let(NoiseGainRange::fromLegacyLevel)
+                ?: NoiseGainRange.DEFAULT_DB,
+            crackleGainDb = prefs[CRACKLE_GAIN_DB]
+                ?: prefs[CRACKLE_LEVEL]?.let(NoiseGainRange::fromLegacyLevel)
+                ?: NoiseGainRange.DEFAULT_DB,
         )
     }
 
@@ -78,8 +82,10 @@ class RazioPreferences(
         dataStore.edit { prefs ->
             prefs[HISS_ENABLED] = settings.hissEnabled
             prefs[CRACKLE_ENABLED] = settings.crackleEnabled
-            prefs[HISS_LEVEL] = settings.hissLevel
-            prefs[CRACKLE_LEVEL] = settings.crackleLevel
+            prefs[HISS_GAIN_DB] = NoiseGainRange.sanitize(settings.hissGainDb)
+            prefs[CRACKLE_GAIN_DB] = NoiseGainRange.sanitize(settings.crackleGainDb)
+            prefs.remove(HISS_LEVEL)
+            prefs.remove(CRACKLE_LEVEL)
         }
     }
 
@@ -88,6 +94,8 @@ class RazioPreferences(
         val PRESET_ID = stringPreferencesKey("preset_id")
         val HISS_ENABLED = booleanPreferencesKey("hiss_enabled")
         val CRACKLE_ENABLED = booleanPreferencesKey("crackle_enabled")
+        val HISS_GAIN_DB = floatPreferencesKey("hiss_gain_db")
+        val CRACKLE_GAIN_DB = floatPreferencesKey("crackle_gain_db")
         val HISS_LEVEL = floatPreferencesKey("hiss_level")
         val CRACKLE_LEVEL = floatPreferencesKey("crackle_level")
 

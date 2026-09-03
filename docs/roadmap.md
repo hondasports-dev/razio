@@ -123,11 +123,11 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] 周波数境界の細分化（低域・高域に中間境界／中間ゲインを追加し、カット傾斜を二段階で調整）
 - [x] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
-- [x] Hiss / Crackle レベル調整（第一面の0〜400%スライダー。5%刻み、基準ゲイン Hiss `0.04` / Crackle `0.20`）
+- [x] Hiss / Crackle ゲイン調整（第一面の -24〜+12 dB スライダー。1 dB刻み、基準振幅 0 dB、内部基準 Hiss `0.04` / Crackle `0.20`）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
 - [x] Shortwave（弱い短波受信。500Hz〜1.25kHz、±6dB / 2.4秒の揺れ）
 - [x] プリセット調整とノイズレベルの永続化（DataStore。再起動後も復元）
-- [x] Hiss / Crackle を第一面操作にする（スイッチ＋0〜400%スライダー。詳細は状態観測）
+- [x] Hiss / Crackle を第一面操作にする（スイッチ＋-24〜+12 dBスライダー。詳細は状態観測）
 - [x] Mono 感の強化は不採用（DynamicsProcessing / Equalizerに左右混合APIはなく、別経路PoCのcapture→downmix→AudioTrackは元音声との二重化をユーザー聴感で確認。製品コード・UI・testは削除し、詳細は `docs/audio-research.md` の履歴へ残す）
 
 AudioEffect API だけで困難な項目は backend の制約を確認してから実装します。
