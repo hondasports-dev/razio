@@ -137,7 +137,7 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 - [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading を ‹ › ・点・横スワイプで切替）
 - [x] dark / light 方針（system dark modeに追従する暖色light / dark scheme。dynamic colorは既定OFF）
 - [x] icon / branding（ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO adaptive icon。API 21〜25はvector layer-listへフォールバック）
-- [x] 詳細調整UI（`詳細設定を開く` で6周波数境界・同調ダイヤル・ゲイン・Dynamics・Character値とNoise / Spectrum / Engine検証パネルを展開。定義値から外れたときだけプリセット名直下のリセットで復帰）
+- [x] 詳細調整UI（`詳細設定を開く` で6周波数境界・同調ダイヤル・ゲイン・Dynamics・Character値とNoise / Spectrum / Engine検証パネルを展開。プリセット名直下のリセットは常時表示し、定義値から外れたときだけ活性）
 
 UI が audio backend の仕様を隠さないようにします。
 

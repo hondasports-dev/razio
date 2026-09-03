@@ -11,6 +11,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -583,21 +584,13 @@ private fun PresetStage(
                     )
                     val pageCustomized = preset == selectedPreset &&
                         tuning.sanitized() != selectedPreset.defaultTuning().sanitized()
-                    if (pageCustomized) {
-                        TextButton(
-                            onClick = onResetTuning,
-                            enabled = enabled,
-                            modifier = Modifier.padding(top = 2.dp),
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    R.string.preset_tuning_reset_named,
-                                    presetLabel(preset),
-                                ),
-                                maxLines = 1,
-                            )
-                        }
-                    }
+                    ResetTuningButton(
+                        presetName = presetLabel(preset),
+                        active = pageCustomized,
+                        enabled = enabled,
+                        onClick = onResetTuning,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
                     PresetFrequencyCurve(
                         tuning = pageTuning,
                         powerOn = powerOn,
@@ -670,6 +663,62 @@ private fun PresetStage(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ResetTuningButton(
+    presetName: String,
+    active: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val canReset = active && enabled
+    val border = if (canReset) {
+        colorScheme.primary
+    } else {
+        colorScheme.outline.copy(alpha = 0.38f)
+    }
+    val fill = if (canReset) {
+        colorScheme.primary.copy(alpha = 0.18f)
+    } else {
+        Color.Transparent
+    }
+    val content = if (canReset) {
+        colorScheme.primary
+    } else {
+        colorScheme.onSurfaceVariant.copy(alpha = 0.42f)
+    }
+    val pill = RoundedCornerShape(100.dp)
+    val label = stringResource(R.string.preset_tuning_reset_named, presetName)
+    Row(
+        modifier = modifier
+            .clip(pill)
+            .border(width = 1.dp, color = border, shape = pill)
+            .background(color = fill, shape = pill)
+            .clickable(
+                enabled = canReset,
+                onClickLabel = label,
+            ) { onClick() }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(content),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = content,
+            fontWeight = if (canReset) FontWeight.SemiBold else FontWeight.Medium,
+            maxLines = 1,
+        )
     }
 }
 
