@@ -9,6 +9,7 @@ import dev.hondasports.razio.audio.preset.AmDynamicsConfig
 import dev.hondasports.razio.audio.preset.AudioPreset
 import dev.hondasports.razio.audio.preset.AudioPresetParameters
 import dev.hondasports.razio.audio.preset.AudioPresetTuning
+import dev.hondasports.razio.audio.preset.FadingApplyMode
 import dev.hondasports.razio.audio.preset.toParameters
 import dev.hondasports.razio.domain.model.AudioSession
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -481,6 +482,9 @@ class GlobalAudioEffectController(
         if (parameters.fadeDepthDb <= 0f || parameters.fadePeriodMs <= 0L) return
 
         val startedAtMs = SystemClock.uptimeMillis()
+        val usePostEqCurve = shouldUseDynamicsPostEqCurve()
+        var consecutiveFailures = 0
+        var fadingMode: FadingApplyMode? = null
         val runnable = object : Runnable {
             override fun run() {
                 if (fadingRunnable !== this) return
@@ -495,26 +499,46 @@ class GlobalAudioEffectController(
                     return
                 }
                 val elapsedMs = SystemClock.uptimeMillis() - startedAtMs
-                val phase = (elapsedMs.toDouble() / parameters.fadePeriodMs.toDouble()) *
-                    (2.0 * kotlin.math.PI)
-                val gainDb = parameters.inputGainDb +
-                    kotlin.math.sin(phase).toFloat() * parameters.fadeDepthDb
                 try {
-                    currentDynamics.setInputGainAllChannelsTo(gainDb)
+                    val mode = AmDynamicsConfig.applyFadingGain(
+                        dynamics = currentDynamics,
+                        parameters = parameters,
+                        elapsedMs = elapsedMs,
+                        usePostEqCurve = usePostEqCurve,
+                        preferMbcPost = fadingMode == FadingApplyMode.MBC_POST,
+                    )
+                    consecutiveFailures = 0
+                    if (fadingMode != mode) {
+                        fadingMode = mode
+                        AudioEffectLog.i("fading write=${mode.name.lowercase()}")
+                    }
                 } catch (throwable: Throwable) {
-                    AudioEffectLog.e("fading input gain update failed", throwable)
-                    stopFading()
-                    return
+                    consecutiveFailures += 1
+                    if (AmDynamicsConfig.shouldLogFadingFailure(consecutiveFailures)) {
+                        AudioEffectLog.e(
+                            "fading update failed count=$consecutiveFailures",
+                            throwable,
+                        )
+                    }
                 }
-                transitionHandler.postDelayed(this, FADING_TICK_MS)
+                transitionHandler.postDelayed(
+                    this,
+                    AmDynamicsConfig.nextFadingDelayMs(consecutiveFailures),
+                )
             }
         }
         fadingRunnable = runnable
         AudioEffectLog.i(
             "fading modulation started depth=${parameters.fadeDepthDb}dB " +
-                "period=${parameters.fadePeriodMs}ms tick=${FADING_TICK_MS}ms",
+                "period=${parameters.fadePeriodMs}ms tick=${FADING_TICK_MS}ms " +
+                "base=${AmDynamicsConfig.resolvedInputGainDb(parameters, usePostEqCurve)}dB",
         )
-        transitionHandler.post(runnable)
+        // Session 0 often rejects setParameter in the same turn as create/enable.
+        // Keep ticking with backoff instead of cancelling the Shortwave wander.
+        transitionHandler.postDelayed(
+            runnable,
+            AmDynamicsConfig.nextFadingDelayMs(consecutiveFailures = 1),
+        )
     }
 
     private fun stopFading() {

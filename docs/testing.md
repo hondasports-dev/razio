@@ -16,6 +16,7 @@ RAZIO では、通常の Android アプリとしての品質に加えて「実�
 対象:
 
 - preset の値変換（`AmPresetTest`）
+- Shortwave / Fading の mapped input-gain 揺れと MBC post フォールバック範囲（`AmDynamicsConfigFadingTest`）
 - AudioEffect state transition（`RazioStatusTest`）
 - error mapping
 - support 判定ロジック
@@ -320,6 +321,11 @@ Phase 2 の実機 regression（変更したとき）:
 
 - Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）へdebug APK（SHA-256 `FCD26DE0D4B47E288A6D589E12317F164000DA5F141EEFC0611649F7DD16F0F7`）をinstallした。第一面のUI treeに SeekBar は0件。`Hiss ゲイン` / `Crackle ゲイン` はプリセットと同じ `‹ ›` と24セグメント帯だった
 - Hiss `›` を2回タップして `4.0 dB → 6.0 dB`。セグメント帯の中央タップで `-6.0 dB` へ飛び、Crackle は `2.0 dB` のまま。`AndroidRuntime:E` dump に `FATAL EXCEPTION` / `ANR in` はなく、プロセス `20519` は生存した
+
+2026-09-03 の Shortwave fading フォールバック確認:
+
+- Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）へdebug APK（SHA-256 `41EE484DD8AED042E590D6BACD2D6FBC904CE9E1253215BA6CDD777D5EE9A68C`）をinstallし、force-stop 後に Shortwave を復元起動した
+- `fading modulation started` のあと `fading write=mbc_post`。`fading modulation stopped` は出ず、UIは `Shortwave` / `遠い短波` / `LIVE`。詳細は `docs/audio-research.md`
 
 ### DynamicsProcessing単独経路
 

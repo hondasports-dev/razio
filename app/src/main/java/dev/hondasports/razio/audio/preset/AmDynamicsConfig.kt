@@ -85,9 +85,9 @@ internal object AmDynamicsConfig {
             true,
         )
             .setInputGainAllChannelsTo(
-                inputGainDb(
+                configInputGainDb(
                     parameters,
-                    gentle = usePostEqCurve || !isSaturation(parameters),
+                    usePostEqCurve = usePostEqCurve,
                 ),
             )
             .setPreEqAllChannelsTo(preEq)
@@ -135,14 +135,8 @@ internal object AmDynamicsConfig {
         val t = progress.coerceIn(0f, 1f)
         dynamics.setInputGainAllChannelsTo(
             lerp(
-                inputGainDb(
-                    from,
-                    gentle = usePostEqCurve || !isSaturation(from),
-                ),
-                inputGainDb(
-                    to,
-                    gentle = usePostEqCurve || !isSaturation(to),
-                ),
+                configInputGainDb(from, usePostEqCurve),
+                configInputGainDb(to, usePostEqCurve),
                 t,
             ),
         )
@@ -263,6 +257,7 @@ internal object AmDynamicsConfig {
         cutoffHz: Float,
         parameters: AudioPresetParameters,
         gentle: Boolean,
+        postGainOverrideDb: Float? = null,
     ): DynamicsProcessing.MbcBand {
         return DynamicsProcessing.MbcBand(
             true,
@@ -275,9 +270,129 @@ internal object AmDynamicsConfig {
             -80f,
             1f,
             0f,
-            mbcPostGainDb(parameters, gentle),
+            postGainOverrideDb ?: mbcPostGainDb(parameters, gentle),
         )
     }
+
+    /**
+     * Input gain written into the DynamicsProcessing Config / apply path.
+     * Pixel session 0 rejects later setInputGain on some configs
+     * (Shortwave), so fading presets leave 0 here. The Handler writes
+     * input gain when the HAL allows it, otherwise MBC post-gain.
+     */
+    fun configInputGainDb(
+        parameters: AudioPresetParameters,
+        usePostEqCurve: Boolean,
+    ): Float {
+        if (parameters.fadeDepthDb > 0f) return 0f
+        return resolvedInputGainDb(parameters, usePostEqCurve)
+    }
+
+    fun resolvedInputGainDb(
+        parameters: AudioPresetParameters,
+        usePostEqCurve: Boolean,
+    ): Float = inputGainDb(
+        parameters,
+        gentle = usePostEqCurve || !isSaturation(parameters),
+    )
+
+    /**
+     * Writes the current fading wander. Pixel session 0 accepts later
+     * `setInputGain` on Fading but rejects it after a Shortwave Config;
+     * MBC post-gain stays writable and is the fallback level path.
+     */
+    fun applyFadingGain(
+        dynamics: DynamicsProcessing,
+        parameters: AudioPresetParameters,
+        elapsedMs: Long,
+        usePostEqCurve: Boolean,
+        preferMbcPost: Boolean = false,
+    ): FadingApplyMode {
+        if (!preferMbcPost) {
+            val gainDb = fadingInputGainDb(
+                parameters = parameters,
+                elapsedMs = elapsedMs,
+                usePostEqCurve = usePostEqCurve,
+            )
+            val inputWrite = runCatching {
+                dynamics.setInputGainAllChannelsTo(gainDb)
+            }
+            if (inputWrite.isSuccess) return FadingApplyMode.INPUT_GAIN
+        }
+        applyFadingToMbcPost(
+            dynamics = dynamics,
+            parameters = parameters,
+            elapsedMs = elapsedMs,
+            usePostEqCurve = usePostEqCurve,
+        )
+        return FadingApplyMode.MBC_POST
+    }
+
+    private fun applyFadingToMbcPost(
+        dynamics: DynamicsProcessing,
+        parameters: AudioPresetParameters,
+        elapsedMs: Long,
+        usePostEqCurve: Boolean,
+    ) {
+        val gentle = usePostEqCurve || !isSaturation(parameters)
+        val postGainDb = fadingMbcPostGainDb(
+            parameters = parameters,
+            elapsedMs = elapsedMs,
+            usePostEqCurve = usePostEqCurve,
+        )
+        val bandCount = dynamics.config.mbcBandCount.coerceAtMost(mbcCutoffsHz.size)
+        for (index in 0 until bandCount) {
+            dynamics.setMbcBandAllChannelsTo(
+                index,
+                createMbcBand(
+                    cutoffHz = mbcCutoffsHz[index],
+                    parameters = parameters,
+                    gentle = gentle,
+                    postGainOverrideDb = postGainDb,
+                ),
+            )
+        }
+    }
+
+    fun fadingInputGainDb(
+        parameters: AudioPresetParameters,
+        elapsedMs: Long,
+        usePostEqCurve: Boolean = true,
+    ): Float {
+        val base = resolvedInputGainDb(parameters, usePostEqCurve)
+        if (parameters.fadeDepthDb <= 0f || parameters.fadePeriodMs <= 0L) {
+            return base
+        }
+        val phase = (elapsedMs.toDouble() / parameters.fadePeriodMs.toDouble()) *
+            (2.0 * kotlin.math.PI)
+        val gainDb = base + kotlin.math.sin(phase).toFloat() * parameters.fadeDepthDb
+        return gainDb.coerceIn(
+            AudioPresetTuning.MIN_INPUT_GAIN_DB,
+            AudioPresetTuning.MAX_INPUT_GAIN_DB,
+        )
+    }
+
+    fun fadingMbcPostGainDb(
+        parameters: AudioPresetParameters,
+        elapsedMs: Long,
+        usePostEqCurve: Boolean = true,
+    ): Float {
+        val gentle = usePostEqCurve || !isSaturation(parameters)
+        val offsetDb = fadingInputGainDb(parameters, elapsedMs, usePostEqCurve) -
+            resolvedInputGainDb(parameters, usePostEqCurve)
+        return (mbcPostGainDb(parameters, gentle) + offsetDb)
+            .coerceIn(0f, DP_ONLY_MBC_POST_GAIN_MAX_DB)
+    }
+
+    fun shouldLogFadingFailure(consecutiveFailures: Int): Boolean =
+        consecutiveFailures in 1..3 ||
+            (consecutiveFailures > 0 && consecutiveFailures % 10 == 0)
+
+    fun nextFadingDelayMs(
+        consecutiveFailures: Int,
+        tickMs: Long = 100L,
+        retryMs: Long = 500L,
+    ): Long = if (consecutiveFailures > 0) retryMs else tickMs
 
     private fun inputGainDb(
         parameters: AudioPresetParameters,
@@ -403,4 +518,9 @@ internal object AmDynamicsConfig {
         end: Float,
         progress: Float,
     ): Float = start + (end - start) * progress.coerceIn(0f, 1f)
+}
+
+internal enum class FadingApplyMode {
+    INPUT_GAIN,
+    MBC_POST,
 }

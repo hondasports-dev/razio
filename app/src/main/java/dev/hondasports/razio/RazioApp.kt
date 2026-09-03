@@ -45,7 +45,6 @@ class RazioApp : Application() {
             context = this,
             effectProfileProvider = audioEffects::spectrumEffectProfile,
         )
-        audioEffects.initialize()
         AudioRouteMonitor(this, ::handleRouteChange).start()
         applicationScope.launch {
             audioEffects.restorePersistedTunings(
@@ -53,6 +52,7 @@ class RazioApp : Application() {
                 saved = preferences.savedTunings(),
             )
             noiseOverlay.restoreSettings(preferences.savedNoiseSettings())
+            audioEffects.initialize()
             if (preferences.savedPowerOn()) {
                 applyPower(enabled = true, persist = false)
             }

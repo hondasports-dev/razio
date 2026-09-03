@@ -670,6 +670,16 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: `AndroidRuntime:E` dump に `FATAL EXCEPTION` / `ANR in` はなく、操作後もプロセス `20519` が生存していた
 - Status: 第一面ゲインUIの実機構造確認は PASS
 
+### 2026-09-03 / Shortwave の揺れを MBC post へフォールバック
+
+- Change: Pixel session 0 は Shortwave Config のあと `setInputGainAllChannelsTo` を `invalid parameter operation` で拒否する。Handler は失敗しても停止せず、同じ周期で MBC post-gain を揺らす。Fading は従来どおり input gain を更新できる
+- Device: Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）。debug APK（SHA-256 `41EE484DD8AED042E590D6BACD2D6FBC904CE9E1253215BA6CDD777D5EE9A68C`）を force-stop 後に起動
+- Cold start: `dynamics create ok` は `preset=shortwave` が1回だけ。`inputGain=0.0dB fade=6.0dB/2400ms`、`setEnabled actual=true`、`fading modulation started depth=6.0dB period=2400ms tick=100ms base=-0.65dB`
+- Fallback: 初回 tick で `fading write=mbc_post`。以降 `fading modulation stopped` / `fading update failed` / `fading input gain update failed` は出ていない
+- UI: 再前面化後に `Shortwave` / `遠い短波` / `LIVE` / `ON`。FGS `RazioAudioService` は `isForeground=true`、プロセス `26534` が生存
+- Stability: `AndroidRuntime:E` dump に `FATAL EXCEPTION` / `ANR in` なし
+- Status: Shortwave の揺れ経路（input gain 拒否時の MBC post フォールバック）の実機構造確認は PASS
+
 ## 判断基準
 
 ### Green

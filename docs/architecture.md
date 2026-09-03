@@ -188,7 +188,7 @@ Output
 | Weak signal | 380 Hz 以下を -30 dB | 900〜1,100 Hz を +5 dB | 1.35 kHz 以上を -48 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
 | Saturation | 180 Hz 以下を -24 dB | 450〜2,400 Hz を +2 dB | 5.0 kHz 以上を -48 dB（2.4 kHzからロールオフ） | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
 | Fading | Narrow AM と同じ | Narrow AM と同じ | Narrow AM と同じ | input gain を約±3 dB、3.2 秒周期でゆっくり変動させる受信揺らぎ |
-| Shortwave | 500 Hz 以下を -30 dB | 850〜1,150 Hz を +4 dB | 1.25 kHz 以上を -48 dB | 遠い短波受信。MBC 14:1 / post +8 dB / makeup +10 dB / input -1 dB。input gain を約±6 dB、2.4 秒周期で揺らす |
+| Shortwave | 500 Hz 以下を -30 dB | 850〜1,150 Hz を +4 dB | 1.25 kHz 以上を -48 dB | 遠い短波受信。MBC 14:1 / post +8 dB / makeup +10 dB / input -1 dB。音量を約±6 dB、2.4 秒周期で揺らす（HAL が `setInputGain` を拒否する端末では MBC post-gain） |
 
 表のMBC比率・入力ゲインはプリセットの音作り上の目標値です。現行のDynamicsProcessing単独経路では、歪みと音量低下を抑える安全マッピングを通してからnative effectへ渡します。実機readbackの目安は Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`、Saturation `8:1`・input `+6dB`・post `0dB` です。
 
@@ -196,7 +196,7 @@ Output
 - 非Saturation（Narrow / Vintage / Weak / Fading）は、実機での歪み報告を受けて穏和化したMBCを使います。目安は Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`。Post-EQは中域を最大 `+3dB` まで許容します。Saturationは入力を抑えた強いMBCで意図した質感を残します。
 - MBC後段にプリセットごとのPost-EQを置き、makeup gainで低域・高域のカットが戻らないようにします。最終ピークはlimiter（-1 dB）で制限します。
 - Saturation だけは DynamicsProcessing の input gain を +10 dB にし、強い MBC（20:1）へ入力を押し込みます。Android AudioEffect に汎用 wave-shaper はないため、倍音を含む物理的な飽和とは区別して扱います。
-- Fading と Shortwave は独立したノイズ信号を生成せず、DynamicsProcessing の input gain を Handler で約 100 ms ごとに更新します。プリセット切替・OFF・route change・release では更新 Runnable を必ずキャンセルし、effect chain を解放した後に古い更新が走らないようにします。
+- Fading と Shortwave は独立したノイズ信号を生成せず、DynamicsProcessing の mapped input gain を中心に Handler で約 100 ms ごとに揺らします。起動時は DataStore のプリセットを読んでから effect を1回だけ生成し、Narrow AM を作ってすぐ Shortwave へ作り直さないようにします。Fading / Shortwave の Config 入力ゲインは 0 のままにし、揺れは Handler が書きます。Pixel の session 0 は Shortwave Config のあと `setInputGain` を `invalid parameter operation` で拒否するので、その場合は MBC post-gain を同じ周期で揺らして音量のゆらぎを維持します。Fading は従来どおり input gain を更新できます。初回 tick と失敗後は 500 ms バックオフし、単発失敗では停止しません。プリセット切替・OFF・route change・release では更新 Runnable を必ずキャンセルし、effect chain を解放した後に古い更新が走らないようにします。
 
 プリセット変更は既存のDynamicsProcessingをreleaseせず、約80 msの補間でPost-EQ / MBCパラメータを更新します。切替中の再タップは、その時点の補間値を次の遷移の開始値にします。effectが壊れて更新できない場合だけ再生成へ戻します。
 
