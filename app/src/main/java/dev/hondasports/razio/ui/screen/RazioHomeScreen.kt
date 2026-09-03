@@ -43,7 +43,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -275,6 +274,15 @@ fun RazioHomeScreen(
                 running = spectrumState.running,
                 modifier = Modifier.padding(top = 8.dp),
             )
+            NoiseFaceControls(
+                noiseState = noiseState,
+                enabled = state.powerOn && !state.initializing,
+                onHissChange = onHissChange,
+                onCrackleChange = onCrackleChange,
+                onHissLevelChange = onHissLevelChange,
+                onCrackleLevelChange = onCrackleLevelChange,
+                modifier = Modifier.padding(top = 10.dp),
+            )
             DetailsToggle(
                 expanded = tuningExpanded,
                 enabled = !state.initializing,
@@ -314,10 +322,6 @@ fun RazioHomeScreen(
                     DevelopmentPanels(
                         state = state,
                         noiseState = noiseState,
-                        onHissChange = onHissChange,
-                        onCrackleChange = onCrackleChange,
-                        onHissLevelChange = onHissLevelChange,
-                        onCrackleLevelChange = onCrackleLevelChange,
                         spectrumState = spectrumState,
                         captureRequestPending = captureRequestPending,
                         onSpectrumStart = onSpectrumStart,
@@ -356,10 +360,6 @@ private fun createProjectionIntent(manager: MediaProjectionManager): Intent {
 private fun DevelopmentPanels(
     state: AudioEffectUiState,
     noiseState: NoiseOverlayUiState,
-    onHissChange: (Boolean) -> Unit,
-    onCrackleChange: (Boolean) -> Unit,
-    onHissLevelChange: (Float) -> Unit,
-    onCrackleLevelChange: (Float) -> Unit,
     spectrumState: SpectrumAnalyzerUiState,
     captureRequestPending: Boolean,
     onSpectrumStart: () -> Unit,
@@ -372,43 +372,10 @@ private fun DevelopmentPanels(
     ) {
         AppPanel {
             SectionHeading(text = stringResource(R.string.noise_overlay_label))
-            NoiseToggleRow(
-                label = stringResource(R.string.noise_hiss_label),
-                checked = noiseState.hissEnabled,
-                enabled = state.powerOn && !state.initializing,
-                onCheckedChange = onHissChange,
-            )
-            TuningSlider(
-                label = stringResource(R.string.noise_hiss_level_label),
-                value = noiseState.hissLevel,
-                valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
-                valueFormatter = ::formatNoiseLevel,
-                enabled = state.powerOn && !state.initializing,
-                step = 0.05f,
-                onValueChange = onHissLevelChange,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            NoiseToggleRow(
-                label = stringResource(R.string.noise_crackle_label),
-                checked = noiseState.crackleEnabled,
-                enabled = state.powerOn && !state.initializing,
-                onCheckedChange = onCrackleChange,
-            )
-            TuningSlider(
-                label = stringResource(R.string.noise_crackle_level_label),
-                value = noiseState.crackleLevel,
-                valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
-                valueFormatter = ::formatNoiseLevel,
-                enabled = state.powerOn && !state.initializing,
-                step = 0.05f,
-                onValueChange = onCrackleLevelChange,
-                modifier = Modifier.padding(top = 4.dp),
-            )
             Text(
                 text = stringResource(R.string.noise_level_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
             )
             Text(
                 text = stringResource(
@@ -1880,24 +1847,115 @@ private fun SectionHeading(
 }
 
 @Composable
-private fun NoiseToggleRow(
-    label: String,
-    checked: Boolean,
+private fun NoiseFaceControls(
+    noiseState: NoiseOverlayUiState,
     enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onHissChange: (Boolean) -> Unit,
+    onCrackleChange: (Boolean) -> Unit,
+    onHissLevelChange: (Float) -> Unit,
+    onCrackleLevelChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.noise_face_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            NoiseFaceSwitch(
+                label = stringResource(R.string.noise_hiss_label),
+                active = noiseState.hissEnabled,
+                enabled = enabled,
+                onClick = { onHissChange(!noiseState.hissEnabled) },
+                modifier = Modifier.weight(1f),
+            )
+            NoiseFaceSwitch(
+                label = stringResource(R.string.noise_crackle_label),
+                active = noiseState.crackleEnabled,
+                enabled = enabled,
+                onClick = { onCrackleChange(!noiseState.crackleEnabled) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+        TuningSlider(
+            label = stringResource(R.string.noise_hiss_level_label),
+            value = noiseState.hissLevel,
+            valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
+            valueFormatter = ::formatNoiseLevel,
             enabled = enabled,
+            step = 0.05f,
+            onValueChange = onHissLevelChange,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        TuningSlider(
+            label = stringResource(R.string.noise_crackle_level_label),
+            value = noiseState.crackleLevel,
+            valueRange = NoiseLevelRange.MIN..NoiseLevelRange.MAX,
+            valueFormatter = ::formatNoiseLevel,
+            enabled = enabled,
+            step = 0.05f,
+            onValueChange = onCrackleLevelChange,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
+
+@Composable
+private fun NoiseFaceSwitch(
+    label: String,
+    active: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val border = if (active) {
+        colorScheme.primary.copy(alpha = if (enabled) 1f else 0.45f)
+    } else {
+        colorScheme.outline.copy(alpha = if (enabled) 0.55f else 0.32f)
+    }
+    val fill = if (active) {
+        colorScheme.primary.copy(alpha = if (enabled) 0.18f else 0.08f)
+    } else {
+        Color.Transparent
+    }
+    val content = when {
+        active && enabled -> colorScheme.primary
+        active -> colorScheme.primary.copy(alpha = 0.55f)
+        enabled -> colorScheme.onSurfaceVariant
+        else -> colorScheme.onSurfaceVariant.copy(alpha = 0.42f)
+    }
+    val pill = RoundedCornerShape(100.dp)
+    Row(
+        modifier = modifier
+            .clip(pill)
+            .border(width = 1.dp, color = border, shape = pill)
+            .background(color = fill, shape = pill)
+            .clickable(enabled = enabled, onClickLabel = label, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(content),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = content,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+            modifier = Modifier.padding(start = 8.dp),
+            maxLines = 1,
         )
     }
 }
@@ -1910,6 +1968,7 @@ private fun presetLabel(preset: AudioPreset): String {
         AudioPreset.WEAK_SIGNAL -> R.string.preset_weak_signal
         AudioPreset.SATURATION -> R.string.preset_saturation
         AudioPreset.FADING -> R.string.preset_fading
+        AudioPreset.SHORTWAVE -> R.string.preset_shortwave
     }
     return stringResource(resId)
 }
@@ -1922,6 +1981,7 @@ private fun presetBlurb(preset: AudioPreset): String {
         AudioPreset.WEAK_SIGNAL -> R.string.preset_weak_signal_blurb
         AudioPreset.SATURATION -> R.string.preset_saturation_blurb
         AudioPreset.FADING -> R.string.preset_fading_blurb
+        AudioPreset.SHORTWAVE -> R.string.preset_shortwave_blurb
     }
     return stringResource(resId)
 }
@@ -1934,6 +1994,7 @@ private fun presetDescription(preset: AudioPreset): String {
         AudioPreset.WEAK_SIGNAL -> R.string.preset_weak_signal_description
         AudioPreset.SATURATION -> R.string.preset_saturation_description
         AudioPreset.FADING -> R.string.preset_fading_description
+        AudioPreset.SHORTWAVE -> R.string.preset_shortwave_description
     }
     return stringResource(resId)
 }

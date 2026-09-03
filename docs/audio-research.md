@@ -398,18 +398,23 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Audible acceptance: **ユーザー確認済み（「OK」）**。ホストで生成した10秒の無音WAV（48 kHz / mono）を `/sdcard/Download/razio-silence-10s.wav` へ転送し、VLCで再生した。ループ設定なしの短時間試行でもHiss / Crackleが無音ベースへ重なって聞こえることを確認した。独立AudioTrackが出力へ乗ることは受入済み。VLC側のループ再生と長時間バックグラウンド聴感は今回の範囲外として未検証
 - Status: **PoC実装・unit test・build・実機構造確認・聴感受入済み。製品採用としてcommit / pushする**
 
-### 2026-08-31 / Hiss and Crackle level controls
+### 2026-08-31 / Hiss and Crackle gain controls
 
 - Scope: 既存の独立 `AudioTrack` オーバーレイへ、Hiss と Crackle の振幅倍率を個別に調整するUIとPCM反映を追加する。元音声のcapture・差し替え・再生経路は変更しない
-- Controls: 詳細パネルの `Hiss 強さ` / `Crackle 強さ` スライダーを `0〜200%`、5%刻みで表示・変更する。既定値は従来の生成振幅を保つ `100%` とし、0%は該当ノイズを無音に、200%は基準振幅の2倍にする
-- Runtime: 値は `NoiseOverlayController` のStateFlowへ保持し、AudioTrackを再生成せず専用writerが次のPCMバッファから反映する。電源OFF時も値はプロセス内で保持するが、DataStoreへは保存しない
-- Safety: Hiss基準ゲイン `0.02` とCrackle基準ゲイン `0.22` を倍率へ変換し、合算サンプルは既存の `[-1, 1]` clampを通す。範囲外・非有限値は安全な既定値へ丸める
-- Verification plan: generator unit testで0%無音・倍率増加のエネルギー／ピークを確認し、Pixel 10 Proで詳細パネルから個別に0%→100%→200%へ変更してUI表示、AudioTrack継続、Hiss / Crackleの聴感変化、OFF時の停止cleanupを確認する
-- Verification result (2026-08-31): Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）へdebug APK（SHA-256 `DCF8C255B3F205EC03CBEB7D454AE0F22BDBFF73C7B2F58CDAC20E9D6C76782D`）をinstallし、詳細パネルで両スライダーと5%刻みの目盛りを確認した。Hissを `100% → 0% → 200%`、Crackleを `100% → 0% → 200%` へ個別操作して表示値が追従し、両スイッチON時は `ノイズ: Active` を維持した
-- AudioTrack continuity: スライダー操作前後でUI detailの `sampleRate=48000Hz` / `buffer=40404B` / session `21969` が維持され、レベル変更だけではtrackを再生成しないことを確認した。開始ログには `hissLevel=200%` / `crackleLevel=200%` が出力された。電源OFFではUIが `session 0 :: Disabled`、ノイズが `Idle` となり、`dumpsys media.audio_flinger` の `AT::remove` とtrack idleを確認した
-- Process lifecycle: OFF後にONへ戻すと `session 0 :: Active` へ復帰し、Noiseスイッチを再度ONにした際もHiss / Crackle各 `200%` が保持された（OFF/ONで新しいAudioTrack sessionが割り当てられるのは既存lifecycleどおり）。filtered logcatでは本試行中のRAZIO由来 `FATAL EXCEPTION` / `ANR in` / `AudioHardening` は確認されなかった
+- Controls: 詳細パネルの `Hiss ゲイン` / `Crackle ゲイン` スライダーを `0〜400%`、5%刻みで表示・変更する。既定値は生成振幅の基準を保つ `100%` とし、0%は該当ノイズを無音に、200%は約+6dB、400%は約+12dB相当の倍率にする
+- Runtime: 値は `NoiseOverlayController` のStateFlowへ保持し、AudioTrackを再生成せず専用writerが次のPCMバッファから反映する。スイッチとレベルは `RazioPreferences` のDataStoreへ保存し、再起動後も復元する
+- Safety: Hiss基準ゲイン `0.04` とCrackle基準ゲイン `0.20` を倍率へ変換し、合算サンプルは既存の `[-1, 1]` clampを通す。範囲外・非有限値は安全な既定値へ丸める
+- Loudness retune (2026-08-31): 200%でも聴感上の存在感が不足したため、ゲインを開発用に直接触れるよう範囲を`0〜200%`から`0〜400%`へ拡張した。基準ゲインはHiss `0.04`、Crackle `0.20`とし、400%まで上げても合算時のclampと非Saturationプリセットの歪み緩和方針を維持する
+- Verification plan: generator unit testで0%無音・倍率増加のエネルギー／ピークを確認し、Pixel 10 Proで詳細パネルから個別に0%→100%→200%→400%へ変更してUI表示、AudioTrack継続、Hiss / Crackleの聴感変化、OFF時の停止cleanupを確認する
+- Verification result (2026-08-31, pre-gain-range expansion): Pixel 10 Pro（`blazer`、Android 17、serial `56101FDCH006CX`）へdebug APK（SHA-256 `DCF8C255B3F205EC03CBEB7D454AE0F22BDBFF73C7B2F58CDAC20E9D6C76782D`）をinstallし、詳細パネルで旧0〜200%スライダーと5%刻みの目盛りを確認した。Hissを `100% → 0% → 200%`、Crackleを `100% → 0% → 200%` へ個別操作して表示値が追従し、両スイッチON時は `ノイズ: Active` を維持した
+- AudioTrack continuity (pre-gain-range expansion): スライダー操作前後でUI detailの `sampleRate=48000Hz` / `buffer=40404B` / session `21969` が維持され、レベル変更だけではtrackを再生成しないことを確認した。開始ログには `hissLevel=200%` / `crackleLevel=200%` が出力された。電源OFFではUIが `session 0 :: Disabled`、ノイズが `Idle` となり、`dumpsys media.audio_flinger` の `AT::remove` とtrack idleを確認した
+- Process lifecycle (pre-gain-range expansion): OFF後にONへ戻すと `session 0 :: Active` へ復帰し、Noiseスイッチを再度ONにした際もHiss / Crackle各 `200%` が保持された（OFF/ONで新しいAudioTrack sessionが割り当てられるのは既存lifecycleどおり）。filtered logcatでは本試行中のRAZIO由来 `FATAL EXCEPTION` / `ANR in` / `AudioHardening` は確認されなかった
 - Evidence: UIの両レベル200%表示と `ノイズ: Active` は [noise-level-200.png](C:/Users/tatsuya/AppData/Local/Temp/razio-spectrum-evidence/noise-level-200.png) に保存した。聴感の最終的な増減差は、既存PoCでユーザーがHiss / Crackle出力を受入済みであることを前提に、今後の音量チューニング課題として分離する
 - Status: **実装・unit test・lint・assemble・Pixel UI／lifecycle確認済み。Hiss / Crackle個別レベル調整を採用する**
+- Verification result (2026-08-31, gain-range expansion): 改修APK（SHA-256 `746C29349DD734C1F1289FE50832080528C32DFF5EF2F8A22F678E4A824E748A`）を同じPixelへ再installし、詳細パネルに `Hiss ゲイン` / `Crackle ゲイン` と0〜400%の表示を確認した。両スイッチをONにしてHiss／Crackleを `100% → 250% → 400%` と操作し、UI表示が追従した
+- AudioTrack continuity (gain-range expansion): 400%操作後も `ノイズ: Active`、`sampleRate=48000Hz buffer=40404B session=22041` を維持し、ゲイン変更だけでAudioTrackが再生成されないことを確認した。filtered logcat（操作前にclear）では本試行のRAZIO由来 `noise overlay write failed` / `noise overlay stop failed` / `FATAL EXCEPTION` / `ANR in` は確認されなかった
+- Evidence (gain-range expansion): UIの両ゲイン400%表示と `ノイズ: Active` は [noise-gain-400.png](C:/Users/tatsuya/AppData/Local/Temp/razio-spectrum-evidence/noise-gain-400.png) に保存した。400%の最終聴感（存在感と音割れ）はユーザーの実機確認待ちとする
+- Status: **ゲイン範囲拡張・基準ゲイン再調整・unit test・lint・assemble・Pixel UI／AudioTrack構造確認済み。400%の聴感確認待ち**
 
 ### 2026-08-29 / Fading first pass
 
@@ -567,7 +572,7 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Design: `AudioPresetTuning` を公開UIモデル、`AudioPresetParameters` をDynamicsProcessing内部モデルとして分離した。周波数（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）、低域・低域中間・中域・高域中間・高域の5ゲイン、MBC ratio／threshold／後段ゲイン、makeup、入力ゲイン、歪み緩和、Fading深度／周期を調整対象とする。低域・高域のロールオフをそれぞれ2段階で追い込める。Compose `Slider` は一定刻みへ丸め、6周波数には`−` / `＋`ボタンを置いた
 - Curve preview: 調整パネル内に `PresetFrequencyCurve` を追加した。20 Hz〜20 kHzの対数軸へ細分化グリッドと9個のラベルを配置し、`AudioPresetTuning.gainDbForCenterHz()` の5ゲイン点補間カーブ、低域／高域カット帯と中域帯の網掛け、6つの境界線を描く。カーブは調整値から算出する視覚的な目安であり、native effectの実測値ではない
 - Safety: `sanitized()` で周波数順序 `lowCut < lowTransition < midLow < midHigh < highTransition < highCut` と各値の範囲を保証する。`toParameters()` で5ゲイン点とMBC後段ゲイン・makeupを合成し、既存のDynamics-only歪み緩和マッピングを経由してnative effectへ渡す。調整ごとに既存の約80 ms in-place遷移へ合流し、effectをrelease／再生成しない
-- Persistence: プリセットごとの調整値はcontroller内のメモリにだけ保持する。DataStoreへ保存せず、再起動で定義済み初期値へ戻る。パネルの`初期値へ戻す`は選択中プリセットだけを初期化する
+- Persistence: プリセットごとの調整値と Hiss / Crackle のスイッチ・レベルは `RazioPreferences` の DataStore へ保存する。force-stop 後も復元し、パネルの`初期値へ戻す`は選択中プリセットの工場値を書いて戻す
 - Unit / build: workflow `98f47e9a58e21b6d01929165b09c499a` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `1ECF131A93B50699FC7BFB12E10009597FA5D4EBE8FCD8E54A0A6F9CA6202249`
 - Device: Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）、Pixel Buds Pro 2 Bluetooth A2DP。最終APKで`Narrow AM`を選択し、6周波数スライダーと低域・高域の中間ゲインを含む全ゲイン・MBC・入力・歪み緩和・Fadingスライダー、周波数の`−` / `＋`、リセットを確認した
 - Interaction evidence: 周波数カーブ見出し、`+6`〜`-48` dB軸、20 Hz〜20 kHzの細分化対数軸、カット／中域帯の網掛け、6境界線をUI treeとスクリーンショットで確認した。低域カット中間を`420 Hz → 430 Hz → 420 Hz`、高域カット中間を`2600 Hz → 2650 Hz → 2600 Hz`（`＋` / `−`）へ変更すると表示値とカーブ境界が追従した。スライダーでは低域カット開始を`330 Hz`へ移動でき、入力ゲインを`0.0 dB → 3.0 dB`へ移動後、リセットで`0.0 dB`へ復帰した。長めのスライダー操作でもUIは`状態: Active`、Equalizer `Not used (backend=dynamics_only)`、session `0`のDynamicsProcessing effectを維持した
@@ -638,6 +643,16 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - `custom band-pass DSP`: 製品音色は現行のglobal `DynamicsProcessing`（Pre/Post-EQ・MBC・Limiter）で実装済み。AudioPlaybackCaptureでPCMを差し替え再生する別DSPは、Mono経路が元音声との二重化でNo-goとなったため現行製品へ追加しない
 - `latency 測定`: Mono PoCではbuffer合計から約170–506 msを得たが、これは試行ごとに変動する概算であり、元音声→加工音→出力のend-to-end timestampではない。global effectの遅延を公開APIだけで同じ方法に測定することもできない
 - Decision: Phase 1をGreen、global AudioEffectをMVPとした現行方針では上記2項目を保留する。差し替え経路を再検討する場合だけ、元音声抑制の成立性を先に実機で確認し、その後にDSPと遅延測定を再開する
+
+### 2026-09-03 / Shortwave・第一面ノイズ・調整値永続化
+
+- Scope: `Shortwave` を6つ目のプリセットとして追加。Hiss / Crackle を第一面へ出し、レベル範囲を 0〜400%。調整値とノイズ設定を DataStore へ保存する
+- Persistence bugfix: 遷移中の UI state ではなく `currentPreset()` へ書く。さもないと Shortwave 調整が Fading キーへ落ちる
+- Device: Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）。debug APKをinstallし、第一面に `ノイズ` / Hiss / Crackle / 0〜400% スライダーと6点インジケータを確認した
+- Shortwave: pager `›` で `Shortwave` / `遠い短波` を表示。低域カット開始を `500 Hz → 510 Hz` へ変更後、force-stop → 再起動で Shortwave / `LIVE` / `510 Hz` / リセット活性を復元した
+- Noise: 第一面で Hiss をON、Hiss 強さ `110%` のまま force-stop → 再起動。UIは Hiss 活性・`110%`、logcat は `noise overlay started hiss=true hissLevel=110% crackle=false crackleLevel=100%`
+- Stability: アプリ由来の `FATAL EXCEPTION` / `ANR in` なし。Shortwave 復元直後に `fading input gain update failed`（`AudioEffect: invalid parameter operation`）が1回出て fading modulation が停止した。effect 自体は `preset=shortwave` / `setEnabled actual=true` で生成できている
+- Status: 機能追加の実機構造確認は PASS。Shortwave の揺れ聴感と fading input gain 失敗は未クローズ
 
 ## 判断基準
 

@@ -12,6 +12,7 @@
     <string name="preset_weak_signal_blurb">弱い受信</string>
     <string name="preset_saturation_blurb">熱い押し込み</string>
     <string name="preset_fading_blurb">ゆっくり揺れる</string>
+    <string name="preset_shortwave_blurb">遠い短波</string>
     <string name="status_live">LIVE</string>
     <string name="status_standby">STANDBY</string>
     <string name="power_on">ON</string>
@@ -31,11 +32,13 @@
     <string name="preset_weak_signal">Weak signal</string>
     <string name="preset_saturation">Saturation</string>
     <string name="preset_fading">Fading</string>
+    <string name="preset_shortwave">Shortwave</string>
     <string name="preset_narrow_am_description">狭いAMラジオ風。300Hz以下と3.0kHz以上を強く抑え、550Hz〜2.2kHzを前に出します。</string>
     <string name="preset_vintage_speaker_description">70〜80年代ラジカセ風。180Hz以下を抑えつつ4.0kHzから丸め、450Hz〜2.6kHzを残します。</string>
     <string name="preset_weak_signal_description">弱い受信風。380Hz以下と1.35kHz以上をさらに抑え、中域と音量を補いながら強く圧縮します。</string>
     <string name="preset_saturation_description">低域・高域を絞ってから入力を押し込み、強い圧縮とリミッターで熱いラジオ音を近似します。波形歪みは端末依存です。</string>
     <string name="preset_fading_description">狭いAM帯域（300Hz以下 / 3.0kHz以上を強くカット）で受信がゆっくり揺れるラジオ風。入力ゲインを±3dBで変化させます。</string>
+    <string name="preset_shortwave_description">弱い短波受信風。500Hz以下と1.25kHz以上を強く抑え、850Hz〜1.15kHzを残します。入力ゲインを±6dB、2.4秒周期で揺らします。</string>
     <string name="preset_tuning_heading">プリセット値（試聴用）</string>
     <string name="preset_tuning_toggle_open">調整を開く</string>
     <string name="preset_tuning_toggle_close">閉じる</string>
@@ -44,7 +47,7 @@
     <string name="preset_tuning_details_close">詳細設定を閉じる</string>
     <string name="preset_tuning_reset_default">プリセット初期値に戻す</string>
     <string name="preset_tuning_reset_named">%1$s を初期値に戻す</string>
-    <string name="preset_tuning_hint">スライダーで選択中プリセットの周波数6点・ゲイン・圧縮を調整できます。変更はこの起動中だけ有効です。</string>
+    <string name="preset_tuning_hint">スライダーで選択中プリセットの周波数6点・ゲイン・圧縮を調整できます。変更は再起動後も残ります。</string>
     <string name="preset_tuning_dial_heading">同調ダイヤル（帯域の位置）</string>
     <string name="preset_tuning_dial_hint">帯域の広さをラジオの目盛り風に表示します。縦の目盛りが6つの周波数境界です。</string>
     <string name="preset_tuning_curve_heading">周波数カーブ（調整値の目安）</string>
@@ -74,7 +77,8 @@
     <string name="noise_crackle_label">Crackle</string>
     <string name="noise_hiss_level_label">Hiss 強さ</string>
     <string name="noise_crackle_level_label">Crackle 強さ</string>
-    <string name="noise_level_hint">強さは基準値を100％として、0〜200％で調整できます。変更はこの起動中だけ有効です。</string>
+    <string name="noise_face_label">ノイズ</string>
+    <string name="noise_level_hint">強さは基準値を100％として、0〜400％で調整できます。電源・プリセット調整・ノイズは再起動後も残ります。</string>
     <string name="noise_overlay_status">ノイズ: %1$s</string>
     <string name="noise_status_idle">Idle</string>
     <string name="noise_status_starting">Starting</string>

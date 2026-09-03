@@ -62,7 +62,7 @@ Other app playback ───────────────┐
 RAZIO generated noise → AudioTrack ┘
 ```
 
-この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。Hiss / Crackle はそれぞれ基準値 `100%` の振幅倍率を持ち、詳細設定のスライダーで `0〜200%` を5%刻みで変更できます。値は `NoiseSignalGenerator` が各PCMバッファへ反映し、合算後は従来どおり `[-1, 1]` にclampします。調整値はプリセット調整と同じくプロセス内だけに保持し、AudioTrackの再生成なしで次のバッファから反映します。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
+この方式は元音声を二重に再生しない一方、ノイズは元音声と独立して鳴るため、信号レベル追従や元音声の置換はできません。Hiss / Crackle はそれぞれ基準値 `100%` の振幅倍率を持ち、第一面のスイッチとスライダーで `0〜400%` を5%刻みで変更できます。値は `NoiseSignalGenerator` が各PCMバッファへ反映し、合算後は従来どおり `[-1, 1]` にclampします。スイッチとレベルは `RazioPreferences` のDataStoreへ保存し、再起動後も復元します。AudioTrackの再生成なしで次のバッファから反映します。PoCでは `USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN` を使い、アクセシビリティ用途を偽装しません。AudioFocusを要求しない同時再生が端末で維持されるか、Android 17のbackground audio hardeningで無音化されないかを実機で確認してから採用判断します。詳細な試行条件とEvidenceは `docs/audio-research.md` に残します。
 
 ### 入出力スペクトラムアナライザー（検証用）
 
@@ -136,7 +136,7 @@ Error
 
 音声経路の状態を隠さないまま、ホームの第一面はラジオ製品面にします。`RazioTheme` は端末壁紙の dynamic color を既定では使わず、琥珀色をアクセントにした dark / light scheme を提供します。`RazioHomeScreen` はこのテーマを局所上書きせず、FilterChip や設定画面風の状態チップを第一面に置きません。
 
-第一面の構成は、上部のアンバー光、大きな `RAZIO`、円形の電源、単一の `LIVE` / `STANDBY`（失敗時は既存の Error / Unsupported 文言）、プリセットの `‹ 名前 ›` と5点インジケータ、一行blurb、塗りつぶしの周波数カーブ、細い出力メーター、`詳細設定を開く` です。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値から外れているときだけアンバーの活性表示で押せます。未変更時は非活性の輪郭だけにします。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプのどれでも切り替わります。`session 0` や `DynamicsProcessing` の観測文言、6本の周波数スライダー、同調ダイヤルは詳細へ下げます。電源は既存の `onPowerChange` へ接続します。CRTテクスチャや端末ログ風のフッターは使いません。
+第一面の構成は、上部のアンバー光、大きな `RAZIO`、円形の電源、単一の `LIVE` / `STANDBY`（失敗時は既存の Error / Unsupported 文言）、プリセットの `‹ 名前 ›` と6点インジケータ、一行blurb、塗りつぶしの周波数カーブ、細い出力メーター、Hiss / Crackle のスイッチと強さ、`詳細設定を開く` です。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値から外れているときだけアンバーの活性表示で押せます。未変更時は非活性の輪郭だけにします。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプのどれでも切り替わります。`session 0` や `DynamicsProcessing` の観測文言、6本の周波数スライダー、同調ダイヤルは詳細へ下げます。電源は既存の `onPowerChange` へ接続します。CRTテクスチャや端末ログ風のフッターは使いません。
 
 ランチャーは標準テンプレートのロボット画像を使わず、ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO用adaptive iconへ置き換えます。API 21〜25向けには同じベクターをlayer-listでフォールバックし、API 26以降はadaptive iconのmaskに任せます。ホームのヒーローは選択中プリセットの `PresetFrequencyCurve` です。dB軸・6本の境界線・凡例は出さず、塗りとグローのカーブだけを置きます。検証用スペクトラムとは別に、出力mix tapのPeakを示す細いsignal meterも第一面に残します。どれもAudioEffectの成立や聴感を単独で保証するものではなく、tapの前後位置は端末依存です。
 
@@ -144,7 +144,7 @@ Error
 
 実装上、6つの周波数境界は `詳細設定を開く` の中へ置きます。第一面のカーブは詳細を閉じても残り、スライダー操作に追従します。折りたたみ状態は `rememberSaveable(state.preset.id)` で保持し、プリセット切替で閉じます。
 
-詳細では同調ダイヤル、6境界のスライダーと`−` / `＋`、開発中のゲイン / MBC / 入力ゲイン / 歪み緩和 / Fading、Noise / Spectrum / Engine の検証パネルを展開します。第一面のリセットは常時見え、調整が定義値から外れている間だけ活性になります。Engineパネルに `session 0` と `DynamicsProcessing` の観測を残し、失敗状態を隠しません。
+詳細では同調ダイヤル、6境界のスライダーと`−` / `＋`、開発中のゲイン / MBC / 入力ゲイン / 歪み緩和 / Fading、Noise状態 / Spectrum / Engine の検証パネルを展開します。Hiss / Crackle の操作は第一面に置き、詳細のNoiseパネルは状態観測用です。第一面のリセットは常時見え、調整が定義値から外れている間だけ活性になります。Engineパネルに `session 0` と `DynamicsProcessing` の観測を残し、失敗状態を隠しません。
 
 `PresetFrequencyCurve` は 20 Hz〜20 kHz の対数軸上で `AudioPresetTuning` のゲインを補間した設計目安です。端末のnative effect出力を直接測定するスペクトラムではありません。
 
@@ -160,7 +160,7 @@ DynamicsProcessing: Pre-EQ(flat) → MBC → Post-EQ → Limiter
 
 `AudioPresetTuning.sanitized()` は周波数を `lowCut < lowTransition < midLow < midHigh < highTransition < highCut` の順に保ち、各値を端末で安全に扱える範囲へ収めます。調整は現在の `DynamicsProcessing` をreleaseせず、既存の約80 ms遷移へ合流させるため、スライダー操作で一瞬effectが外れる経路を作りません。DynamicsProcessing単独経路の歪み緩和マッピングは調整値にも適用され、UIのMBC目標値とnative readback値が異なる場合があります。
 
-値はプリセットごとにプロセス内だけで保持し、DataStoreへは保存しません。アプリ再起動では初期値へ戻ります。`初期値へ戻す` は選択中プリセットの定義値を再適用します。これは音作りを決めるための試聴用UIであり、非インタラクティブな`tuning dial`も帯域位置の確認専用です。製品向けの操作ダイヤルや永続設定とは別扱いです。
+値はプリセットごとに `RazioPreferences` のDataStoreへ保存します。アプリ再起動では最後のプリセット、調整値、Hiss / Crackle のスイッチとレベルを復元します。`初期値へ戻す` は選択中プリセットの定義値を再適用し、その定義値も保存します。これは音作りを決めるための試聴用UIであり、非インタラクティブな`tuning dial`も帯域位置の確認専用です。製品向けの操作ダイヤルとは別扱いです。
 
 ## AM プリセット
 
@@ -188,6 +188,7 @@ Output
 | Weak signal | 380 Hz 以下を -30 dB | 900〜1,100 Hz を +5 dB | 1.35 kHz 以上を -48 dB | 弱い受信。MBC 16:1 / post +8 dB / makeup +10 dB |
 | Saturation | 180 Hz 以下を -24 dB | 450〜2,400 Hz を +2 dB | 5.0 kHz 以上を -48 dB（2.4 kHzからロールオフ） | 入力 +10 dBを強いMBCへ押し込む飽和近似。MBC 20:1 / threshold -18 dB / post +4 dB / makeup +4 dB |
 | Fading | Narrow AM と同じ | Narrow AM と同じ | Narrow AM と同じ | input gain を約±3 dB、3.2 秒周期でゆっくり変動させる受信揺らぎ |
+| Shortwave | 500 Hz 以下を -30 dB | 850〜1,150 Hz を +4 dB | 1.25 kHz 以上を -48 dB | 遠い短波受信。MBC 14:1 / post +8 dB / makeup +10 dB / input -1 dB。input gain を約±6 dB、2.4 秒周期で揺らす |
 
 表のMBC比率・入力ゲインはプリセットの音作り上の目標値です。現行のDynamicsProcessing単独経路では、歪みと音量低下を抑える安全マッピングを通してからnative effectへ渡します。実機readbackの目安は Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`、Saturation `8:1`・input `+6dB`・post `0dB` です。
 
@@ -195,7 +196,7 @@ Output
 - 非Saturation（Narrow / Vintage / Weak / Fading）は、実機での歪み報告を受けて穏和化したMBCを使います。目安は Narrow/Fading `1.2:1`・post `0dB`、Vintage `1.5:1`・post `+2dB`、Weak `4:1`・post `+9dB`。Post-EQは中域を最大 `+3dB` まで許容します。Saturationは入力を抑えた強いMBCで意図した質感を残します。
 - MBC後段にプリセットごとのPost-EQを置き、makeup gainで低域・高域のカットが戻らないようにします。最終ピークはlimiter（-1 dB）で制限します。
 - Saturation だけは DynamicsProcessing の input gain を +10 dB にし、強い MBC（20:1）へ入力を押し込みます。Android AudioEffect に汎用 wave-shaper はないため、倍音を含む物理的な飽和とは区別して扱います。
-- Fading は独立したノイズ信号を生成せず、DynamicsProcessing の input gain を Handler で約 100 ms ごとに更新します。プリセット切替・OFF・route change・release では更新 Runnable を必ずキャンセルし、effect chain を解放した後に古い更新が走らないようにします。
+- Fading と Shortwave は独立したノイズ信号を生成せず、DynamicsProcessing の input gain を Handler で約 100 ms ごとに更新します。プリセット切替・OFF・route change・release では更新 Runnable を必ずキャンセルし、effect chain を解放した後に古い更新が走らないようにします。
 
 プリセット変更は既存のDynamicsProcessingをreleaseせず、約80 msの補間でPost-EQ / MBCパラメータを更新します。切替中の再タップは、その時点の補間値を次の遷移の開始値にします。effectが壊れて更新できない場合だけ再生成へ戻します。
 

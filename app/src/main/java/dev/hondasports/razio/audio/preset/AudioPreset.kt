@@ -138,6 +138,30 @@ enum class AudioPreset(
         fadeDepthDb = 3f,
         fadePeriodMs = 3_200L,
     ),
+    SHORTWAVE(
+        id = "shortwave",
+        // Narrower than Weak signal, with faster fading so the band feels like
+        // a distant shortwave voice rather than a local AM station.
+        lowCutHz = 500f,
+        lowTransitionHz = 680f,
+        midLowHz = 850f,
+        midHighHz = 1_150f,
+        highTransitionHz = 1_200f,
+        highCutHz = 1_250f,
+        lowGainDb = -30f,
+        lowTransitionGainDb = -14f,
+        midGainDb = 4f,
+        highTransitionGainDb = -22f,
+        highGainDb = -48f,
+        mbcRatio = 14f,
+        mbcThresholdDb = -28f,
+        mbcPostGainDb = 8f,
+        makeupGainDb = 10f,
+        inputGainDb = -1f,
+        distortionRelief = 0.35f,
+        fadeDepthDb = 6f,
+        fadePeriodMs = 2_400L,
+    ),
     ;
 
     val effectiveMbcPostGainDb: Float
@@ -233,7 +257,7 @@ enum class AudioPreset(
     }
 }
 
-/** Runtime-adjustable values for the selected preset. Changes are not persisted. */
+/** Runtime-adjustable values for the selected preset. */
 data class AudioPresetTuning(
     val lowCutHz: Float,
     val lowTransitionHz: Float,
@@ -330,6 +354,32 @@ data class AudioPresetTuning(
         )
     }
 
+    fun encoded(): String {
+        val tuning = sanitized()
+        return listOf(
+            ENCODING_VERSION,
+            tuning.lowCutHz,
+            tuning.lowTransitionHz,
+            tuning.midLowHz,
+            tuning.midHighHz,
+            tuning.highTransitionHz,
+            tuning.highCutHz,
+            tuning.lowGainDb,
+            tuning.lowTransitionGainDb,
+            tuning.midGainDb,
+            tuning.highTransitionGainDb,
+            tuning.highGainDb,
+            tuning.mbcRatio,
+            tuning.mbcThresholdDb,
+            tuning.mbcPostGainDb,
+            tuning.makeupGainDb,
+            tuning.inputGainDb,
+            tuning.distortionRelief,
+            tuning.fadeDepthDb,
+            tuning.fadePeriodMs,
+        ).joinToString(ENCODING_SEPARATOR)
+    }
+
     private fun lerp(
         start: Float,
         end: Float,
@@ -337,6 +387,9 @@ data class AudioPresetTuning(
     ): Float = start + (end - start) * progress.coerceIn(0f, 1f)
 
     companion object {
+        const val ENCODING_VERSION = "v1"
+        const val ENCODING_SEPARATOR = "|"
+        const val ENCODED_FIELD_COUNT = 20
         const val MIN_LOW_CUT_HZ = 20f
         const val MAX_LOW_CUT_HZ = 2_000f
         const val MAX_LOW_TRANSITION_HZ = 3_000f
@@ -359,6 +412,37 @@ data class AudioPresetTuning(
         const val MAX_INPUT_GAIN_DB = 12f
         const val MAX_FADE_DEPTH_DB = 12f
         const val MAX_FADE_PERIOD_MS = 10_000L
+
+        fun decode(raw: String?, fallback: AudioPresetTuning): AudioPresetTuning {
+            if (raw.isNullOrBlank()) return fallback.sanitized()
+            val parts = raw.split(ENCODING_SEPARATOR)
+            if (parts.size != ENCODED_FIELD_COUNT || parts[0] != ENCODING_VERSION) {
+                return fallback.sanitized()
+            }
+            return runCatching {
+                AudioPresetTuning(
+                    lowCutHz = parts[1].toFloat(),
+                    lowTransitionHz = parts[2].toFloat(),
+                    midLowHz = parts[3].toFloat(),
+                    midHighHz = parts[4].toFloat(),
+                    highTransitionHz = parts[5].toFloat(),
+                    highCutHz = parts[6].toFloat(),
+                    lowGainDb = parts[7].toFloat(),
+                    lowTransitionGainDb = parts[8].toFloat(),
+                    midGainDb = parts[9].toFloat(),
+                    highTransitionGainDb = parts[10].toFloat(),
+                    highGainDb = parts[11].toFloat(),
+                    mbcRatio = parts[12].toFloat(),
+                    mbcThresholdDb = parts[13].toFloat(),
+                    mbcPostGainDb = parts[14].toFloat(),
+                    makeupGainDb = parts[15].toFloat(),
+                    inputGainDb = parts[16].toFloat(),
+                    distortionRelief = parts[17].toFloat(),
+                    fadeDepthDb = parts[18].toFloat(),
+                    fadePeriodMs = parts[19].toLong(),
+                ).sanitized()
+            }.getOrElse { fallback.sanitized() }
+        }
     }
 }
 

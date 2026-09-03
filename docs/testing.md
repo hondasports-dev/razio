@@ -75,14 +75,14 @@ RAZIO で最も重要なテストです。
 | Android | 対象 OS version |
 | Target app | YouTube / music / Chrome |
 | Output | Speaker / Bluetooth / USB |
-| Preset | Narrow AM / Vintage speaker / Weak signal / Saturation / Fading |
+| Preset | Narrow AM / Vintage speaker / Weak signal / Saturation / Fading / Shortwave |
 | RAZIO | ON / OFF |
 
 ### 必須確認
 
 - effect 初期化が成功する
 - ON / OFF に明確な差がある
-- Narrow AM / Vintage speaker / Weak signal / Saturation / Fading の切替で音の傾向が変わり、選択状態が表示される
+- Narrow AM / Vintage speaker / Weak signal / Saturation / Fading / Shortwave の切替で音の傾向が変わり、選択状態が表示される
 - プリセット切替中も session `0` の effect が外れず、音が素通りする区間がない
 - 対象アプリ切り替え後も動作する
 - 音声 route 変更後の状態
@@ -148,7 +148,7 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### プリセット値の試聴調整UI
 
-調整値はプロセス内だけの試聴用で、DataStoreへ保存しません。周波数6点は順序を崩さない範囲でスライダーと`−` / `＋`ボタンから変更し、低域・高域の中間ゲインを含むその他のゲイン・MBC・歪み緩和・Fading値もスライダーで変更します。
+調整値はプリセット単位で DataStore へ保存する。周波数6点は順序を崩さない範囲でスライダーと`−` / `＋`ボタンから変更し、低域・高域の中間ゲインを含むその他のゲイン・MBC・歪み緩和・Fading値もスライダーで変更します。
 
 必須確認:
 
@@ -157,8 +157,8 @@ Phase 2 の実機 regression（変更したとき）:
 3. カーブのカット帯・中域帯の色分けと6つの縦境界線が周波数境界位置と一致すること。詳細パネルの6本のスライダーは表示中のカーブへ追従すること
 4. 低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始のスライダーを動かし、各`−` / `＋`ボタンで刻み幅どおりに値が増減すること。周波数の順序が逆転せず、同調ダイヤルと周波数カーブの6境界線・網掛け・カーブが変更値へ追従すること
 5. ゲイン、MBC、入力ゲイン、歪み緩和、Fading深度・周期を動かし、値表示とエンジンdetailの反映が変わること。調整中もsession `0` のDynamicsProcessingが維持されること
-6. 「初期値へ戻す」で選択中プリセットの値へ戻ること。別プリセットへ切り替えて戻ったときは、同一起動中の調整値がプリセット単位で保持されること
-7. force-stop後の再起動で調整値が初期値へ戻ること（永続化していないこと）
+6. 「初期値へ戻す」で選択中プリセットの値へ戻ること。別プリセットへ切り替えて戻ったときは、調整値がプリセット単位で保持されること
+7. force-stop後の再起動で、最後に保存した調整値・選択プリセット・Hiss / Crackle が復元されること
 8. 操作後のfiltered `logcat` に `FATAL EXCEPTION`、`ANR in`、アプリ由来の未処理Exceptionがないこと
 
 2026-08-30 の実機確認:
@@ -171,15 +171,15 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品UI（現行）
 
-第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は大きな `RAZIO`、円形電源、`LIVE` / `STANDBY`、プリセットの `‹ 名前 ›` と点インジケータ、塗りカーブ、細い出力メーター、`詳細設定を開く` で構成する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと周波数スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
+第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は大きな `RAZIO`、円形電源、`LIVE` / `STANDBY`、プリセットの `‹ 名前 ›` と点インジケータ、塗りカーブ、細い出力メーター、Hiss / Crackle のスイッチと `0〜400%` スライダー、`詳細設定を開く` で構成する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと周波数スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
 
 必須確認:
 
 1. debug APKをPixelへinstallし、第一面に `RAZIO`、円形 ON/OFF、`LIVE` または `STANDBY`、プリセット名、塗りカーブ、細いメーターが出ること。`session 0` / `DynamicsProcessing` チップ、6本スライダー、緑黒CRTが出ないこと
-2. 名前またはカーブを左／右へスワイプして隣接プリセットへ変わり、点インジケータとカーブ形状が追従すること。`‹ ›` と点タップでも同じ切替になること
+2. 名前またはカーブを左／右へスワイプして隣接プリセットへ変わり、点インジケータとカーブ形状が追従すること。`‹ ›` と点タップでも同じ切替になること。6つ目の `Shortwave` が点とスワイプに含まれること
 3. `詳細設定を開く` を押して `詳細設定を閉じる` へ変わり、同調ダイヤルと6つの周波数ラベル（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）がUI treeに現れること
 4. 6本のうち1本を `＋` またはスライダーで変更し、値表示と第一面カーブが更新されること。blurb直下の `（プリセット名）を初期値に戻す` が非活性から活性へ変わり、タップで定義値へ戻って再び非活性になること
-5. 詳細の開閉・リセット後も `Equalizer: Not used`、session `0` のDynamicsProcessing、Hiss / Crackle、スペクトラム／出力メーターの既存操作が崩れないこと
+5. 詳細の開閉・リセット後も `Equalizer: Not used`、session `0` のDynamicsProcessing、第一面の Hiss / Crackle、スペクトラム／出力メーターの既存操作が崩れないこと
 6. 操作後のfiltered `logcat` に `FATAL EXCEPTION`、`ANR in`、アプリ由来の未処理Exceptionがないこと
 
 2026-08-30 の Ghost Terminal UI 確認と、設定画面風チップ＋6スライダーの第一面は履歴として残し、現行の見た目判定には使わない。
@@ -290,7 +290,7 @@ Phase 2 の実機 regression（変更したとき）:
 
 2026-08-30 の実装・構造確認結果:
 
-- `NoiseOverlayController` が決定論的なPCMを生成し、`USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN`・AudioFocusなしの独立 `AudioTrack` で再生する。AudioPlaybackCaptureは使わず、元音声のミュート／差し替えもしない。RAZIO OFFではノイズスイッチをクリアしてAudioTrackとFGSを停止し、route changeでは停止・再生成する
+- `NoiseOverlayController` が決定論的なPCMを生成し、`USAGE_MEDIA` / `CONTENT_TYPE_UNKNOWN`・AudioFocusなしの独立 `AudioTrack` で再生する。AudioPlaybackCaptureは使わず、元音声のミュート／差し替えもしない。RAZIO OFFではAudioTrackとFGSを停止するがスイッチとレベルは保持し、再ONとforce-stop後はDataStoreから復元する。route changeでは停止・再生成する
 - `:app:testDebugUnitTest` と `:app:assembleDebug` は workflow `2874600e19b809682ef98d192f8cbe31` でPASS。最新版検証APKのSHA-256は `678780EA7C35DF1ED3F99ED3A4A30B56B7696669B340FD54BAAE95C10DCDC9AC`
 - Pixel 10 Pro（`blazer`、Android 17 `CP2A.260805.005`、serial `56101FDCH006CX`）でSpotify再生中にHiss / Crackleを有効化し、`dumpsys audio`でSpotifyとRAZIOの独立AudioTrackが同時に `started` になることを確認した。RAZIOはmono / 48 kHz、detailは `usage=media content=unknown focus=none`
 - Home・画面OFF（`Dozing`）でも既存のspecialUse FGSとRAZIO AudioTrackが維持された。RAZIO OFFではUIが `Disabled` / `Idle`、FGSとRAZIO AudioTrackが消えることを確認した
@@ -300,9 +300,9 @@ Phase 2 の実機 regression（変更したとき）:
 
 レベル調整の追加確認:
 
-1. 詳細パネルで `Hiss 強さ` / `Crackle 強さ` が表示され、`0〜200%`を5%刻みで変更できること
-2. Hissだけ、Crackleだけをそれぞれ0%→100%→200%へ動かし、他方のスイッチ状態とAudioTrackを維持したまま聴感の強さが変わること
-3. 変更後にRAZIOをOFFへ戻すとノイズAudioTrackが停止し、再ON時は最後のレベルがプロセス内で復元されること（再起動後の永続化は対象外）
+1. 第一面で `Hiss` / `Crackle` スイッチと `Hiss 強さ` / `Crackle 強さ` が表示され、`0〜400%`を5%刻みで変更できること
+2. Hissだけ、Crackleだけをそれぞれ0%→100%→400%へ動かし、他方のスイッチ状態とAudioTrackを維持したまま聴感の強さが変わること
+3. 変更後にRAZIOをOFFへ戻すとノイズAudioTrackが停止し、再ON時は最後のスイッチとレベルが復元されること。force-stop後の再起動でもDataStoreから復元されること
 
 2026-08-31 のPixel確認結果:
 
@@ -311,6 +311,11 @@ Phase 2 の実機 regression（変更したとき）:
 - RAZIO電源OFFで `session 0 :: Disabled` / `ノイズ: Idle`、`dumpsys media.audio_flinger` の `AT::remove` とtrack idleを確認。再ON後にNoiseスイッチをONへ戻すと `ノイズ: Active` と各 `200%` 表示が復元された（再ON時の新sessionは既存の再生成lifecycleによる）
 - 本試行のfiltered `logcat`にRAZIO由来の `FATAL EXCEPTION` / `ANR in` / `AudioHardening` はなかった。UI証跡は [noise-level-200.png](C:/Users/tatsuya/AppData/Local/Temp/razio-spectrum-evidence/noise-level-200.png)
 
+2026-09-03 の製品面・永続化確認:
+
+- Pixel 10 Pro（Android 17、serial `56101FDCH006CX`）で第一面の `ノイズ` / Hiss / Crackle と `0〜400%` スライダー、6つ目の `Shortwave` を確認した
+- Shortwave の低域カット開始 `510 Hz` と Hiss ON / `110%` が force-stop 後も復元された。詳細は `docs/audio-research.md`
+
 ### DynamicsProcessing単独経路
 
 現行経路は `DynamicsProcessing` 1つだけ（Pre-EQ flat → MBC → Post-EQ → Limiter）とする。通常の `Equalizer` は生成せず、UIのEqualizer欄は `Not used (backend=dynamics_only)` になる。Post-EQの最終bandは20 kHzまで持ち、全プリセットの高域目標は `-48 dB` とする。
@@ -318,7 +323,7 @@ Phase 2 の実機 regression（変更したとき）:
 1. Spotifyを再生し、本体スピーカー / Pixel Buds Pro 2 Bluetooth A2DPでRAZIOをONにする
 2. UI detailで `Equalizer: Not used`、`preEq=flat`、`postEq=curve`、`postEqBands` の20 kHz bandが確認できることを記録する
 3. UI detailのPost-EQ 9 / 18 / 20 kHzが`-48dB`、stageが`inUse` / `enabled`、9 bandが全て有効であることをreadbackする。満たさない端末は`Ready` / `Active`合格にしない
-4. Narrow AM / Vintage speaker / Weak signal / Saturation / Fadingを順に選択し、10 kHz付近の高域残り、低域・声域のバランス、音量低下、過度な歪みを聴感メモへ残す
+4. Narrow AM / Vintage speaker / Weak signal / Saturation / Fading / Shortwaveを順に選択し、10 kHz付近の高域残り、低域・声域のバランス、音量低下、過度な歪みを聴感メモへ残す
 5. ON / OFF、プリセット切替、route change、Home、画面OFF、force-stop後の復元を確認する。プリセット切替は約80 msで途切れず、effectを二重生成しないことを確認する
 6. `dumpsys media.audio_flinger`、`dumpsys activity services dev.hondasports.razio`、`dumpsys audio`、filtered `logcat`でeffect数（1）、FGS、route、crash/ANRを保存する
 

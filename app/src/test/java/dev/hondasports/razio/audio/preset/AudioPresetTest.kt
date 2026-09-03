@@ -54,6 +54,7 @@ class AudioPresetTest {
         assertTrue(AudioPreset.VINTAGE_SPEAKER.distortionRelief > 0f)
         assertTrue(AudioPreset.SATURATION.distortionRelief > 0f)
         assertTrue(AudioPreset.FADING.distortionRelief > 0f)
+        assertTrue(AudioPreset.SHORTWAVE.distortionRelief > 0f)
     }
 
     @Test
@@ -79,6 +80,21 @@ class AudioPresetTest {
         assertEquals(3f, preset.fadeDepthDb, 0.01f)
         assertEquals(3_200L, preset.fadePeriodMs)
         assertEquals(0f, preset.inputGainDb, 0.01f)
+    }
+
+    @Test
+    fun shortwave_usesANarrowerBandAndFasterFading() {
+        val preset = AudioPreset.SHORTWAVE
+
+        assertEquals(-30f, preset.gainDbForCenterHz(500f), 0.01f)
+        assertEquals(4f, preset.gainDbForCenterHz(850f), 0.01f)
+        assertEquals(4f, preset.gainDbForCenterHz(1_150f), 0.01f)
+        assertEquals(-48f, preset.gainDbForCenterHz(1_250f), 0.01f)
+        assertEquals(-1f, preset.inputGainDb, 0.01f)
+        assertEquals(6f, preset.fadeDepthDb, 0.01f)
+        assertEquals(2_400L, preset.fadePeriodMs)
+        assertTrue(preset.highCutHz < AudioPreset.WEAK_SIGNAL.highCutHz)
+        assertTrue(preset.fadeDepthDb > AudioPreset.FADING.fadeDepthDb)
     }
 
     @Test
@@ -164,5 +180,22 @@ class AudioPresetTest {
         assertEquals(tuning.midGainDb, tuning.gainDbForCenterHz(1_000f), 0.01f)
         assertEquals(tuning.highTransitionGainDb, tuning.gainDbForCenterHz(tuning.highTransitionHz), 0.01f)
         assertEquals(tuning.highGainDb, tuning.gainDbForCenterHz(10_000f), 0.01f)
+    }
+
+    @Test
+    fun tuning_roundTripsThroughEncodedForm() {
+        val original = AudioPreset.SHORTWAVE.defaultTuning().copy(
+            lowCutHz = 470f,
+            fadeDepthDb = 5.5f,
+            fadePeriodMs = 2_000L,
+        ).sanitized()
+
+        val restored = AudioPresetTuning.decode(original.encoded(), AudioPreset.NARROW_AM.defaultTuning())
+
+        assertEquals(original, restored)
+        assertEquals(
+            AudioPreset.NARROW_AM.defaultTuning().sanitized(),
+            AudioPresetTuning.decode("nope", AudioPreset.NARROW_AM.defaultTuning()),
+        )
     }
 }

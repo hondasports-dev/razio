@@ -123,8 +123,11 @@ Phase 1 で採用する audio backend が決定した後に進みます。
 - [x] 周波数境界の細分化（低域・高域に中間境界／中間ゲインを追加し、カット傾斜を二段階で調整）
 - [x] Hiss（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
 - [x] Crackle（global AudioEffectでは生成不可。AudioTrack独立ノイズオーバーレイPoCを実装し、Pixel 10 Proで無音ベースへの重畳を聴感確認済み）
-- [x] Hiss / Crackle レベル調整（詳細パネルの0〜200%スライダー。5%刻み、Pixel 10 ProでUI／AudioTrack継続／OFF cleanup確認済み）
+- [x] Hiss / Crackle レベル調整（第一面の0〜400%スライダー。5%刻み、基準ゲイン Hiss `0.04` / Crackle `0.20`）
 - [x] Fading（DynamicsProcessing の input gain をゆっくり変動。Pixel 10 Pro / SoundCore 2 / Spotifyでユーザー聴感受入済み）
+- [x] Shortwave（弱い短波受信。500Hz〜1.25kHz、±6dB / 2.4秒の揺れ）
+- [x] プリセット調整とノイズレベルの永続化（DataStore。再起動後も復元）
+- [x] Hiss / Crackle を第一面操作にする（スイッチ＋0〜400%スライダー。詳細は状態観測）
 - [x] Mono 感の強化は不採用（DynamicsProcessing / Equalizerに左右混合APIはなく、別経路PoCのcapture→downmix→AudioTrackは元音声との二重化をユーザー聴感で確認。製品コード・UI・testは削除し、詳細は `docs/audio-research.md` の履歴へ残す）
 
 AudioEffect API だけで困難な項目は backend の制約を確認してから実装します。
@@ -134,10 +137,10 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 - [x] 製品UI（第一面は大きな RAZIO、円形電源、LIVE/STANDBY、プリセット ‹ ›、塗りカーブ、細いメーター。設定チップと6スライダーは出さない）
 - [x] tuning dial の表現（詳細パネルに6境界の帯域位置をラジオ目盛り風に表示。操作は下のスライダーで行う）
 - [x] signal meter（第一面は出力mix tapのPeakを細いセグメントで表示。検証用スペクトラムとは役割を分離し、tap位置の端末依存を明示）
-- [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading を ‹ › ・点・横スワイプで切替）
+- [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading / Shortwave を ‹ › ・点・横スワイプで切替）
 - [x] dark / light 方針（system dark modeに追従する暖色light / dark scheme。dynamic colorは既定OFF）
 - [x] icon / branding（ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO adaptive icon。API 21〜25はvector layer-listへフォールバック）
-- [x] 詳細調整UI（`詳細設定を開く` で6周波数境界・同調ダイヤル・ゲイン・Dynamics・Character値とNoise / Spectrum / Engine検証パネルを展開。プリセット名直下のリセットは常時表示し、定義値から外れたときだけ活性）
+- [x] 詳細調整UI（`詳細設定を開く` で6周波数境界・同調ダイヤル・ゲイン・Dynamics・Character値とNoise状態 / Spectrum / Engine検証パネルを展開。Hiss / Crackle操作は第一面。プリセット名直下のリセットは常時表示し、定義値から外れたときだけ活性）
 
 UI が audio backend の仕様を隠さないようにします。
 

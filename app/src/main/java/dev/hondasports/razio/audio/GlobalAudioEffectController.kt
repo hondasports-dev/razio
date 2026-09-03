@@ -150,6 +150,22 @@ class GlobalAudioEffectController(
         publishExisting(wasOn)
     }
 
+    fun currentPreset(): AudioPreset = selectedPreset
+
+    /** Replaces in-memory tunings and the selected preset after DataStore restore. */
+    fun restorePersistedTunings(
+        preset: AudioPreset,
+        saved: Map<AudioPreset, AudioPresetTuning>,
+    ) {
+        AudioPreset.entries.forEach { entry ->
+            tunings[entry] = saved[entry]?.sanitized() ?: tunings[entry] ?: entry.defaultTuning()
+        }
+        selectedPreset = preset
+        if (attempted) {
+            initialize()
+        }
+    }
+
     fun handleRouteChange() {
         stopFading()
         cancelPresetTransition(applyFinalPreset = true)

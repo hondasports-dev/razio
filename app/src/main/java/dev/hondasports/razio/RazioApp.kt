@@ -33,6 +33,8 @@ class RazioApp : Application() {
     private lateinit var preferences: RazioPreferences
     private var powerPersistenceJob: Job? = null
     private var presetPersistenceJob: Job? = null
+    private var tuningPersistenceJob: Job? = null
+    private var noisePersistenceJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -46,7 +48,11 @@ class RazioApp : Application() {
         audioEffects.initialize()
         AudioRouteMonitor(this, ::handleRouteChange).start()
         applicationScope.launch {
-            audioEffects.setPreset(preferences.savedPreset())
+            audioEffects.restorePersistedTunings(
+                preset = preferences.savedPreset(),
+                saved = preferences.savedTunings(),
+            )
+            noiseOverlay.restoreSettings(preferences.savedNoiseSettings())
             if (preferences.savedPowerOn()) {
                 applyPower(enabled = true, persist = false)
             }
@@ -65,25 +71,29 @@ class RazioApp : Application() {
         }
     }
 
-    /** Applies a runtime-only tuning change to the currently selected preset. */
     fun setPresetTuning(tuning: AudioPresetTuning) {
         audioEffects.setPresetTuning(tuning)
+        persistTuning(audioEffects.currentPreset(), tuning)
     }
 
     fun setHissEnabled(enabled: Boolean) {
         noiseOverlay.setHissEnabled(enabled)
+        persistNoiseSettings()
     }
 
     fun setCrackleEnabled(enabled: Boolean) {
         noiseOverlay.setCrackleEnabled(enabled)
+        persistNoiseSettings()
     }
 
     fun setHissLevel(level: Float) {
         noiseOverlay.setHissLevel(level)
+        persistNoiseSettings()
     }
 
     fun setCrackleLevel(level: Float) {
         noiseOverlay.setCrackleLevel(level)
+        persistNoiseSettings()
     }
 
     /** Starts the output-only analyzer on API < 29, where playback capture is unavailable. */
@@ -167,6 +177,23 @@ class RazioApp : Application() {
             powerPersistenceJob = applicationScope.launch {
                 preferences.setPowerOn(enabled)
             }
+        }
+    }
+
+    private fun persistTuning(
+        preset: AudioPreset,
+        tuning: AudioPresetTuning,
+    ) {
+        tuningPersistenceJob?.cancel()
+        tuningPersistenceJob = applicationScope.launch {
+            preferences.setTuning(preset, tuning)
+        }
+    }
+
+    private fun persistNoiseSettings() {
+        noisePersistenceJob?.cancel()
+        noisePersistenceJob = applicationScope.launch {
+            preferences.setNoiseSettings(noiseOverlay.currentSettings())
         }
     }
 

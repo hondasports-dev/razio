@@ -84,4 +84,27 @@ class NoiseSignalGeneratorTest {
         val loudPeak = loud.maxOf { kotlin.math.abs(it.toInt()) }
         assertTrue(loudPeak > quietPeak * 3 / 2)
     }
+
+    @Test
+    fun maxLevelsProduceMeaningfulOutputWithoutClipping() {
+        val buffer = ShortArray(48_000 * 4)
+
+        NoiseSignalGenerator(sampleRate = 48_000, seed = 7L)
+            .fill(
+                buffer,
+                hiss = true,
+                crackle = true,
+                hissLevel = NoiseLevelRange.MAX,
+                crackleLevel = NoiseLevelRange.MAX,
+            )
+
+        val peak = buffer.maxOf { kotlin.math.abs(it.toInt()) }
+        val sumSquares = buffer.sumOf { sample ->
+            val value = sample.toLong()
+            value * value
+        }
+        val rms = kotlin.math.sqrt(sumSquares.toDouble() / buffer.size)
+        assertTrue(rms > 1_000.0)
+        assertTrue(peak < Short.MAX_VALUE)
+    }
 }

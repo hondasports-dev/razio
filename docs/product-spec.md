@@ -55,12 +55,7 @@ UI は昔のポケットラジオを想起させる方向を候補とします�
 
 将来候補:
 
-- Normal AM
-- Weak Signal
-- Vintage Speaker
-- Saturation
-- Fading
-- Shortwave-like
+- Shortwave-like（実装済み: `Shortwave` プリセット）
 
 ## 成功条件
 

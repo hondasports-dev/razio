@@ -35,12 +35,31 @@ class NoiseOverlayController {
         synchronized(lock) {
             if (released) return
             powerOn = enabled
-            if (!enabled) {
-                hissEnabled = false
-                crackleEnabled = false
-            }
         }
         reconcile()
+    }
+
+    /** Applies saved switch and level values before or after power is restored. */
+    fun restoreSettings(settings: NoiseOverlaySettings) {
+        synchronized(lock) {
+            if (released) return
+            hissEnabled = settings.hissEnabled
+            crackleEnabled = settings.crackleEnabled
+            hissLevel = sanitizeLevel(settings.hissLevel)
+            crackleLevel = sanitizeLevel(settings.crackleLevel)
+        }
+        reconcile()
+    }
+
+    fun currentSettings(): NoiseOverlaySettings {
+        return synchronized(lock) {
+            NoiseOverlaySettings(
+                hissEnabled = hissEnabled,
+                crackleEnabled = crackleEnabled,
+                hissLevel = hissLevel,
+                crackleLevel = crackleLevel,
+            )
+        }
     }
 
     fun setHissEnabled(enabled: Boolean) {
@@ -123,7 +142,7 @@ class NoiseOverlayController {
             if (released || !shouldPlayLocked() || playback != null) {
                 null
             } else {
-                NoiseSettings(
+                NoiseOverlaySettings(
                     hissEnabled = hissEnabled,
                     crackleEnabled = crackleEnabled,
                     hissLevel = hissLevel,
@@ -231,7 +250,7 @@ class NoiseOverlayController {
                     if (playback?.track !== track || !shouldPlayLocked()) {
                         null
                     } else {
-                        NoiseSettings(
+                        NoiseOverlaySettings(
                             hissEnabled = hissEnabled,
                             crackleEnabled = crackleEnabled,
                             hissLevel = hissLevel,
@@ -290,7 +309,7 @@ class NoiseOverlayController {
         publishStableState()
     }
 
-    private fun publishStartingState(settings: NoiseSettings) {
+    private fun publishStartingState(settings: NoiseOverlaySettings) {
         _state.value = NoiseOverlayUiState(
             powerOn = true,
             hissEnabled = settings.hissEnabled,
@@ -336,6 +355,8 @@ class NoiseOverlayController {
         val snapshot = synchronized(lock) {
             when {
                 !powerOn -> NoiseOverlayUiState(
+                    hissEnabled = hissEnabled,
+                    crackleEnabled = crackleEnabled,
                     hissLevel = hissLevel,
                     crackleLevel = crackleLevel,
                 )
@@ -403,13 +424,6 @@ class NoiseOverlayController {
         val detail: String,
     )
 
-    private data class NoiseSettings(
-        val hissEnabled: Boolean,
-        val crackleEnabled: Boolean,
-        val hissLevel: Float,
-        val crackleLevel: Float,
-    )
-
     private companion object {
         const val DEFAULT_SAMPLE_RATE = 48_000
         const val MIN_SAMPLE_RATE = 8_000
@@ -428,6 +442,13 @@ enum class NoiseOverlayStatus {
     Error,
 }
 
+data class NoiseOverlaySettings(
+    val hissEnabled: Boolean = false,
+    val crackleEnabled: Boolean = false,
+    val hissLevel: Float = NoiseLevelRange.DEFAULT,
+    val crackleLevel: Float = NoiseLevelRange.DEFAULT,
+)
+
 data class NoiseOverlayUiState(
     val powerOn: Boolean = false,
     val hissEnabled: Boolean = false,
@@ -440,7 +461,7 @@ data class NoiseOverlayUiState(
 
 internal object NoiseLevelRange {
     const val MIN = 0f
-    const val MAX = 2f
+    const val MAX = 4f
     const val DEFAULT = 1f
 }
 
@@ -520,9 +541,11 @@ internal class NoiseSignalGenerator(
         const val MIN_SAMPLE_RATE = 8_000
         const val RANDOM_SCALE = 9_007_199_254_740_992.0
         const val HISS_LOW_PASS_ALPHA = 0.02f
-        const val HISS_GAIN = 0.02f
+        // Keep the generated hiss audible beside normal media while leaving
+        // enough headroom for Crackle and the final full-scale clamp.
+        const val HISS_GAIN = 0.04f
         const val CRACKLE_EVENTS_PER_SECOND = 2f
-        const val CRACKLE_GAIN = 0.22f
+        const val CRACKLE_GAIN = 0.20f
         const val CRACKLE_DECAY = 0.45f
     }
 }
