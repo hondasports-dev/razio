@@ -266,6 +266,7 @@ fun RazioHomeScreen(
                 powerOn = state.powerOn,
                 enabled = !state.initializing,
                 onPresetChange = onPresetChange,
+                onResetTuning = { onPresetTuningChange(state.preset.defaultTuning()) },
                 modifier = Modifier.padding(top = 28.dp),
             )
             CompactSignalMeter(
@@ -277,7 +278,7 @@ fun RazioHomeScreen(
                 expanded = tuningExpanded,
                 enabled = !state.initializing,
                 onToggle = { tuningExpanded = !tuningExpanded },
-                modifier = Modifier.padding(top = 20.dp),
+                modifier = Modifier.padding(top = 8.dp),
             )
             if (tuningExpanded) {
                 Column(
@@ -307,11 +308,6 @@ fun RazioHomeScreen(
                             showDial = true,
                             showFrequencyControls = true,
                             modifier = Modifier.padding(top = 12.dp),
-                        )
-                        ResetButton(
-                            enabled = !state.initializing,
-                            onClick = { onPresetTuningChange(state.preset.defaultTuning()) },
-                            modifier = Modifier.padding(top = 8.dp),
                         )
                     }
                     DevelopmentPanels(
@@ -525,6 +521,7 @@ private fun PresetStage(
     powerOn: Boolean,
     enabled: Boolean,
     onPresetChange: (AudioPreset) -> Unit,
+    onResetTuning: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val presets = AudioPreset.entries
@@ -584,6 +581,23 @@ private fun PresetStage(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 10.dp),
                     )
+                    val pageCustomized = preset == selectedPreset &&
+                        tuning.sanitized() != selectedPreset.defaultTuning().sanitized()
+                    if (pageCustomized) {
+                        TextButton(
+                            onClick = onResetTuning,
+                            enabled = enabled,
+                            modifier = Modifier.padding(top = 2.dp),
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    R.string.preset_tuning_reset_named,
+                                    presetLabel(preset),
+                                ),
+                                maxLines = 1,
+                            )
+                        }
+                    }
                     PresetFrequencyCurve(
                         tuning = pageTuning,
                         powerOn = powerOn,
@@ -656,27 +670,6 @@ private fun PresetStage(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ResetButton(
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-        shape = ControlShape,
-    ) {
-        Text(
-            text = stringResource(R.string.preset_tuning_reset_default),
-            maxLines = 1,
-        )
     }
 }
 

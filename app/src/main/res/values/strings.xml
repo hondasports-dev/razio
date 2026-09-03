@@ -43,6 +43,7 @@
     <string name="preset_tuning_details_open">詳細設定を開く</string>
     <string name="preset_tuning_details_close">詳細設定を閉じる</string>
     <string name="preset_tuning_reset_default">プリセット初期値に戻す</string>
+    <string name="preset_tuning_reset_named">%1$s を初期値に戻す</string>
     <string name="preset_tuning_hint">スライダーで選択中プリセットの周波数6点・ゲイン・圧縮を調整できます。変更はこの起動中だけ有効です。</string>
     <string name="preset_tuning_dial_heading">同調ダイヤル（帯域の位置）</string>
     <string name="preset_tuning_dial_hint">帯域の広さをラジオの目盛り風に表示します。縦の目盛りが6つの周波数境界です。</string>

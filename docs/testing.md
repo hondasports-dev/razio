@@ -171,14 +171,14 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品UI（現行）
 
-第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は大きな `RAZIO`、円形電源、`LIVE` / `STANDBY`、プリセットの `‹ 名前 ›` と点インジケータ、塗りカーブ、細い出力メーター、`詳細設定を開く` で構成する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと周波数スライダー、同調ダイヤル、リセット、ゲイン / Dynamics / Character、Noise / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
+第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は大きな `RAZIO`、円形電源、`LIVE` / `STANDBY`、プリセットの `‹ 名前 ›` と点インジケータ、塗りカーブ、細い出力メーター、`詳細設定を開く` で構成する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。調整が定義値と違うときだけ、blurb直下に `（プリセット名）を初期値に戻す` を出す。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと周波数スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
 
 必須確認:
 
 1. debug APKをPixelへinstallし、第一面に `RAZIO`、円形 ON/OFF、`LIVE` または `STANDBY`、プリセット名、塗りカーブ、細いメーターが出ること。`session 0` / `DynamicsProcessing` チップ、6本スライダー、緑黒CRTが出ないこと
 2. 名前またはカーブを左／右へスワイプして隣接プリセットへ変わり、点インジケータとカーブ形状が追従すること。`‹ ›` と点タップでも同じ切替になること
 3. `詳細設定を開く` を押して `詳細設定を閉じる` へ変わり、同調ダイヤルと6つの周波数ラベル（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）がUI treeに現れること
-4. 6本のうち1本を `＋` またはスライダーで変更し、値表示と第一面カーブが更新されること。`プリセット初期値に戻す` で変更値が定義値へ戻ること
+4. 6本のうち1本を `＋` またはスライダーで変更し、値表示と第一面カーブが更新されること。詳細を閉じると blurb直下に `（プリセット名）を初期値に戻す` が現れ、タップで定義値へ戻ること。戻すとリンクが消えること
 5. 詳細の開閉・リセット後も `Equalizer: Not used`、session `0` のDynamicsProcessing、Hiss / Crackle、スペクトラム／出力メーターの既存操作が崩れないこと
 6. 操作後のfiltered `logcat` に `FATAL EXCEPTION`、`ANR in`、アプリ由来の未処理Exceptionがないこと
 
