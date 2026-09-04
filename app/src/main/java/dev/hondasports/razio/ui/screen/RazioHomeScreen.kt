@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -75,6 +76,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,8 +103,10 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
 
-private val PanelShape = RoundedCornerShape(24.dp)
-private val ControlShape = RoundedCornerShape(16.dp)
+private val PanelShape = RoundedCornerShape(22.dp)
+private val ControlShape = RoundedCornerShape(14.dp)
+private val ChassisShape = RoundedCornerShape(26.dp)
+private val WellShape = RoundedCornerShape(18.dp)
 
 @Composable
 fun RazioHomeRoute(
@@ -254,7 +258,7 @@ fun RazioHomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 24.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             var tuningExpanded by rememberSaveable(state.preset.id) { mutableStateOf(false) }
@@ -265,38 +269,51 @@ fun RazioHomeScreen(
                 enabled = !state.initializing,
                 onPowerChange = onPowerChange,
             )
-            PresetStage(
-                selectedPreset = state.preset,
-                tuning = state.tuning,
-                powerOn = state.powerOn,
-                enabled = !state.initializing,
-                showCurve = !tuningExpanded,
-                onPresetChange = onPresetChange,
-                onResetTuning = { onPresetTuningChange(state.preset.defaultTuning()) },
-                modifier = Modifier.padding(top = if (tuningExpanded) 12.dp else 28.dp),
-            )
-            if (!tuningExpanded) {
-                CompactSignalMeter(
-                    snapshot = spectrumState.output,
-                    running = spectrumState.running,
-                    modifier = Modifier.padding(top = 8.dp),
+            if (tuningExpanded) {
+                PresetStage(
+                    selectedPreset = state.preset,
+                    tuning = state.tuning,
+                    powerOn = state.powerOn,
+                    enabled = !state.initializing,
+                    showCurve = false,
+                    onPresetChange = onPresetChange,
+                    onResetTuning = { onPresetTuningChange(state.preset.defaultTuning()) },
+                    modifier = Modifier.padding(top = 12.dp),
                 )
-                NoiseFaceControls(
-                    noiseState = noiseState,
-                    enabled = state.powerOn && !state.initializing,
-                    onHissChange = onHissChange,
-                    onCrackleChange = onCrackleChange,
-                    onHissGainChange = onHissGainChange,
-                    onCrackleGainChange = onCrackleGainChange,
-                    modifier = Modifier.padding(top = 10.dp),
-                )
+            } else {
+                RadioChassis(modifier = Modifier.padding(top = 16.dp)) {
+                    PresetStage(
+                        selectedPreset = state.preset,
+                        tuning = state.tuning,
+                        powerOn = state.powerOn,
+                        enabled = !state.initializing,
+                        showCurve = true,
+                        onPresetChange = onPresetChange,
+                        onResetTuning = { onPresetTuningChange(state.preset.defaultTuning()) },
+                    )
+                    CompactSignalMeter(
+                        snapshot = spectrumState.output,
+                        running = spectrumState.running,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                }
+                RadioChassis(modifier = Modifier.padding(top = 12.dp)) {
+                    NoiseFaceControls(
+                        noiseState = noiseState,
+                        enabled = state.powerOn && !state.initializing,
+                        onHissChange = onHissChange,
+                        onCrackleChange = onCrackleChange,
+                        onHissGainChange = onHissGainChange,
+                        onCrackleGainChange = onCrackleGainChange,
+                    )
+                }
             }
             DetailsToggle(
                 expanded = tuningExpanded,
                 enabled = !state.initializing,
                 onToggle = { tuningExpanded = !tuningExpanded },
                 modifier = Modifier
-                    .padding(top = 8.dp)
+                    .padding(top = 12.dp)
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
             )
@@ -557,9 +574,9 @@ private fun PresetStage(
                     )
                     Text(
                         text = presetBlurb(preset),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 10.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                     val pageCustomized = preset == selectedPreset &&
                         tuning.sanitized() != selectedPreset.defaultTuning().sanitized()
@@ -568,14 +585,29 @@ private fun PresetStage(
                         active = pageCustomized,
                         enabled = enabled,
                         onClick = onResetTuning,
-                        modifier = Modifier.padding(top = 10.dp),
+                        modifier = Modifier.padding(top = 6.dp),
                     )
                     if (showCurve) {
-                        PresetFrequencyCurve(
-                            tuning = pageTuning,
-                            powerOn = powerOn,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
+                        val colorScheme = MaterialTheme.colorScheme
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 10.dp)
+                                .fillMaxWidth()
+                                .clip(WellShape)
+                                .background(colorScheme.background)
+                                .border(
+                                    width = 1.dp,
+                                    color = colorScheme.outline.copy(alpha = 0.45f),
+                                    shape = WellShape,
+                                )
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                        ) {
+                            PresetFrequencyCurve(
+                                tuning = pageTuning,
+                                powerOn = powerOn,
+                                plotHeight = 196.dp,
+                            )
+                        }
                     }
                 }
             }
@@ -631,13 +663,14 @@ private fun PresetStage(
                 val selected = index == pagerState.currentPage
                 Box(
                     modifier = Modifier
-                        .size(if (selected) 8.dp else 6.dp)
-                        .clip(CircleShape)
+                        .height(4.dp)
+                        .width(if (selected) 16.dp else 6.dp)
+                        .clip(RoundedCornerShape(2.dp))
                         .background(
                             if (selected) {
                                 MaterialTheme.colorScheme.primary
                             } else {
-                                MaterialTheme.colorScheme.outline
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
                             },
                         )
                         .clickable(enabled = enabled) { onPresetChange(preset) },
@@ -657,50 +690,26 @@ private fun ResetTuningButton(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val canReset = active && enabled
-    val border = if (canReset) {
-        colorScheme.primary
-    } else {
-        colorScheme.outline.copy(alpha = 0.38f)
-    }
-    val fill = if (canReset) {
-        colorScheme.primary.copy(alpha = 0.18f)
-    } else {
-        Color.Transparent
-    }
     val content = if (canReset) {
         colorScheme.primary
     } else {
-        colorScheme.onSurfaceVariant.copy(alpha = 0.42f)
+        colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
     }
-    val pill = RoundedCornerShape(100.dp)
     val label = stringResource(R.string.preset_tuning_reset_named, presetName)
-    Row(
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = content,
+        fontWeight = if (canReset) FontWeight.SemiBold else FontWeight.Medium,
+        maxLines = 1,
         modifier = modifier
-            .clip(pill)
-            .border(width = 1.dp, color = border, shape = pill)
-            .background(color = fill, shape = pill)
+            .clip(RoundedCornerShape(8.dp))
             .clickable(
                 enabled = canReset,
                 onClickLabel = label,
             ) { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(content),
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = content,
-            fontWeight = if (canReset) FontWeight.SemiBold else FontWeight.Medium,
-            maxLines = 1,
-        )
-    }
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    )
 }
 
 @Composable
@@ -710,20 +719,35 @@ private fun DetailsToggle(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedButton(
-        onClick = onToggle,
-        enabled = enabled,
-        modifier = modifier.fillMaxWidth(),
-        shape = ControlShape,
+    val colorScheme = MaterialTheme.colorScheme
+    val label = stringResource(
+        if (expanded) {
+            R.string.preset_tuning_details_close
+        } else {
+            R.string.preset_tuning_details_open
+        },
+    )
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(ControlShape)
+            .background(colorScheme.surfaceContainerHigh)
+            .border(
+                width = 1.dp,
+                color = colorScheme.outline.copy(alpha = 0.5f),
+                shape = ControlShape,
+            )
+            .clickable(enabled = enabled, onClickLabel = label, onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .alpha(if (enabled) 1f else 0.45f),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(
-                if (expanded) {
-                    R.string.preset_tuning_details_close
-                } else {
-                    R.string.preset_tuning_details_open
-                },
-            ),
+            text = label,
+            style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 1.2.sp),
+            color = colorScheme.onSurface,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
         )
     }
@@ -1736,7 +1760,7 @@ private fun HomeHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.home_overline),
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 3.sp),
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 4.sp),
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
@@ -1745,35 +1769,37 @@ private fun HomeHeader(
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Row(
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(6.dp)
                         .clip(CircleShape)
                         .background(statusColor),
                 )
                 Text(
                     text = statusLabel,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
                     color = statusColor,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
             Text(
                 text = stringResource(R.string.terminal_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 6.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         PowerButton(
             powerOn = powerOn,
             enabled = enabled,
             onToggle = onPowerChange,
-            modifier = Modifier.padding(start = 12.dp),
+            modifier = Modifier.padding(start = 8.dp),
         )
     }
 }
@@ -1795,18 +1821,24 @@ private fun PowerButton(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val ring = if (powerOn) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+    }
     Box(
         modifier = modifier
-            .size(88.dp)
+            .size(68.dp)
             .alpha(if (enabled) 1f else 0.4f),
         contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier
-                .size(88.dp)
+                .size(68.dp)
+                .border(width = 1.dp, color = ring, shape = CircleShape)
                 .background(
                     color = if (powerOn) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
                     } else {
                         Color.Transparent
                     },
@@ -1815,7 +1847,7 @@ private fun PowerButton(
         )
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(54.dp)
                 .clip(CircleShape)
                 .background(container)
                 .clickable(enabled = enabled) { onToggle(!powerOn) },
@@ -1823,9 +1855,10 @@ private fun PowerButton(
         ) {
             Text(
                 text = stringResource(if (powerOn) R.string.power_on else R.string.power_off),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = content,
                 fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
             )
         }
     }
@@ -1841,6 +1874,10 @@ private fun AppPanel(
         shape = PanelShape,
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+        ),
         shadowElevation = 0.dp,
         tonalElevation = 0.dp,
         content = {
@@ -1849,6 +1886,28 @@ private fun AppPanel(
                 content = content,
             )
         },
+    )
+}
+
+@Composable
+private fun RadioChassis(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(ChassisShape)
+            .background(colorScheme.surfaceContainer)
+            .border(
+                width = 1.dp,
+                color = colorScheme.outline.copy(alpha = 0.5f),
+                shape = ChassisShape,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content,
     )
 }
 
@@ -1940,18 +1999,24 @@ private fun FaceGainStrip(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = formatTuningDb(localValue),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.2.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = formatTuningDb(localValue),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
         Box(modifier = Modifier.fillMaxWidth()) {
             FaceSegmentTrack(
                 fraction = gainFraction(localValue, valueRange),
@@ -2129,14 +2194,14 @@ private fun NoiseFaceSwitch(
         enabled -> colorScheme.onSurfaceVariant
         else -> colorScheme.onSurfaceVariant.copy(alpha = 0.42f)
     }
-    val pill = RoundedCornerShape(100.dp)
+    val bezel = RoundedCornerShape(14.dp)
     Row(
         modifier = modifier
-            .clip(pill)
-            .border(width = 1.dp, color = border, shape = pill)
-            .background(color = fill, shape = pill)
+            .clip(bezel)
+            .border(width = 1.dp, color = border, shape = bezel)
+            .background(color = fill, shape = bezel)
             .clickable(enabled = enabled, onClickLabel = label, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
