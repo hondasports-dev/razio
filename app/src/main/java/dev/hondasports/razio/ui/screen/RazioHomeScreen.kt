@@ -522,18 +522,25 @@ private fun PresetStage(
     modifier: Modifier = Modifier,
 ) {
     val presets = AudioPreset.entries
-    val pagerState = rememberPagerState(initialPage = selectedPreset.ordinal) { presets.size }
+    val pagerState = rememberPagerState(
+        initialPage = loopingPagerStartPage(presets.size, selectedPreset.ordinal),
+    ) { LOOPING_PAGER_PAGE_COUNT }
     val latestPreset by rememberUpdatedState(selectedPreset)
     val latestOnPresetChange by rememberUpdatedState(onPresetChange)
 
     LaunchedEffect(selectedPreset) {
-        if (pagerState.settledPage != selectedPreset.ordinal) {
-            pagerState.animateScrollToPage(selectedPreset.ordinal)
+        val targetPage = nearestLoopingPagerPage(
+            currentPage = pagerState.settledPage,
+            targetIndex = selectedPreset.ordinal,
+            itemCount = presets.size,
+        )
+        if (pagerState.settledPage != targetPage) {
+            pagerState.animateScrollToPage(targetPage)
         }
     }
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collect { page ->
-            val preset = presets[page]
+            val preset = presets[loopingPagerItemIndex(page, presets.size)]
             if (preset != latestPreset) {
                 latestOnPresetChange(preset)
             }
@@ -555,7 +562,7 @@ private fun PresetStage(
                     .fillMaxWidth()
                     .wrapContentHeight(),
             ) { page ->
-                val preset = presets[page]
+                val preset = presets[loopingPagerItemIndex(page, presets.size)]
                 val pageTuning = if (preset == selectedPreset) {
                     tuning
                 } else {
@@ -660,7 +667,7 @@ private fun PresetStage(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             presets.forEachIndexed { index, preset ->
-                val selected = index == pagerState.currentPage
+                val selected = index == loopingPagerItemIndex(pagerState.currentPage, presets.size)
                 Box(
                     modifier = Modifier
                         .height(4.dp)

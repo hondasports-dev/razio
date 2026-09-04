@@ -7,25 +7,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 private val Sans = FontFamily.SansSerif
-private val Display = FontFamily.Serif
 
 val Typography =
     Typography(
         displaySmall =
             TextStyle(
-                fontFamily = Display,
-                fontWeight = FontWeight.Medium,
-                fontSize = 34.sp,
-                lineHeight = 38.sp,
-                letterSpacing = 1.6.sp,
+                fontFamily = Sans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 44.sp,
+                lineHeight = 48.sp,
+                letterSpacing = (-1.2).sp,
             ),
         headlineMedium =
             TextStyle(
-                fontFamily = Display,
+                fontFamily = Sans,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 22.sp,
-                lineHeight = 28.sp,
-                letterSpacing = 0.2.sp,
+                fontSize = 26.sp,
+                lineHeight = 32.sp,
+                letterSpacing = (-0.3).sp,
             ),
         titleLarge =
             TextStyle(

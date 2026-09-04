@@ -16,6 +16,7 @@ RAZIO では、通常の Android アプリとしての品質に加えて「実�
 対象:
 
 - preset の値変換（`AmPresetTest`）
+- プリセット pager の端一周（`LoopingPagerTest`）
 - Shortwave / Fading の mapped input-gain 揺れと MBC post フォールバック範囲（`AmDynamicsConfigFadingTest`）
 - AudioEffect state transition（`RazioStatusTest`）
 - error mapping
@@ -172,12 +173,12 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品UI（現行）
 
-第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` はセリフの `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、細いメーター、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
+第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は既存 Sans の `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、細いメーター、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
 
 必須確認:
 
 1. debug APKをPixelへinstallし、第一面に `RAZIO`、円形 ON/OFF、`LIVE` または `STANDBY`、プリセット名、塗りカーブ、細いメーターが出ること。`session 0` / `DynamicsProcessing` チップ、6本スライダー、緑黒CRTが出ないこと
-2. 名前またはカーブを左／右へスワイプして隣接プリセットへ変わり、点インジケータとカーブ形状が追従すること。`‹ ›` と点タップでも同じ切替になること。6つ目の `Shortwave` が点とスワイプに含まれること
+2. 名前またはカーブを左／右へスワイプして隣接プリセットへ変わり、点インジケータとカーブ形状が追従すること。`‹ ›` と点タップでも同じ切替になること。6つ目の `Shortwave` が点とスワイプに含まれること。`Shortwave` からさらに次へスワイプすると `Narrow AM` へ一周し、`Narrow AM` から前へスワイプすると `Shortwave` へ戻ること
 3. `詳細設定を開く` を押して全幅の `詳細設定を閉じる` へ変わり、Hiss / Crackle が隠れ、周波数カーブと6つの周波数ラベル（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）が同じ詳細面に現れること
 4. 6本のうち1本を `＋` またはスライダーで変更し、値表示と詳細内カーブが更新されること。詳細を閉じると第一面カーブも同じ形になること。blurb直下の `（プリセット名）を初期値に戻す` が非活性から活性へ変わり、タップで定義値へ戻って再び非活性になること
 5. 詳細の開閉・リセット後も `Equalizer: Not used`、session `0` のDynamicsProcessing、第一面の Hiss / Crackle、スペクトラム／出力メーターの既存操作が崩れないこと
