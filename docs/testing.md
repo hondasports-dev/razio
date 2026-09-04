@@ -174,7 +174,7 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品UI（現行）
 
-第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は既存 Sans の `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、カーオーディオ風の10帯域LEDスペアナ、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
+第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は Sans Regular の `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、カーオーディオ風の10帯域LEDスペアナ、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
 
 必須確認:
 

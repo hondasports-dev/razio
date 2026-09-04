@@ -13,7 +13,7 @@ val Typography =
         displaySmall =
             TextStyle(
                 fontFamily = Sans,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Normal,
                 fontSize = 44.sp,
                 lineHeight = 48.sp,
                 letterSpacing = (-1.2).sp,
@@ -21,7 +21,7 @@ val Typography =
         headlineMedium =
             TextStyle(
                 fontFamily = Sans,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Normal,
                 fontSize = 26.sp,
                 lineHeight = 32.sp,
                 letterSpacing = (-0.3).sp,
