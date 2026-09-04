@@ -696,6 +696,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: pid `29144` の logcat に `FATAL EXCEPTION` / `ANR in` なし。`spectrum analyzer started status=Active`
 - Status: **49帯域第一面スペアナのunit / build / Pixel表示確認PASS**。1024点FFTでは低域の隣接1/6帯が同じbinに寄るため、低域カラムは完全に独立した周波数分解能ではない
 
+### 2026-09-04 / ヘッドユニット装飾（デモ点灯・SIG/CLIP・局周波数）
+
+- Scope: 解析前の消灯グリッドを、選択中プリセットの帯域形に沿ったデモ点灯へ置き換えた。第一面へ `SIG` / 装飾の局周波数 / `CLIP` を追加。局表示は大阪周辺のAM/短波を想起させる装飾で、実際の選局ではない
+- Unit / build: workflow `7e91737a27b1e502e3002e45afdc7a11` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `98B900E3EDC5B0689BDB3A4A882DF248A1BE7092506A2085EBCD2644148F3A16`
+- Device: Pixel 10 Pro（`blazer`、serial `56101FDCH006CX`、Android 17）。force-stop後にデモ点灯、`SIG` / `CLIP`、復元プリセット Fading の `1179 kHz`。`Shortwave` 切替後 `6.09 MHz`
+- Stability: pid `31141` の logcat に `FATAL EXCEPTION` / `ANR in` なし。今回は画面共有同意を再取得していない
+- Status: **デモ点灯と局表示のunit / build / Pixel表示確認PASS**。実信号の `SIG` 点灯はこのサイクルでは未再確認
+
 ## 判断基準
 
 ### Green
