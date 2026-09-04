@@ -293,8 +293,6 @@ fun RazioHomeScreen(
                     CarAudioSpectrum(
                         snapshot = spectrumState.output,
                         running = spectrumState.running,
-                        preset = state.preset,
-                        tuning = state.tuning,
                         startEnabled = !state.initializing && !captureRequestPending,
                         onStart = onSpectrumStart,
                         onStop = onSpectrumStop,
@@ -1492,8 +1490,6 @@ private fun formatTuningDb(value: Float): String =
 private fun CarAudioSpectrum(
     snapshot: SpectrumSnapshot,
     running: Boolean,
-    preset: AudioPreset,
-    tuning: AudioPresetTuning,
     startEnabled: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
@@ -1505,11 +1501,13 @@ private fun CarAudioSpectrum(
     var hold by remember { mutableStateOf(CarAudioSpectrumHold.idle()) }
     val latestIncoming by rememberUpdatedState(snapshot.levelsDb)
     val latestRunning by rememberUpdatedState(running)
-    val latestTuning by rememberUpdatedState(tuning)
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(running) {
+        if (!running) {
+            hold = CarAudioSpectrumHold.idle()
+            return@LaunchedEffect
+        }
         var lastNanos = 0L
-        var demoSeconds = 0f
         while (true) {
             withFrameNanos { now ->
                 val dt = if (lastNanos == 0L) {
@@ -1518,24 +1516,16 @@ private fun CarAudioSpectrum(
                     (now - lastNanos) / 1_000_000_000f
                 }
                 lastNanos = now
-                demoSeconds += dt
-                val incoming = if (latestRunning) {
-                    latestIncoming
-                } else {
-                    demoSpectrumLevels(latestTuning, demoSeconds)
-                }
                 hold = stepCarAudioSpectrum(
                     previous = hold,
-                    incomingDb = incoming,
+                    incomingDb = latestIncoming,
                     dtSeconds = dt,
-                    running = true,
+                    running = latestRunning,
                 )
             }
         }
     }
 
-    val clipping = carAudioIsClipping(snapshot.peakDb, running)
-    val signalLit = running && snapshot.available
     val statusText = if (running && snapshot.available) {
         stringResource(R.string.signal_meter_active)
     } else if (running) {
@@ -1613,31 +1603,7 @@ private fun CarAudioSpectrum(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 10.dp, end = 10.dp, top = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HeadUnitLamp(
-                text = stringResource(R.string.signal_meter_sig),
-                lit = signalLit,
-            )
-            Text(
-                text = carAudioStationReadout(preset),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    letterSpacing = 1.4.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                color = colorScheme.primary.copy(alpha = 0.9f),
-            )
-            HeadUnitLamp(
-                text = stringResource(R.string.signal_meter_clip),
-                lit = clipping,
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 10.dp, end = 10.dp, top = 2.dp),
+                .padding(start = 10.dp, end = 10.dp, top = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
@@ -1663,28 +1629,6 @@ private fun CarAudioSpectrum(
             modifier = Modifier.padding(top = 4.dp),
         )
     }
-}
-
-@Composable
-private fun HeadUnitLamp(
-    text: String,
-    lit: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(
-            letterSpacing = 1.8.sp,
-            fontWeight = FontWeight.Medium,
-        ),
-        color = if (lit) {
-            colorScheme.primary
-        } else {
-            colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-        },
-        modifier = modifier,
-    )
 }
 
 @Composable
