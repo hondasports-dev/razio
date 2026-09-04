@@ -17,6 +17,7 @@ RAZIO では、通常の Android アプリとしての品質に加えて「実�
 
 - preset の値変換（`AmPresetTest`）
 - プリセット pager の端一周（`LoopingPagerTest`）
+- カーオーディオ風スペアナのピークホールド（`CarAudioSpectrumTest`）
 - Shortwave / Fading の mapped input-gain 揺れと MBC post フォールバック範囲（`AmDynamicsConfigFadingTest`）
 - AudioEffect state transition（`RazioStatusTest`）
 - error mapping
@@ -173,11 +174,11 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品UI（現行）
 
-第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は既存 Sans の `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、細いメーター、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
+第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は既存 Sans の `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、カーオーディオ風の10帯域LEDスペアナ、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
 
 必須確認:
 
-1. debug APKをPixelへinstallし、第一面に `RAZIO`、円形 ON/OFF、`LIVE` または `STANDBY`、プリセット名、塗りカーブ、細いメーターが出ること。`session 0` / `DynamicsProcessing` チップ、6本スライダー、緑黒CRTが出ないこと
+1. debug APKをPixelへinstallし、第一面に `RAZIO`、円形 ON/OFF、`LIVE` または `STANDBY`、プリセット名、塗りカーブ、10帯域LEDスペアナが出ること。`session 0` / `DynamicsProcessing` チップ、6本スライダー、緑黒CRTが出ないこと
 2. 名前またはカーブを左／右へスワイプして隣接プリセットへ変わり、点インジケータとカーブ形状が追従すること。`‹ ›` と点タップでも同じ切替になること。6つ目の `Shortwave` が点とスワイプに含まれること。`Shortwave` からさらに次へスワイプすると `Narrow AM` へ一周し、`Narrow AM` から前へスワイプすると `Shortwave` へ戻ること
 3. `詳細設定を開く` を押して全幅の `詳細設定を閉じる` へ変わり、Hiss / Crackle が隠れ、周波数カーブと6つの周波数ラベル（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）が同じ詳細面に現れること
 4. 6本のうち1本を `＋` またはスライダーで変更し、値表示と詳細内カーブが更新されること。詳細を閉じると第一面カーブも同じ形になること。blurb直下の `（プリセット名）を初期値に戻す` が非活性から活性へ変わり、タップで定義値へ戻って再び非活性になること
@@ -193,6 +194,17 @@ Phase 2 の実機 regression（変更したとき）:
 - filtered `logcat`に`FATAL EXCEPTION`、`ANR in`、RAZIO由来の未処理Exceptionはなく、`dumpsys activity services`でeffect用FGS `isForeground=true`、`dumpsys media.audio_flinger`でsession `0`のDynamicsProcessing 1 effectを確認した。検証後の画面オフ設定は60秒へ戻した
 
 ### 製品向けsignal meter
+
+第一面は出力観測tapの10帯域を、90年代カーオーディオ風の縦LEDカラム＋ピークホールドで表示する。細いPeakストリップは置き換える。解析開始前は消灯グリッドと `タップして解析を開始`。開始後は既存の出力snapshotでカラムが動き、native post-DSP測定ではない。
+
+必須確認:
+
+1. 第一面のプリセットカーブ直下に10本の縦LEDカラム、`80` / `1k` / `16k` ラベルがあること
+2. 起動直後はカラムが消灯で、タップまたは詳細の `解析を開始` と同じ同意フローへ入れること
+3. 解析が `Active` のあいだ、音楽再生でカラムとピークホールドが動き、停止後は消灯へ戻ること
+4. 詳細を開くと第一面スペアナが隠れ、閉じると戻ること
+
+2026-08-30 の細いPeakメーター履歴:
 
 - workflow `bb12f7547b375af1b7854c2da7d24ca8` で `:app:testDebugUnitTest` / `:app:assembleDebug` をPASS。APK SHA-256は `1F1C0130FBADBA341D6C88D027ECB6113754C61C7F82D4939F3CCD01620D6AFD`
 - Pixel 10 Pro（Android 17 / serial `56101FDCH006CX` / Pixel Buds Pro 2 Bluetooth A2DP）へAPKをinstallし、出力レベルメーターの待機状態（`解析待ち`、RMS／Peak `−∞ dB`）を確認した

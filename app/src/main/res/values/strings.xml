@@ -104,10 +104,11 @@
     <string name="spectrum_status_error">Error</string>
     <string name="capture_request_pending">権限／画面共有の同意待ちです。ダイアログを閉じるまで操作できません。</string>
     <string name="signal_meter_heading">出力レベルメーター</string>
-    <string name="signal_meter_explanation">入力フレームへDynamicsProcessingの設定を反映した、エフェクト後の推定RMS／PeakをLED風に表示します。native post-DSP readbackではなく、解析を開始したときだけ更新します。</string>
+    <string name="signal_meter_explanation">第一面は90年代カーオーディオ風の10帯域LEDスペアナです。出力観測tapのFFTを使い、ピークホールド付きで表示します。native post-DSP readbackではなく、解析を開始したときだけ動きます。</string>
     <string name="signal_meter_output_label">出力（エフェクト後・推定）</string>
     <string name="signal_meter_active">観測中</string>
     <string name="signal_meter_waiting">解析待ち</string>
+    <string name="signal_meter_tap_to_start">タップして解析を開始</string>
     <string name="signal_meter_rms">RMS %1$s</string>
     <string name="signal_meter_peak">Peak %1$s</string>
     <string name="equalizer_label">Equalizer: %1$s</string>

@@ -57,6 +57,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -291,9 +292,11 @@ fun RazioHomeScreen(
                         onPresetChange = onPresetChange,
                         onResetTuning = { onPresetTuningChange(state.preset.defaultTuning()) },
                     )
-                    CompactSignalMeter(
+                    CarAudioSpectrum(
                         snapshot = spectrumState.output,
                         running = spectrumState.running,
+                        startEnabled = !state.initializing && !captureRequestPending,
+                        onStart = onSpectrumStart,
                         modifier = Modifier.padding(top = 10.dp),
                     )
                 }
@@ -1606,53 +1609,144 @@ private fun SpectrumMeter(
     }
 }
 
-/** A compact product-facing level strip backed by the existing output observation tap. */
+/** A first-face 10-band LED analyzer styled after a 90s car head unit. */
 @Composable
-private fun CompactSignalMeter(
+private fun CarAudioSpectrum(
     snapshot: SpectrumSnapshot,
     running: Boolean,
+    startEnabled: Boolean,
+    onStart: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val warm = colorScheme.primary
-    val idle = colorScheme.outline.copy(alpha = 0.28f)
-    val segmentCount = 24
-    val peakFraction = ((snapshot.peakDb - SpectrumMath.FLOOR_DB) / -SpectrumMath.FLOOR_DB)
-        .coerceIn(0f, 1f)
-    val activeSegments = (peakFraction * segmentCount).roundToInt().coerceIn(0, segmentCount)
+    val idle = colorScheme.outline.copy(alpha = 0.22f)
+    var hold by remember { mutableStateOf(CarAudioSpectrumHold.idle()) }
+    val latestIncoming by rememberUpdatedState(snapshot.levelsDb)
+    val latestRunning by rememberUpdatedState(running)
+
+    LaunchedEffect(running) {
+        if (!running) {
+            hold = CarAudioSpectrumHold.idle()
+            return@LaunchedEffect
+        }
+        var lastNanos = 0L
+        while (true) {
+            withFrameNanos { now ->
+                val dt = if (lastNanos == 0L) {
+                    0f
+                } else {
+                    (now - lastNanos) / 1_000_000_000f
+                }
+                lastNanos = now
+                hold = stepCarAudioSpectrum(
+                    previous = hold,
+                    incomingDb = latestIncoming,
+                    dtSeconds = dt,
+                    running = latestRunning,
+                )
+            }
+        }
+    }
+
+    val canStart = startEnabled && !running
+    val statusText = if (running && snapshot.available) {
+        stringResource(R.string.signal_meter_active)
+    } else if (canStart) {
+        stringResource(R.string.signal_meter_tap_to_start)
+    } else {
+        stringResource(R.string.signal_meter_waiting)
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            repeat(segmentCount) { index ->
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(
-                            color = if (index < activeSegments) {
-                                warm.copy(alpha = 0.45f + 0.55f * (index / segmentCount.toFloat()))
-                            } else {
-                                idle
-                            },
-                        ),
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(WellShape)
+                .background(colorScheme.background)
+                .border(
+                    width = 1.dp,
+                    color = colorScheme.outline.copy(alpha = 0.45f),
+                    shape = WellShape,
                 )
+                .clickable(
+                    enabled = canStart,
+                    onClickLabel = stringResource(R.string.spectrum_start),
+                    onClick = onStart,
+                )
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp),
+            ) {
+                val bands = hold.displayedDb.size.coerceAtLeast(1)
+                val columnGap = 3.dp.toPx()
+                val segmentGap = 1.6.dp.toPx()
+                val columnWidth = ((size.width - columnGap * (bands - 1)) / bands)
+                    .coerceAtLeast(1f)
+                val segmentHeight = (
+                    (size.height - segmentGap * (CAR_AUDIO_SEGMENT_COUNT - 1)) /
+                        CAR_AUDIO_SEGMENT_COUNT
+                    ).coerceAtLeast(1f)
+                hold.displayedDb.forEachIndexed { band, db ->
+                    val lit = carAudioLitSegments(db)
+                    val peak = carAudioLitSegments(
+                        hold.peakDb.getOrElse(band) { db },
+                    ).coerceAtLeast(lit)
+                    val x = band * (columnWidth + columnGap)
+                    repeat(CAR_AUDIO_SEGMENT_COUNT) { segment ->
+                        val isPeak = peak > 0 && segment == peak - 1
+                        val isLit = segment < lit
+                        val heat = segment / (CAR_AUDIO_SEGMENT_COUNT - 1).toFloat()
+                        val color = when {
+                            isPeak -> warm
+                            isLit -> warm.copy(alpha = 0.38f + 0.62f * heat)
+                            else -> idle
+                        }
+                        drawRect(
+                            color = color,
+                            topLeft = Offset(
+                                x = x,
+                                y = size.height - (segment + 1) * segmentHeight -
+                                    segment * segmentGap,
+                            ),
+                            size = Size(width = columnWidth, height = segmentHeight),
+                        )
+                    }
+                }
             }
         }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 10.dp, end = 10.dp, top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = "80",
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "1k",
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "16k",
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
-            text = if (running && snapshot.available) {
-                stringResource(R.string.signal_meter_peak, formatDb(snapshot.peakDb))
-            } else {
-                stringResource(R.string.signal_meter_waiting)
-            },
+            text = statusText,
             style = MaterialTheme.typography.labelSmall,
             color = colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
+            modifier = Modifier.padding(top = 4.dp),
         )
     }
 }

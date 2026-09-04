@@ -134,9 +134,9 @@ AudioEffect API だけで困難な項目は backend の制約を確認してか�
 
 ## Phase 4: Product UI
 
-- [x] 製品UI（第一面は大きな RAZIO、円形電源、LIVE/STANDBY、プリセット ‹ ›、塗りカーブ、細いメーター。設定チップと6スライダーは出さない）
+- [x] 製品UI（第一面は大きな RAZIO、円形電源、LIVE/STANDBY、プリセット ‹ ›、塗りカーブ、カーオーディオ風スペアナ。設定チップと6スライダーは出さない）
 - [x] tuning dial の表現（詳細パネルに6境界の帯域位置をラジオ目盛り風に表示。操作は下のスライダーで行う）
-- [x] signal meter（第一面は出力mix tapのPeakを細いセグメントで表示。検証用スペクトラムとは役割を分離し、tap位置の端末依存を明示）
+- [x] signal meter（第一面は出力観測tapの10帯域をカーオーディオ風LEDスペアナで表示。検証用スペクトラムとは役割を分離し、tap位置の端末依存を明示）
 - [x] preset UI（Narrow AM / Vintage speaker / Weak signal / Saturation / Fading / Shortwave を ‹ › ・点・横スワイプで切替）
 - [x] dark / light 方針（system dark modeに追従する暖色light / dark scheme。dynamic colorは既定OFF）
 - [x] icon / branding（ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO adaptive icon。API 21〜25はvector layer-listへフォールバック）
