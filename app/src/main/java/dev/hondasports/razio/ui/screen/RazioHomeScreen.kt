@@ -46,7 +46,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,6 +74,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -269,29 +270,35 @@ fun RazioHomeScreen(
                 tuning = state.tuning,
                 powerOn = state.powerOn,
                 enabled = !state.initializing,
+                showCurve = !tuningExpanded,
                 onPresetChange = onPresetChange,
                 onResetTuning = { onPresetTuningChange(state.preset.defaultTuning()) },
-                modifier = Modifier.padding(top = 28.dp),
+                modifier = Modifier.padding(top = if (tuningExpanded) 12.dp else 28.dp),
             )
-            CompactSignalMeter(
-                snapshot = spectrumState.output,
-                running = spectrumState.running,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-            NoiseFaceControls(
-                noiseState = noiseState,
-                enabled = state.powerOn && !state.initializing,
-                onHissChange = onHissChange,
-                onCrackleChange = onCrackleChange,
-                onHissGainChange = onHissGainChange,
-                onCrackleGainChange = onCrackleGainChange,
-                modifier = Modifier.padding(top = 10.dp),
-            )
+            if (!tuningExpanded) {
+                CompactSignalMeter(
+                    snapshot = spectrumState.output,
+                    running = spectrumState.running,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                NoiseFaceControls(
+                    noiseState = noiseState,
+                    enabled = state.powerOn && !state.initializing,
+                    onHissChange = onHissChange,
+                    onCrackleChange = onCrackleChange,
+                    onHissGainChange = onHissGainChange,
+                    onCrackleGainChange = onCrackleGainChange,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
             DetailsToggle(
                 expanded = tuningExpanded,
                 enabled = !state.initializing,
                 onToggle = { tuningExpanded = !tuningExpanded },
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
             )
             if (tuningExpanded) {
                 Column(
@@ -317,7 +324,7 @@ fun RazioHomeScreen(
                             tuning = state.tuning,
                             enabled = !state.initializing,
                             onTuningChange = onPresetTuningChange,
-                            showVisuals = false,
+                            showVisuals = true,
                             showDial = true,
                             showFrequencyControls = true,
                             modifier = Modifier.padding(top = 12.dp),
@@ -494,6 +501,7 @@ private fun PresetStage(
     enabled: Boolean,
     onPresetChange: (AudioPreset) -> Unit,
     onResetTuning: () -> Unit,
+    showCurve: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val presets = AudioPreset.entries
@@ -562,11 +570,13 @@ private fun PresetStage(
                         onClick = onResetTuning,
                         modifier = Modifier.padding(top = 10.dp),
                     )
-                    PresetFrequencyCurve(
-                        tuning = pageTuning,
-                        powerOn = powerOn,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
+                    if (showCurve) {
+                        PresetFrequencyCurve(
+                            tuning = pageTuning,
+                            powerOn = powerOn,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
                 }
             }
             Row(
@@ -700,7 +710,7 @@ private fun DetailsToggle(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    TextButton(
+    OutlinedButton(
         onClick = onToggle,
         enabled = enabled,
         modifier = modifier.fillMaxWidth(),
@@ -772,19 +782,19 @@ private fun PresetTuningEditor(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (showDial) {
-            PresetTuningDial(
-                tuning = safeTuning,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
-        }
         if (showVisuals) {
             PresetFrequencyCurve(
                 tuning = safeTuning,
                 modifier = Modifier.padding(bottom = 4.dp),
+                plotHeight = 168.dp,
             )
         }
         if (showFrequencyControls) {
+            Text(
+                text = stringResource(R.string.frequency_boundaries_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
         FrequencyTuningSlider(
             label = stringResource(R.string.preset_tuning_low_cut),
             value = safeTuning.lowCutHz,
@@ -875,6 +885,13 @@ private fun PresetTuningEditor(
                 )
             },
         )
+        }
+
+        if (showDial) {
+            PresetTuningDial(
+                tuning = safeTuning,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+            )
         }
 
         if (showToneControls) {
@@ -1176,12 +1193,12 @@ private fun PresetTuningDial(
 private fun PresetFrequencyCurve(
     tuning: AudioPresetTuning,
     powerOn: Boolean = true,
+    plotHeight: Dp = 240.dp,
     modifier: Modifier = Modifier,
 ) {
     val safeTuning = tuning.sanitized()
     val colorScheme = MaterialTheme.colorScheme
     val accent = if (powerOn) colorScheme.primary else colorScheme.outline
-    val plotHeight = 240.dp
     val minHz = 20f
     val maxHz = 20_000f
     val minDb = -48f
@@ -1289,7 +1306,7 @@ private fun FrequencyAxisLabels(
                 )
             }
         },
-        modifier = modifier.fillMaxWidth().height(18.dp),
+        modifier = modifier.fillMaxWidth().height(22.dp),
     ) { measurables, constraints ->
         val placeables = measurables.map { measurable ->
             measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
@@ -1353,8 +1370,10 @@ private fun FrequencyTuningSlider(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
                 modifier = Modifier
-                    .width(72.dp)
+                    .width(96.dp)
                     .padding(horizontal = 4.dp),
             )
             StepButton(
