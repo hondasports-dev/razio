@@ -29,32 +29,56 @@ internal object SpectrumMath {
     /** Treat frames at the display floor as an unavailable signal, not a valid sample. */
     private const val SIGNAL_MARGIN_DB = 1f
 
-    /** ISO-ish 1/3-octave centers from 63 Hz to 16 kHz for the first-face analyzer. */
+    /** ISO-ish 1/6-octave centers from 63 Hz to 16 kHz for the first-face analyzer. */
     val bandCentersHz: List<Int> = listOf(
         63,
+        71,
         80,
+        90,
         100,
+        112,
         125,
+        140,
         160,
+        180,
         200,
+        224,
         250,
+        280,
         315,
+        355,
         400,
+        450,
         500,
+        560,
         630,
+        710,
         800,
+        900,
         1_000,
+        1_120,
         1_250,
+        1_400,
         1_600,
+        1_800,
         2_000,
+        2_240,
         2_500,
+        2_800,
         3_150,
+        3_550,
         4_000,
+        4_500,
         5_000,
+        5_600,
         6_300,
+        7_100,
         8_000,
+        9_000,
         10_000,
+        11_200,
         12_500,
+        14_000,
         16_000,
     )
 
@@ -120,8 +144,8 @@ internal object SpectrumMath {
         fft(fftReal, fftImaginary)
 
         val levels = bandCentersHz.map { centerHz ->
-            val lowHz = (centerHz / THIRD_OCTAVE_HALF).coerceAtLeast(1f)
-            val highHz = centerHz * THIRD_OCTAVE_HALF
+            val lowHz = (centerHz / SIXTH_OCTAVE_HALF).coerceAtLeast(1f)
+            val highHz = centerHz * SIXTH_OCTAVE_HALF
             val firstBin = (lowHz / sampleRateHz.coerceAtLeast(1) * FFT_SIZE)
                 .toInt()
                 .coerceIn(1, FFT_SIZE / 2)
@@ -213,7 +237,7 @@ internal object SpectrumMath {
     }
 
     private const val LN_10 = 2.302585092994046
-    private val THIRD_OCTAVE_HALF = 2.0.pow(1.0 / 6.0).toFloat()
+    private val SIXTH_OCTAVE_HALF = 2.0.pow(1.0 / 12.0).toFloat()
 }
 
 enum class SpectrumAnalyzerStatus {

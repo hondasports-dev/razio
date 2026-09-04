@@ -688,6 +688,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - Stability: pid `27346` の logcat に `FATAL EXCEPTION` / `ANR in` なし。今回は既存解析セッション上での停止確認で、MediaProjection同意の再取得はしていない
 - Status: **検証用2本グラフ削除と25帯域第一面スペアナのunit / build / Pixel表示・停止確認PASS**
 
+### 2026-09-04 / 1/6オクターブ49帯域スペアナ
+
+- Scope: 第一面LEDスペアナの帯域幅を1/3オクターブの半分（ISO風1/6オクターブ、63 Hz〜16 kHzの49帯域）へ細分化した。開始・停止のタップ操作は据え置き
+- Unit / build: workflow `8d389ce86d09cb6a6c978046a89835da` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `91432384B8C3204A758D309AFE2D599E5A703D981A9ED133E5C1C55AEA1E976F`
+- Device: Pixel 10 Pro（`blazer`、serial `56101FDCH006CX`、Android 17）。第一面に `63` / `1k` / `16k` と細かいLEDカラム、`観測中`
+- Stability: pid `29144` の logcat に `FATAL EXCEPTION` / `ANR in` なし。`spectrum analyzer started status=Active`
+- Status: **49帯域第一面スペアナのunit / build / Pixel表示確認PASS**。1024点FFTでは低域の隣接1/6帯が同じbinに寄るため、低域カラムは完全に独立した周波数分解能ではない
+
 ## 判断基準
 
 ### Green

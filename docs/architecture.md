@@ -66,18 +66,18 @@ RAZIO generated noise → AudioTrack ┘
 
 ### スペクトラム観測tap
 
-音質プリセットの傾向を見える化するため、処理経路を置き換えない観測用tapを用意します。製品UIは第一面の1/3オクターブ（25帯域、63 Hz〜16 kHz）カーオーディオ風LEDスペアナだけです。詳細にあった入出力2本グラフは削除しました。開始と停止は第一面スペアナのタップです。
+音質プリセットの傾向を見える化するため、処理経路を置き換えない観測用tapを用意します。製品UIは第一面の1/6オクターブ（49帯域、63 Hz〜16 kHz）カーオーディオ風LEDスペアナだけです。詳細にあった入出力2本グラフは削除しました。開始と停止は第一面スペアナのタップです。
 
 ```text
 Other app playback ──┬── original Android output ── Speaker / BT / USB
                      │
                      └── AudioPlaybackCapture → AudioRecord → FFT → 出力推定（DynamicsProcessing反映）
-                                                                └→ 第一面 25帯域LEDスペアナ
+                                                                └→ 第一面 49帯域LEDスペアナ
 
 （入力キャプチャ不可時のみ）Android output mix ── Visualizer(session 0) → waveform → FFT → 出力fallback
 ```
 
-- 入力は `AudioPlaybackCapture` で対象アプリの再生音をPCMコピーし、1024点のHann窓付きFFTで1/3オクターブ25帯域へ集約します。解析PCMを `AudioTrack` へ戻さないため、解析開始による二重再生は発生しません
+- 入力は `AudioPlaybackCapture` で対象アプリの再生音をPCMコピーし、1024点のHann窓付きFFTで1/6オクターブ49帯域へ集約します。解析PCMを `AudioTrack` へ戻さないため、解析開始による二重再生は発生しません
 - Android 10以上で入力キャプチャが動いている場合、第一面へ出す出力は入力と同じフレームへ現在の `DynamicsProcessing` のPost-EQ / MBC / Limiterパラメータを決定論的に反映した推定値です。native MBCのエンベロープ、出力段、HALの後処理は公開APIから読めないため、実スピーカー直後の測定値とは扱いません。推定処理に失敗した場合は入力フレームをそのまま出力へ使い、ログへ記録します。推定の有効判定は保持中のlive `DynamicsProcessing.enabled` を参照し、readback失敗後に同一フレームを誤表示しないようにします
 - 入力キャプチャが使えない端末・権限状態では、`Visualizer(0)` のglobal mix waveformをfallback出力として同じFFTへ通します。`SCALING_MODE_AS_PLAYED` とwaveformのunsigned 8-bit中心値128→PCM変換を従来どおり試みますが、これは post-DSP非保証です。Visualizerは出力mix tapであり、入力が取れているときの推定出力と同時には採用しません。`AudioRecord` が初期化できても表示床（約`-80 dBFS`）のフレームしか返さない場合、または最後の有効フレームから2秒以上経過した場合は、入力をunavailableへ戻し `Partial` とします。後から有効信号を受け取った場合は `Active` へ復帰します
 - Android 10以上では `RECORD_AUDIO` とMediaProjection同意が必要です。Android 17（API 37）では音声取得を要求した同意UIを出し、MediaProjection用FGSの `startForeground` 完了後に `getMediaProjection` を呼びます。入力キャプチャ中は `mediaProjection` 型FGSを保持します
@@ -136,9 +136,9 @@ Error
 
 音声経路の状態を隠さないまま、ホームの第一面はラジオ製品面にします。`RazioTheme` は端末壁紙の dynamic color を既定では使わず、琥珀色をアクセントにした dark / light scheme を提供します。`RazioHomeScreen` はこのテーマを局所上書きせず、FilterChip や設定画面風の状態チップを第一面に置きません。
 
-第一面の構成は、上部のアンバー光、Sans Regular の `RAZIO` ワードマーク、円形の電源、単一の `LIVE` / `STANDBY`、プリセットと周波数カーブを収めた筐体パネル、カーオーディオ風の1/3オクターブ（25帯域）LEDスペアナ、Hiss / Crackle の筐体パネル、`詳細設定を開く` です。色は既存の night studio（アンバー＋チャコール）を維持し、設定アプリ風のスタジアムピルや巨大なアウトラインボタンは使いません。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値から外れているときだけアンバーの活性表示で押せます。未変更時は非活性の輪郭だけにします。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプのどれでも切り替わり、端の `Shortwave` / `Narrow AM` からも一周します。`session 0` や `DynamicsProcessing` の観測文言、6本の周波数スライダー、同調ダイヤルは詳細へ下げます。電源は既存の `onPowerChange` へ接続します。CRTテクスチャや端末ログ風のフッターは使いません。
+第一面の構成は、上部のアンバー光、Sans Regular の `RAZIO` ワードマーク、円形の電源、単一の `LIVE` / `STANDBY`、プリセットと周波数カーブを収めた筐体パネル、カーオーディオ風の1/6オクターブ（49帯域）LEDスペアナ、Hiss / Crackle の筐体パネル、`詳細設定を開く` です。色は既存の night studio（アンバー＋チャコール）を維持し、設定アプリ風のスタジアムピルや巨大なアウトラインボタンは使いません。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値から外れているときだけアンバーの活性表示で押せます。未変更時は非活性の輪郭だけにします。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプのどれでも切り替わり、端の `Shortwave` / `Narrow AM` からも一周します。`session 0` や `DynamicsProcessing` の観測文言、6本の周波数スライダー、同調ダイヤルは詳細へ下げます。電源は既存の `onPowerChange` へ接続します。CRTテクスチャや端末ログ風のフッターは使いません。
 
-ランチャーは標準テンプレートのロボット画像を使わず、ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO用adaptive iconへ置き換えます。API 21〜25向けには同じベクターをlayer-listでフォールバックし、API 26以降はadaptive iconのmaskに任せます。ホームのヒーローは選択中プリセットの `PresetFrequencyCurve` です。dB軸・6本の境界線・凡例は出さず、塗りとグローのカーブだけを置きます。既存の出力観測tapを1/3オクターブ25帯域のカーオーディオ風LEDスペアナとして第一面に置きます。ピークホールドは表示側の弾道で、native post-DSP測定ではありません。タップで解析開始、動作中の再タップで停止します。どれもAudioEffectの成立や聴感を単独で保証するものではなく、tapの前後位置は端末依存です。
+ランチャーは標準テンプレートのロボット画像を使わず、ベークライト筐体・紙面パネル・琥珀色の同調部品を描いたRAZIO用adaptive iconへ置き換えます。API 21〜25向けには同じベクターをlayer-listでフォールバックし、API 26以降はadaptive iconのmaskに任せます。ホームのヒーローは選択中プリセットの `PresetFrequencyCurve` です。dB軸・6本の境界線・凡例は出さず、塗りとグローのカーブだけを置きます。既存の出力観測tapを1/6オクターブ49帯域のカーオーディオ風LEDスペアナとして第一面に置きます。ピークホールドは表示側の弾道で、native post-DSP測定ではありません。タップで解析開始、動作中の再タップで停止します。どれもAudioEffectの成立や聴感を単独で保証するものではなく、tapの前後位置は端末依存です。
 
 ### プリセット値の試聴調整
 

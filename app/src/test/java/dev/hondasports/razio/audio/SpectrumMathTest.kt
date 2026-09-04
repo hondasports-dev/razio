@@ -22,9 +22,10 @@ class SpectrumMathTest {
     }
 
     @Test
-    fun analyzerUsesTwentyFiveThirdOctaveBands() {
-        assertEquals(25, SpectrumMath.bandCentersHz.size)
+    fun analyzerUsesFortyNineSixthOctaveBands() {
+        assertEquals(49, SpectrumMath.bandCentersHz.size)
         assertEquals(63, SpectrumMath.bandCentersHz.first())
+        assertEquals(71, SpectrumMath.bandCentersHz[1])
         assertEquals(1_000, SpectrumMath.bandCentersHz[SpectrumMath.bandIndex(1_000)])
         assertEquals(16_000, SpectrumMath.bandCentersHz.last())
     }

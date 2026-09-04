@@ -1485,7 +1485,7 @@ private fun formatTuningChartHz(value: Float): String {
 private fun formatTuningDb(value: Float): String =
     String.format(Locale.US, "%.1f dB", value)
 
-/** A first-face 1/3-octave LED analyzer styled after a 90s car head unit. */
+/** A first-face 1/6-octave LED analyzer styled after a 90s car head unit. */
 @Composable
 private fun CarAudioSpectrum(
     snapshot: SpectrumSnapshot,
@@ -1556,7 +1556,7 @@ private fun CarAudioSpectrum(
                     ),
                     onClick = { if (running) onStop() else onStart() },
                 )
-                .padding(horizontal = 6.dp, vertical = 10.dp),
+                .padding(horizontal = 4.dp, vertical = 10.dp),
         ) {
             Canvas(
                 modifier = Modifier
@@ -1564,7 +1564,7 @@ private fun CarAudioSpectrum(
                     .height(96.dp),
             ) {
                 val bands = hold.displayedDb.size.coerceAtLeast(1)
-                val columnGap = 1.2.dp.toPx()
+                val columnGap = 0.8.dp.toPx()
                 val segmentGap = 1.6.dp.toPx()
                 val columnWidth = ((size.width - columnGap * (bands - 1)) / bands)
                     .coerceAtLeast(1f)
