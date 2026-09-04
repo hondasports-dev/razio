@@ -7,6 +7,12 @@ import org.junit.Test
 
 class CarAudioSpectrumTest {
     @Test
+    fun idleHoldUsesTwentyFiveThirdOctaveBands() {
+        assertEquals(25, CarAudioSpectrumHold.idle().displayedDb.size)
+        assertEquals(SpectrumMath.bandCentersHz.size, CarAudioSpectrumHold.idle().peakDb.size)
+    }
+
+    @Test
     fun floorMapsToZeroSegments() {
         assertEquals(0, carAudioLitSegments(SpectrumMath.FLOOR_DB))
     }

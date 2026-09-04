@@ -174,11 +174,11 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品UI（現行）
 
-第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は Sans Regular の `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、カーオーディオ風の10帯域LEDスペアナ、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Spectrum / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
+第一面はラジオ製品面にする。FilterChip、`Active` / `session 0` / `DynamicsProcessing` の状態チップ、6本スライダーのスタックは主画面に出さない。`RazioHomeScreen` は Sans Regular の `RAZIO`、円形電源、`LIVE` / `STANDBY`、筐体パネルに収めたプリセット名と塗りカーブ、カーオーディオ風の1/3オクターブ（25帯域）LEDスペアナ、Hiss / Crackle の筐体パネル、全幅の `詳細設定を開く` で構成する。色は既存のアンバー／チャコールを維持する。プリセットは `‹ ›`、点、名前／カーブ上の横スワイプで切り替える。blurb直下の `（プリセット名）を初期値に戻す` は常時表示し、定義値のときは非活性、変更後はアンバーの活性表示になる。ヘッダーの電源は既存の `onPowerChange` へ接続する。`詳細設定を開く` の折りたたみは `rememberSaveable(state.preset.id)` で保持し、開くと第一面のノイズ／メーター／ヒーローカーブを畳んで `詳細設定を閉じる` を全幅表示する。詳細では周波数カーブの直下に6境界スライダー、同調ダイヤル、ゲイン / Dynamics / Character、Noise状態 / Engine 検証パネルを展開する。`session 0` の観測は Engine パネルへ残す。
 
 必須確認:
 
-1. debug APKをPixelへinstallし、第一面に `RAZIO`、円形 ON/OFF、`LIVE` または `STANDBY`、プリセット名、塗りカーブ、10帯域LEDスペアナが出ること。`session 0` / `DynamicsProcessing` チップ、6本スライダー、緑黒CRTが出ないこと
+1. debug APKをPixelへinstallし、第一面に `RAZIO`、円形 ON/OFF、`LIVE` または `STANDBY`、プリセット名、塗りカーブ、25帯域LEDスペアナが出ること。`session 0` / `DynamicsProcessing` チップ、6本スライダー、緑黒CRT、詳細の検証用スペアナが出ないこと
 2. 名前またはカーブを左／右へスワイプして隣接プリセットへ変わり、点インジケータとカーブ形状が追従すること。`‹ ›` と点タップでも同じ切替になること。6つ目の `Shortwave` が点とスワイプに含まれること。`Shortwave` からさらに次へスワイプすると `Narrow AM` へ一周し、`Narrow AM` から前へスワイプすると `Shortwave` へ戻ること
 3. `詳細設定を開く` を押して全幅の `詳細設定を閉じる` へ変わり、Hiss / Crackle が隠れ、周波数カーブと6つの周波数ラベル（低域カット開始／低域カット中間／中域開始／中域終了／高域カット中間／高域カット開始）が同じ詳細面に現れること
 4. 6本のうち1本を `＋` またはスライダーで変更し、値表示と詳細内カーブが更新されること。詳細を閉じると第一面カーブも同じ形になること。blurb直下の `（プリセット名）を初期値に戻す` が非活性から活性へ変わり、タップで定義値へ戻って再び非活性になること
@@ -195,14 +195,21 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 製品向けsignal meter
 
-第一面は出力観測tapの10帯域を、90年代カーオーディオ風の縦LEDカラム＋ピークホールドで表示する。細いPeakストリップは置き換える。解析開始前は消灯グリッドと `タップして解析を開始`。開始後は既存の出力snapshotでカラムが動き、native post-DSP測定ではない。
+第一面は出力観測tapの1/3オクターブ25帯域を、90年代カーオーディオ風の縦LEDカラム＋ピークホールドで表示する。細いPeakストリップは置き換える。解析開始前は消灯グリッドと `タップして解析を開始`。開始後は既存の出力snapshotでカラムが動き、native post-DSP測定ではない。動作中の再タップで停止する。詳細の入出力2本グラフは置かない。
 
 必須確認:
 
-1. 第一面のプリセットカーブ直下に10本の縦LEDカラム、`80` / `1k` / `16k` ラベルがあること
-2. 起動直後はカラムが消灯で、タップまたは詳細の `解析を開始` と同じ同意フローへ入れること
-3. 解析が `Active` のあいだ、音楽再生でカラムとピークホールドが動き、停止後は消灯へ戻ること
-4. 詳細を開くと第一面スペアナが隠れ、閉じると戻ること
+1. 第一面のプリセットカーブ直下に25本の縦LEDカラム、`63` / `1k` / `16k` ラベルがあること
+2. 起動直後はカラムが消灯で、タップすると同意フローへ入れること。詳細に `解析を開始` ボタンがないこと
+3. 解析が `Active` のあいだ、音楽再生でカラムとピークホールドが動き、スペアナ再タップで停止後は消灯へ戻ること
+4. 詳細を開くと第一面スペアナが隠れ、閉じると戻ること。詳細に検証用スペアナ見出しが出ないこと
+
+2026-09-04 の25帯域化と検証用グラフ削除:
+
+- workflow `c94c656cd8af97c1a423486142f6b85e` で `:app:testDebugUnitTest` / `:app:assembleDebug` をPASS。APK SHA-256は `07C80A6C318E07758952D24E58B699B323D9638A850D495BF4E6072BDB5107B5`
+- Pixel 10 Pro（Android 17 / serial `56101FDCH006CX`）へinstallし、第一面に25本LEDカラムと `63` / `1k` / `16k` を確認。解析動作中は `観測中`、第一面スペアナ再タップで `タップして解析を開始` へ戻った
+- 詳細を開いてスクロールし、`ノイズオーバーレイ（PoC）` と `エンジン状態` のあいだに `スペクトラムアナライザー（検証用）` / `解析を開始` が出ないことをUI treeで確認した。閉じると第一面スペアナが戻る
+- filtered `logcat`（pid `27346`）に `FATAL EXCEPTION`、`ANR in` はなかった。今回は既存の解析セッションが残っていたため、画面共有同意の再取得はしていない
 
 2026-08-30 の細いPeakメーター履歴:
 
@@ -231,17 +238,17 @@ Phase 2 の実機 regression（変更したとき）:
 
 ### 入出力スペクトラムアナライザー検証PoC
 
-この機能は、音声を再生し直さずに入力・出力を比較するための観測tapです。入力は `AudioPlaybackCapture` → `AudioRecord` をエフェクト前の基準として使い、出力は同じ入力フレームへ現在の `DynamicsProcessing` を反映したエフェクト後の推定値です。どちらも同じ1024点FFTで10帯域へ変換し、`Active` / `Partial` / `Error` として取得可否を表示します。native post-DSP PCMは公開APIで保証できないため、入力キャプチャが使えない場合だけ `Visualizer(session 0)` をfallbackにし、UIでも推定値と区別します。
+この機能は、音声を再生し直さずに入力・出力を比較するための観測tapです。製品UIの入出力2本グラフは削除し、第一面の25帯域LEDスペアナだけが残っています。入力は `AudioPlaybackCapture` → `AudioRecord` をエフェクト前の基準として使い、出力は同じ入力フレームへ現在の `DynamicsProcessing` を反映したエフェクト後の推定値です。どちらも同じ1024点FFTで1/3オクターブ25帯域へ変換します。native post-DSP PCMは公開APIで保証できないため、入力キャプチャが使えない場合だけ `Visualizer(session 0)` をfallbackにします。
 
 必須確認:
 
 1. `:app:testDebugUnitTest` と `:app:assembleDebug` を `gradle-run` で通し、debug APKをPixelへinstallする
-2. Spotifyなど対象アプリを再生し、RAZIOの「解析を開始」を押す。`RECORD_AUDIO`許可後、MediaProjectionの画面共有同意を通す（Android 17では音声取得を要求するUIになる）
-3. UIが `Active（入力・出力）` になり、入力／出力の棒グラフ、RMS、Peakが更新されることを確認する。入力側は `入力（エフェクト前） / AudioPlaybackCapture`、出力側は `出力（エフェクト後・推定） / DynamicsProcessing` と表示され、detailが `入力tap=AudioPlaybackCapture（エフェクト前の解析用コピー）` / `出力=同一フレームへDynamicsProcessingを反映したpost-effect推定` になることを記録する。入力キャプチャ失敗時は `Visualizer(session 0; post-DSP非保証)` のfallback表示になることも確認する
+2. Spotifyなど対象アプリを再生し、第一面スペアナをタップして解析を開始する。`RECORD_AUDIO`許可後、MediaProjectionの画面共有同意を通す（Android 17では音声取得を要求するUIになる）
+3. 第一面の25帯域カラムが動き、詳細に検証用の入力／出力グラフや `Active（入力・出力）` 見出しが出ないこと。入力キャプチャ失敗時は Visualizer fallback になることも確認する
 4. `dumpsys media_session`で対象アプリが`PLAYING`、`dumpsys activity services dev.hondasports.razio`でProjection型FGSがforegroundであることを確認する
 5. 入力PCMをAudioTrackへ再生していないため、解析開始前後で二重再生・意図しない音量二重化がないことを聴感確認する
-6. 「解析を停止」を押し、UIが`Stopped`、`dumpsys media_projection`が`null`になることを確認する。RAZIOの電源がONならeffect用specialUse FGSだけが残ることを確認する
-7. 対象アプリのcapture policyやProjection拒否を再現できる場合、`Partial` / `Error`と理由が表示され、元音声を抑制しないことを確認する
+6. 第一面スペアナを再タップして停止し、`dumpsys media_projection`が`null`になることを確認する。RAZIOの電源がONならeffect用specialUse FGSだけが残ることを確認する
+7. 対象アプリのcapture policyやProjection拒否を再現できる場合、`Partial` / `Error`として扱い、元音声を抑制しないことを確認する
 
 2026-08-30 の実機結果（旧Visualizer出力方式の履歴）:
 

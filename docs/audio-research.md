@@ -83,7 +83,7 @@ Global AudioEffect が成立しない場合の代替候補です。
 
 このため RAZIO の第一候補にはしません。
 
-ただし、入出力の差を確認する検証用途では、AudioPlaybackCaptureで得たPCMを再生し直さずFFTへ渡すだけの観測tapとして利用できます。この用途は下記の「入出力スペクトラムアナライザー」に限定し、global AudioEffectを置き換えるcustom DSP経路とは分けて扱います。
+ただし、第一面スペアナの観測用途では、AudioPlaybackCaptureで得たPCMを再生し直さずFFTへ渡すだけの観測tapとして利用できます。この用途は下記の「スペクトラム観測tap」に限定し、global AudioEffectを置き換えるcustom DSP経路とは分けて扱います。
 
 ## AM ラジオらしさの考え方
 
@@ -679,6 +679,14 @@ MVP は前半の要素を優先し、装飾的なノイズは後から追加し�
 - UI: 再前面化後に `Shortwave` / `遠い短波` / `LIVE` / `ON`。FGS `RazioAudioService` は `isForeground=true`、プロセス `26534` が生存
 - Stability: `AndroidRuntime:E` dump に `FATAL EXCEPTION` / `ANR in` なし
 - Status: Shortwave の揺れ経路（input gain 拒否時の MBC post フォールバック）の実機構造確認は PASS
+
+### 2026-09-04 / 検証用スペアナUI削除と1/3オクターブ25帯域
+
+- Scope: 詳細の入出力2本グラフを削除し、第一面LEDスペアナをISO風1/3オクターブ25帯域（63 Hz〜16 kHz）へ細分化した。開始・停止は第一面スペアナのタップ。FFT / AudioPlaybackCapture / 推定出力の観測経路は残す
+- Unit / build: workflow `c94c656cd8af97c1a423486142f6b85e` で `:app:testDebugUnitTest` / `:app:assembleDebug` PASS。APK SHA-256 `07C80A6C318E07758952D24E58B699B323D9638A850D495BF4E6072BDB5107B5`
+- Device: Pixel 10 Pro（`blazer`、serial `56101FDCH006CX`、Android 17）。第一面に25カラムと `63` / `1k` / `16k`、動作中 `観測中`、再タップで `タップして解析を開始`。詳細スクロールで検証用見出しなし、Noise / Engineパネルは残存
+- Stability: pid `27346` の logcat に `FATAL EXCEPTION` / `ANR in` なし。今回は既存解析セッション上での停止確認で、MediaProjection同意の再取得はしていない
+- Status: **検証用2本グラフ削除と25帯域第一面スペアナのunit / build / Pixel表示・停止確認PASS**
 
 ## 判断基準
 

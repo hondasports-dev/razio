@@ -30,8 +30,12 @@ class SpectrumEffectEstimatorTest {
             ),
         )
 
-        assertTrue(result.levelsDb[4] > result.levelsDb[8] + 20f)
-        assertTrue(result.levelsDb[8] < frame.levelsDb[8] - 20f)
+        assertTrue(result.levelsDb[SpectrumMath.bandIndex(1_000)] >
+            result.levelsDb[SpectrumMath.bandIndex(10_000)] + 20f)
+        assertTrue(
+            result.levelsDb[SpectrumMath.bandIndex(10_000)] <
+                frame.levelsDb[SpectrumMath.bandIndex(10_000)] - 20f,
+        )
         assertTrue(result.rmsDb <= 0f)
         assertTrue(result.peakDb <= -1f)
     }

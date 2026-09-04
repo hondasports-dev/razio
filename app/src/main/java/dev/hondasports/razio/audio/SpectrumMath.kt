@@ -5,6 +5,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -19,7 +20,7 @@ internal data class SpectrumFrame(
  * Pure FFT and level mapping for the analyzer.
  *
  * The visualizer callback is only an 8-bit waveform tap and AudioRecord delivers PCM16.
- * Both are normalized here so the two charts use the same -80..0 dBFS display range.
+ * Both are normalized here so the first-face analyzer uses the same -80..0 dBFS range.
  */
 internal object SpectrumMath {
     const val FFT_SIZE = 1_024
@@ -28,18 +29,40 @@ internal object SpectrumMath {
     /** Treat frames at the display floor as an unavailable signal, not a valid sample. */
     private const val SIGNAL_MARGIN_DB = 1f
 
+    /** ISO-ish 1/3-octave centers from 63 Hz to 16 kHz for the first-face analyzer. */
     val bandCentersHz: List<Int> = listOf(
+        63,
         80,
+        100,
+        125,
         160,
+        200,
+        250,
         315,
+        400,
+        500,
         630,
+        800,
+        1_000,
         1_250,
+        1_600,
+        2_000,
         2_500,
+        3_150,
         4_000,
+        5_000,
         6_300,
+        8_000,
         10_000,
+        12_500,
         16_000,
     )
+
+    fun bandIndex(centerHz: Int): Int {
+        val index = bandCentersHz.indexOf(centerHz)
+        check(index >= 0) { "no analyzer band at ${centerHz}Hz" }
+        return index
+    }
 
     fun hasUsableSignal(frame: SpectrumFrame): Boolean =
         frame.peakDb > FLOOR_DB + SIGNAL_MARGIN_DB
@@ -97,8 +120,8 @@ internal object SpectrumMath {
         fft(fftReal, fftImaginary)
 
         val levels = bandCentersHz.map { centerHz ->
-            val lowHz = (centerHz * 0.75f).coerceAtLeast(1f)
-            val highHz = centerHz * 1.33f
+            val lowHz = (centerHz / THIRD_OCTAVE_HALF).coerceAtLeast(1f)
+            val highHz = centerHz * THIRD_OCTAVE_HALF
             val firstBin = (lowHz / sampleRateHz.coerceAtLeast(1) * FFT_SIZE)
                 .toInt()
                 .coerceIn(1, FFT_SIZE / 2)
@@ -190,6 +213,7 @@ internal object SpectrumMath {
     }
 
     private const val LN_10 = 2.302585092994046
+    private val THIRD_OCTAVE_HALF = 2.0.pow(1.0 / 6.0).toFloat()
 }
 
 enum class SpectrumAnalyzerStatus {

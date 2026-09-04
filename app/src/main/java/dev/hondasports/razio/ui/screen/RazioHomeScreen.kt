@@ -40,9 +40,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -297,6 +295,7 @@ fun RazioHomeScreen(
                         running = spectrumState.running,
                         startEnabled = !state.initializing && !captureRequestPending,
                         onStart = onSpectrumStart,
+                        onStop = onSpectrumStop,
                         modifier = Modifier.padding(top = 10.dp),
                     )
                 }
@@ -353,10 +352,6 @@ fun RazioHomeScreen(
                     DevelopmentPanels(
                         state = state,
                         noiseState = noiseState,
-                        spectrumState = spectrumState,
-                        captureRequestPending = captureRequestPending,
-                        onSpectrumStart = onSpectrumStart,
-                        onSpectrumStop = onSpectrumStop,
                         modifier = Modifier.padding(top = 12.dp),
                     )
                     Spacer(modifier = Modifier.height(32.dp))
@@ -391,10 +386,6 @@ private fun createProjectionIntent(manager: MediaProjectionManager): Intent {
 private fun DevelopmentPanels(
     state: AudioEffectUiState,
     noiseState: NoiseOverlayUiState,
-    spectrumState: SpectrumAnalyzerUiState,
-    captureRequestPending: Boolean,
-    onSpectrumStart: () -> Unit,
-    onSpectrumStop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -425,74 +416,6 @@ private fun DevelopmentPanels(
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
-        }
-
-        AppPanel {
-            SectionHeading(text = stringResource(R.string.spectrum_heading))
-            Text(
-                text = stringResource(R.string.spectrum_explanation),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (spectrumState.running) {
-                    OutlinedButton(
-                        onClick = onSpectrumStop,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                        shape = ControlShape,
-                    ) {
-                        Text(text = stringResource(R.string.spectrum_stop))
-                    }
-                } else {
-                    Button(
-                        onClick = onSpectrumStart,
-                        enabled = !captureRequestPending,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                        shape = ControlShape,
-                    ) {
-                        Text(text = stringResource(R.string.spectrum_start))
-                    }
-                }
-                Text(
-                    text = spectrumStatusText(spectrumState.status),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (spectrumState.detail.isNotEmpty()) {
-                Text(
-                    text = spectrumState.detail,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-            }
-            if (captureRequestPending && !spectrumState.running) {
-                Text(
-                    text = stringResource(R.string.capture_request_pending),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-            }
-            SpectrumMeter(
-                label = stringResource(R.string.spectrum_input_label),
-                snapshot = spectrumState.input,
-                accent = MaterialTheme.colorScheme.primary,
-            )
-            SpectrumMeter(
-                label = stringResource(R.string.spectrum_output_label),
-                snapshot = spectrumState.output,
-                accent = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.padding(top = 12.dp),
-            )
         }
 
         AppPanel {
@@ -1562,60 +1485,14 @@ private fun formatTuningChartHz(value: Float): String {
 private fun formatTuningDb(value: Float): String =
     String.format(Locale.US, "%.1f dB", value)
 
-@Composable
-private fun SpectrumMeter(
-    label: String,
-    snapshot: SpectrumSnapshot,
-    accent: Color,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(top = 10.dp),
-        )
-        SpectrumChart(
-            levelsDb = snapshot.levelsDb,
-            accent = accent,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = stringResource(R.string.spectrum_rms, formatDb(snapshot.rmsDb)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(R.string.spectrum_peak, formatDb(snapshot.peakDb)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (!snapshot.available) {
-            Text(
-                text = stringResource(R.string.spectrum_waiting),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-    }
-}
-
-/** A first-face 10-band LED analyzer styled after a 90s car head unit. */
+/** A first-face 1/3-octave LED analyzer styled after a 90s car head unit. */
 @Composable
 private fun CarAudioSpectrum(
     snapshot: SpectrumSnapshot,
     running: Boolean,
     startEnabled: Boolean,
     onStart: () -> Unit,
+    onStop: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -1649,10 +1526,11 @@ private fun CarAudioSpectrum(
         }
     }
 
-    val canStart = startEnabled && !running
     val statusText = if (running && snapshot.available) {
         stringResource(R.string.signal_meter_active)
-    } else if (canStart) {
+    } else if (running) {
+        stringResource(R.string.signal_meter_waiting)
+    } else if (startEnabled) {
         stringResource(R.string.signal_meter_tap_to_start)
     } else {
         stringResource(R.string.signal_meter_waiting)
@@ -1672,11 +1550,13 @@ private fun CarAudioSpectrum(
                     shape = WellShape,
                 )
                 .clickable(
-                    enabled = canStart,
-                    onClickLabel = stringResource(R.string.spectrum_start),
-                    onClick = onStart,
+                    enabled = startEnabled,
+                    onClickLabel = stringResource(
+                        if (running) R.string.spectrum_stop else R.string.spectrum_start,
+                    ),
+                    onClick = { if (running) onStop() else onStart() },
                 )
-                .padding(horizontal = 10.dp, vertical = 10.dp),
+                .padding(horizontal = 6.dp, vertical = 10.dp),
         ) {
             Canvas(
                 modifier = Modifier
@@ -1684,7 +1564,7 @@ private fun CarAudioSpectrum(
                     .height(96.dp),
             ) {
                 val bands = hold.displayedDb.size.coerceAtLeast(1)
-                val columnGap = 3.dp.toPx()
+                val columnGap = 1.2.dp.toPx()
                 val segmentGap = 1.6.dp.toPx()
                 val columnWidth = ((size.width - columnGap * (bands - 1)) / bands)
                     .coerceAtLeast(1f)
@@ -1727,7 +1607,7 @@ private fun CarAudioSpectrum(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "80",
+                text = "63",
                 style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.onSurfaceVariant,
             )
@@ -1749,91 +1629,6 @@ private fun CarAudioSpectrum(
             modifier = Modifier.padding(top = 4.dp),
         )
     }
-}
-
-@Composable
-private fun SpectrumChart(
-    levelsDb: List<Float>,
-    accent: Color,
-    modifier: Modifier = Modifier,
-) {
-    val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-    Column(modifier = modifier) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(132.dp),
-        ) {
-            val chartBottom = size.height - 2.dp.toPx()
-            val chartTop = 4.dp.toPx()
-            val chartHeight = chartBottom - chartTop
-            listOf(-60f, -30f, 0f).forEach { db ->
-                val fraction = (db - SpectrumMath.FLOOR_DB) / -SpectrumMath.FLOOR_DB
-                val y = chartBottom - chartHeight * fraction
-                drawLine(
-                    color = grid,
-                    start = Offset(0f, y),
-                    end = Offset(size.width, y),
-                    strokeWidth = 1.dp.toPx(),
-                )
-            }
-            val safeLevels = levelsDb.ifEmpty {
-                SpectrumMath.bandCentersHz.map { SpectrumMath.FLOOR_DB }
-            }
-            val barWidth = size.width / safeLevels.size
-            safeLevels.forEachIndexed { index, db ->
-                val fraction = ((db - SpectrumMath.FLOOR_DB) / -SpectrumMath.FLOOR_DB)
-                    .coerceIn(0f, 1f)
-                val height = chartHeight * fraction
-                drawRect(
-                    color = accent,
-                    topLeft = Offset(
-                        x = index * barWidth + barWidth * 0.16f,
-                        y = chartBottom - height,
-                    ),
-                    size = Size(width = barWidth * 0.68f, height = height),
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            SpectrumMath.bandCentersHz.forEach { centerHz ->
-                Text(
-                    text = frequencyLabel(centerHz),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-private fun frequencyLabel(centerHz: Int): String {
-    return if (centerHz >= 1_000) {
-        "${centerHz / 1_000}k"
-    } else {
-        centerHz.toString()
-    }
-}
-
-private fun formatDb(value: Float): String {
-    if (value <= SpectrumMath.FLOOR_DB + 0.5f) return "−∞ dB"
-    return String.format(Locale.US, "%.1f dB", value)
-}
-
-@Composable
-private fun spectrumStatusText(status: SpectrumAnalyzerStatus): String {
-    val resId = when (status) {
-        SpectrumAnalyzerStatus.Idle -> R.string.spectrum_status_idle
-        SpectrumAnalyzerStatus.Starting -> R.string.spectrum_status_starting
-        SpectrumAnalyzerStatus.Active -> R.string.spectrum_status_active
-        SpectrumAnalyzerStatus.Partial -> R.string.spectrum_status_partial
-        SpectrumAnalyzerStatus.Stopped -> R.string.spectrum_status_stopped
-        SpectrumAnalyzerStatus.Error -> R.string.spectrum_status_error
-    }
-    return stringResource(resId)
 }
 
 @Composable
